@@ -12,10 +12,8 @@ import os
 # Load environment variables from .env file if it exists
 load_dotenv()
 
-# Create Flask application instance
-app = create_app(os.getenv('FLASK_ENV', 'production'))
+# Determine configuration name; default to production for Render
+config_name = os.getenv('FLASK_CONFIG') or os.getenv('FLASK_ENV', 'production')
 
-if __name__ == '__main__':
-    # This is for development only
-    # In production, use: gunicorn wsgi:app
-    app.run(debug=False)
+# Create Flask application instance exposed as module-level ``app`` for Gunicorn
+app = create_app(config_name)
