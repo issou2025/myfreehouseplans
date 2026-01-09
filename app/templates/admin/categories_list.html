@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">🏷️ Categories</p>
+            <h1 class="admin-title">Manage Categories</h1>
+            <p class="admin-subtitle">Categories help customers filter plans and improve SEO through clean URLs.</p>
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--primary" href="{{ url_for('admin.add_category') }}">
+                <span class="btn-admin__icon">✨</span>
+                <span>Add Category</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="admin-panel" aria-label="Category table">
+        <div class="admin-table-wrapper">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Slug</th>
+                        <th>Number of Plans</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in categories %}
+                    <tr>
+                        <td>
+                            <div class="plan-title">{{ c.name }}</div>
+                            {% if c.description %}
+                            <div class="plan-category">{{ c.description }}</div>
+                            {% endif %}
+                        </td>
+                        <td><span class="status-badge status-badge--info">/{{ c.slug }}</span></td>
+                        <td><span class="status-badge status-badge--success">{{ plan_counts.get(c.id, 0) }}</span></td>
+                        <td class="admin-table__actions">
+                            <a class="btn-action btn-action--edit" href="{{ url_for('admin.edit_category', id=c.id) }}">Edit</a>
+                            <form method="post" action="{{ url_for('admin.delete_category', id=c.id) }}" onsubmit="return confirm('Delete this category? Plans will be detached but not deleted.');">
+                                {{ csrf_token() if csrf_token is defined else '' }}
+                                <button type="submit" class="btn-action btn-action--delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

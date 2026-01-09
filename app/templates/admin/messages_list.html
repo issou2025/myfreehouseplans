@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell inbox-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">Studio inbox</p>
+            <h1 class="admin-title">Message center</h1>
+            <p class="admin-subtitle">Track every contact request, attachments, and opt-ins in one Render-friendly queue.</p>
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--primary" href="{{ url_for('main.contact') }}" target="_blank" rel="noopener">Preview contact form</a>
+        </div>
+    </header>
+
+    <section class="inbox-overview" aria-label="Inbox status summary">
+        <div>
+            <p class="inbox-count__label">Open</p>
+            <strong class="inbox-count__value">{{ status_counts['open'] }}</strong>
+        </div>
+        <div>
+            <p class="inbox-count__label">New</p>
+            <strong class="inbox-count__value">{{ status_counts.get('new', 0) }}</strong>
+        </div>
+        <div>
+            <p class="inbox-count__label">All messages</p>
+            <strong class="inbox-count__value">{{ status_counts['all'] }}</strong>
+        </div>
+        <div>
+            <p class="inbox-count__label">Responded</p>
+            <strong class="inbox-count__value">{{ status_counts.get('responded', 0) }}</strong>
+        </div>
+    </section>
+
+    <form method="get" class="inbox-filters" aria-label="Filter messages">
+        <label>
+            <span>Status</span>
+            <select name="status">
+                {% for value, label in status_options %}
+                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Topic</span>
+            <select name="type">
+                {% for value, label in inquiry_options %}
+                <option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="inbox-filters__search">
+            <span>Search</span>
+            <input type="search" name="q" placeholder="Subject, email, reference" value="{{ filters.q }}">
+        </label>
+        <label>
+            <span>Per page</span>
+            <select name="per_page">
+                {% for size in [20, 40, 80] %}
+                <option value="{{ size }}" {% if filters.per_page == size %}selected{% endif %}>{{ size }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="inbox-filters__actions">
+            <button type="submit" class="btn-admin btn-admin--secondary">Apply filters</button>
+            <a href="{{ url_for('admin.messages') }}" class="link-reset">Reset</a>
+        </div>
+    </form>
+
+    <section class="admin-panel" aria-label="Messages table">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">{{ pagination.total }} results</p>
+                <h2 class="admin-panel__title">Queue</h2>
+            </div>
+            <div class="message-legend">
+                <span class="attachment-chip">📎 Attachment</span>
+                <span class="attachment-chip attachment-chip--accent">📬 Opt-in</span>
+            </div>
+        </div>
+        <div class="admin-table-wrapper">
+            <table class="inbox-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Sender</th>
+                        <th>Topic</th>
+                        <th>Status</th>
+                        <th>Received</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in messages %}
+                    {% set status_class = 'published' if m.status in ['new', 'in_progress'] else ('success' if m.status == 'responded' else 'neutral') %}
+                    <tr>
+                        <td class="inbox-table__subject">
+                            <a href="{{ url_for('admin.message_detail', message_id=m.id) }}">{{ m.subject }}</a>
+                            <p>{{ m.message[:140] }}{% if m.message|length > 140 %}…{% endif %}</p>
+                            <div class="inbox-flags">
+                                {% if m.has_attachment %}<span class="attachment-chip">📎 Attachment</span>{% endif %}
+                                {% if m.subscribe %}<span class="attachment-chip attachment-chip--accent">📬 Opt-in</span>{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <strong>{{ m.name }}</strong>
+                            <p>{{ m.email }}</p>
+                            {% if m.phone %}<p>{{ m.phone }}</p>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge--outline">{{ inquiry_labels.get(m.inquiry_type, m.inquiry_type|capitalize) }}</span>
+                            {% if m.plan_snapshot %}<p class="plan-snapshot">{{ m.plan_snapshot }}</p>{% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-badge--{{ status_class }}">{{ status_labels.get(m.status, m.status) }}</span>
+                        </td>
+                        <td>
+                            <time datetime="{{ m.created_at.isoformat() if m.created_at }}">{{ m.created_at.strftime('%b %d, %Y · %H:%M UTC') if m.created_at else '—' }}</time>
+                        </td>
+                        <td class="inbox-actions">
+                            <a class="btn-action btn-action--edit" href="{{ url_for('admin.message_detail', message_id=m.id) }}">Open</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <p class="inbox-empty">No messages match your filter.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <nav class="pagination" aria-label="Inbox pagination">
+            {% if pagination.has_prev %}
+            <a class="btn btn-soft" href="{{ url_for('admin.messages', page=pagination.prev_num, **query_args) }}">← Previous</a>
+            {% else %}
+            <span class="btn btn-soft btn-disabled">← Previous</span>
+            {% endif %}
+            <span class="pagination__info">Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+            {% if pagination.has_next %}
+            <a class="btn btn-soft" href="{{ url_for('admin.messages', page=pagination.next_num, **query_args) }}">Next →</a>
+            {% else %}
+            <span class="btn btn-soft btn-disabled">Next →</span>
+            {% endif %}
+        </nav>
+    </section>
+</div>
+{% endblock %}

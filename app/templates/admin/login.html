@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header admin-header--form">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">Restricted area</p>
+            <h1 class="admin-title">Administrator Login</h1>
+            <p class="admin-subtitle">Only approved team members may access the dashboard. All activity is logged.</p>
+        </div>
+    </header>
+    <form method="post" class="admin-form" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-input", placeholder="Email or username") }}
+                {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </div>
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-input", placeholder="••••••••") }}
+                {% for err in form.password.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </div>
+            <div class="form-group">
+                <label class="form-checkbox">
+                    {{ form.remember_me() }}
+                    <span>Keep me signed in on this device</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+                <a class="btn btn-soft" href="{{ url_for('auth.reset_password_request') }}">Need help signing in?</a>
+            </div>
+            <p class="form-help">Contact the lead architect if you require credentials. Public registration is disabled.</p>
+    </form>
+</div>
+{% endblock %}

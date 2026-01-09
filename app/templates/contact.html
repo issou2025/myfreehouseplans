@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="contact-shell" aria-labelledby="contact-heading">
+    <div class="contact-intro">
+        <p class="eyebrow">Studio inbox</p>
+        <h1 id="contact-heading">Share your brief, files, or Gumroad receipt</h1>
+        <p class="lead">Attach site information, ask about pricing tiers, or request support for a specific reference code. We answer within two business days.</p>
+        <ul class="contact-highlights">
+            <li><strong>Support email:</strong> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></li>
+            <li><strong>Phone:</strong> +22796380877</li>
+            <li><strong>WhatsApp:</strong> <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
+            <li><strong>Response window:</strong> 72h average</li>
+        </ul>
+        {% if plan_options %}
+        <div class="contact-ref-list" aria-label="Popular references">
+            <p class="muted">Recently referenced plans</p>
+            <ul>
+                {% for plan in plan_options[:3] %}
+                <li>{{ plan.reference_code }} · {{ plan.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    <div class="contact-form-card">
+        <form method="post" enctype="multipart/form-data" class="contact-form" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="form-grid form-grid--2">
+                <label>
+                    <span>{{ form.name.label.text }}</span>
+                    {{ form.name(class="form-input", aria_label='Your name') }}
+                    {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label>
+                    <span>{{ form.email.label.text }}</span>
+                    {{ form.email(class="form-input", aria_label='Your email') }}
+                    {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label>
+                    <span>{{ form.phone.label.text }}</span>
+                    {{ form.phone(class="form-input", aria_label='Your phone number', placeholder='+22796380877') }}
+                    {% for err in form.phone.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label>
+                    <span>{{ form.inquiry_type.label.text }}</span>
+                    {{ form.inquiry_type(class="form-select") }}
+                    {% for err in form.inquiry_type.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+            </div>
+            <label>
+                <span>{{ form.subject.label.text }}</span>
+                {{ form.subject(class="form-input", aria_label='Subject') }}
+                {% for err in form.subject.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <div class="form-grid form-grid--2">
+                <label>
+                    <span>{{ form.plan_reference.label.text }}</span>
+                    {{ form.plan_reference(class="form-select") }}
+                    {% for err in form.plan_reference.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label>
+                    <span>{{ form.reference_code.label.text }}</span>
+                    {{ form.reference_code(class="form-input", placeholder='MYFREEHOUSEPLANS-0123/2026') }}
+                    {% for err in form.reference_code.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+            </div>
+            <label>
+                <span>{{ form.message.label.text }}</span>
+                {{ form.message(class="form-textarea", rows=6, aria_label='Message') }}
+                {% for err in form.message.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <label class="upload-field">
+                <span>{{ form.attachment.label.text }}</span>
+                {{ form.attachment(class="form-file") }}
+                <p class="form-help">Attach PDF, DOC/DOCX, DWG, or image files up to 16 MB.</p>
+                {% for err in form.attachment.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <label class="form-checkbox">
+                {{ form.subscribe() }}
+                <span>Send me quarterly studio updates</span>
+            </label>
+            <div class="form-submit">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

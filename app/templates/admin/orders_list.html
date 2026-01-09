@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Orders</h1>
+    <table class="table">
+        <thead><tr><th>Order #</th><th>Email</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+            {% for o in orders.items %}
+            <tr>
+                <td>{{ o.order_number }}</td>
+                <td>{{ o.billing_email }}</td>
+                <td>{{ o.amount }}</td>
+                <td>{{ o.status }}</td>
+                <td>{{ o.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        {% if orders.has_prev %}<a href="{{ url_for('admin.orders', page=orders.prev_num) }}">Previous</a>{% endif %}
+        <span>Page {{ orders.page }} of {{ orders.pages }}</span>
+        {% if orders.has_next %}<a href="{{ url_for('admin.orders', page=orders.next_num) }}">Next</a>{% endif %}
+    </div>
+</div>
+{% endblock %}

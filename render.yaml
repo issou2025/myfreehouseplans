@@ -1,0 +1,38 @@
+# Render deployment configuration for MyFreeHousePlan
+services:
+  # Web Service
+  - type: web
+    name: myfreehouseplan
+    env: python
+    region: oregon  # Choose your preferred region
+    plan: free  # Change to starter or higher for production
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    releaseCommand: flask db upgrade || true
+    startCommand: gunicorn wsgi:app --workers 3 --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PROTECTED_UPLOAD_FOLDER
+        value: uploads_protected
+      - key: UPLOAD_FOLDER
+        value: app/static/uploads
+      - key: DATABASE_URL
+        fromDatabase:
+          name: myfreehouseplan-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  # Database (PostgreSQL)
+  - type: pgsql
+    name: myfreehouseplan-db
+    region: oregon
+    plan: free  # Change to starter or higher for production
+    databaseName: myfreehouseplan
+    databaseUser: myfreehouseplan_user
+    ipAllowList: []  # Empty means allow all

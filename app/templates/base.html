@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    {# SEO Meta Tags #}
+    <title>{% block title %}{{ meta.title if meta else site_name }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ meta.description if meta else site_description }}{% endblock %}">
+    {% block meta_keywords %}
+    {% if meta and meta.keywords %}
+    <meta name="keywords" content="{{ meta.keywords }}">
+    {% elif site_description %}
+    <meta name="keywords" content="{{ site_description }}">
+    {% endif %}
+    {% endblock %}
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="{% block canonical %}{{ meta.canonical_url if meta else site_url }}{% endblock %}">
+    
+    {# Open Graph / Facebook #}
+    <meta property="og:type" content="{% block og_type %}{{ meta.og_type if meta else 'website' }}{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ meta.og_url if meta else site_url }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ meta.og_title if meta else site_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ meta.og_description if meta else site_description }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ meta.og_image if meta }}{% endblock %}">
+    
+    {# Twitter Card #}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ meta.og_url if meta else site_url }}">
+    <meta name="twitter:title" content="{{ meta.og_title if meta else site_name }}">
+    <meta name="twitter:description" content="{{ meta.og_description if meta else site_description }}">
+    <meta name="twitter:image" content="{{ meta.og_image if meta }}">
+    
+    {# Favicon #}
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    
+    {# Stylesheets #}
+    <meta name="color-scheme" content="light dark">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% block extra_css %}{% endblock %}
+    
+    {# Structured Data #}
+    {% block structured_data %}{% endblock %}
+</head>
+<body class="site-body">
+    {# Header / Navigation #}
+    <header class="site-header site-header--sticky" role="banner">
+        <div class="shell site-header__inner">
+            <a class="site-brand" href="{{ url_for('main.index') }}">
+                <span class="site-brand__logo">{{ site_name }}</span>
+                <span class="site-brand__tagline">Independent architectural plan studio</span>
+            </a>
+            <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">☰</button>
+            {% set current_endpoint = request.endpoint or '' %}
+            <nav id="primary-navigation" class="nav" aria-label="Primary">
+                <a class="{% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
+                <a class="{% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">Plans</a>
+                <a class="{% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">About</a>
+                <a class="{% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a class="{% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin</a>
+                    <a class="{% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">Account</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link--muted">Logout</a>
+                {% elif current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link--muted">Logout</a>
+                {% endif %}
+            </nav>
+            <div class="site-header__cta">
+                <p class="site-header__note">Studio hours · Mon–Fri</p>
+                <a class="btn btn-soft" href="{{ url_for('main.packs') }}">View catalog</a>
+                <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Discuss a project</a>
+            </div>
+        </div>
+    </header>
+    <div class="nav-overlay" id="nav-overlay"></div>
+
+    {# Flash Messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {# Main Content #}
+    <main id="main" role="main" class="page-shell">
+        {% block content %}{% endblock %}
+    </main>
+
+    {# Footer #}
+    <footer class="site-footer">
+        <div class="shell">
+            <div class="footer-grid">
+                <div>
+                    <h3 class="site-brand__logo">{{ site_name }}</h3>
+                    <p>We curate architectural plans that translate smoothly from PDF to construction. Every set is reviewed by architects before being published.</p>
+                </div>
+                <div>
+                    <h4>Studio</h4>
+                    <ul>
+                        <li><a href="{{ url_for('main.about') }}">About the practice</a></li>
+                        <li><a href="{{ url_for('main.contact') }}">Studio contact</a></li>
+                        <li><a href="{{ url_for('main.packs') }}">Plan catalog</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Need-to-know</h4>
+                    <ul>
+                        <li><a href="{{ url_for('main.privacy') }}">Privacy policy</a></li>
+                        <li><a href="{{ url_for('main.terms') }}">Terms & conditions</a></li>
+                        <li><a href="{{ url_for('main.contact') }}">Support & aftercare</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contact</h4>
+                    <p>Email: <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></p>
+                    <p>Phone: +22796380877</p>
+                    <p>WhatsApp: <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Chat with us</a></p>
+                    <p>Based in Portland · Working worldwide</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ now.year if now else '2026' }} {{ site_name }} · Built for Render deployments.</p>
+            </div>
+        </div>
+    </footer>
+
+    {# JavaScript #}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Mobile navigation with slide-in menu
+        (function(){
+            const btn = document.querySelector('.nav-toggle');
+            const nav = document.getElementById('primary-navigation');
+            const overlay = document.getElementById('nav-overlay');
+            
+            if(!btn || !nav || !overlay) return;
+            
+            function openMenu() {
+                nav.classList.add('is-open');
+                overlay.classList.add('is-visible');
+                btn.setAttribute('aria-expanded', 'true');
+                document.body.style.overflow = 'hidden';
+            }
+            
+            function closeMenu() {
+                nav.classList.remove('is-open');
+                overlay.classList.remove('is-visible');
+                btn.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+            }
+            
+            // Toggle menu
+            btn.addEventListener('click', function(){
+                const isOpen = nav.classList.contains('is-open');
+                if(isOpen) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            });
+            
+            // Close on overlay click
+            overlay.addEventListener('click', closeMenu);
+            
+            // Close on nav link click (mobile)
+            nav.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', function() {
+                    if(window.innerWidth < 960) {
+                        closeMenu();
+                    }
+                });
+            });
+            
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if(e.key === 'Escape' && nav.classList.contains('is-open')) {
+                    closeMenu();
+                }
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if(window.innerWidth >= 960) {
+                    closeMenu();
+                }
+            });
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">✨ Studio Admin</p>
+            <h1 class="admin-title">Dashboard</h1>
+            <p class="admin-subtitle">Track your house plans, monitor sales, and manage your portfolio at a glance.</p>
+            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.messages') }}">
+                <span class="btn-admin__icon">📮</span>
+                <span>Inbox ({{ stats.messages_open }})</span>
+            </a>
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.plans') }}">
+                <span class="btn-admin__icon">📋</span>
+                <span>Manage Plans</span>
+            </a>
+            <a class="btn-admin btn-admin--primary" href="{{ url_for('admin.add_plan') }}">
+                <span class="btn-admin__icon">✨</span>
+                <span>Add New Plan</span>
+            </a>
+        </div>
+    </header>
+
+        <article class="metric-card metric-card--slate">
+            <div class="metric-card__icon">📮</div>
+            <div class="metric-card__content">
+                <p class="metric-card__label">Inbox</p>
+                <strong class="metric-card__value">{{ stats.messages_open }}</strong>
+                <span class="metric-card__meta">{{ stats.messages_new }} new today</span>
+            </div>
+        </article>
+    <section class="admin-metrics" aria-label="Key metrics">
+        <article class="metric-card metric-card--blue">
+            <div class="metric-card__icon">📊</div>
+        <section class="admin-panel" aria-labelledby="inbox-heading">
+            <div class="admin-panel__head">
+                <div>
+                    <p class="eyebrow">Support queue</p>
+                    <h2 id="inbox-heading">Inbox snapshot</h2>
+                </div>
+                <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.messages') }}">Open inbox</a>
+            </div>
+            <div class="inbox-glance" role="list">
+                <div class="inbox-pill inbox-pill--primary" role="listitem">
+                    <p>Open</p>
+                    <strong>{{ inbox_counts['open'] }}</strong>
+                </div>
+                <div class="inbox-pill inbox-pill--accent" role="listitem">
+                    <p>New</p>
+                    <strong>{{ inbox_counts['new'] }}</strong>
+                </div>
+                <div class="inbox-pill" role="listitem">
+                    <p>Responded</p>
+                    <strong>{{ inbox_counts['responded'] }}</strong>
+                </div>
+            </div>
+            <ul class="inbox-list">
+                {% for m in recent_messages %}
+                <li>
+                    <div>
+                        <a href="{{ url_for('admin.message_detail', message_id=m.id) }}" class="inbox-subject">{{ m.subject }}</a>
+                        <p class="inbox-meta">{{ m.name }} · {{ m.email }} · {{ inquiry_labels.get(m.inquiry_type, m.inquiry_type|capitalize) }}</p>
+                    </div>
+                    <div class="inbox-status">
+                        <span class="status-badge status-badge--{{ 'published' if m.status in ['new','in_progress'] else 'draft' }}">{{ status_labels.get(m.status, m.status) }}</span>
+                        <span class="badge badge--outline">#{{ m.id }}</span>
+                    </div>
+                </li>
+                {% else %}
+                <li class="inbox-empty">
+                    <p>No recent messages. Enjoy the calm ✨</p>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+            <div class="metric-card__content">
+                <p class="metric-card__label">Total Plans</p>
+                <strong class="metric-card__value">{{ stats.total_plans }}</strong>
+                <span class="metric-card__meta">{{ stats.published_plans }} published</span>
+            </div>
+        </article>
+        <article class="metric-card metric-card--green">
+            <div class="metric-card__icon">🎁</div>
+            <div class="metric-card__content">
+                <p class="metric-card__label">Free Plans</p>
+                <strong class="metric-card__value">{{ stats.free_plans }}</strong>
+                <span class="metric-card__meta">Instant PDF downloads</span>
+            </div>
+        </article>
+        <article class="metric-card metric-card--purple">
+            <div class="metric-card__icon">💎</div>
+            <div class="metric-card__content">
+                <p class="metric-card__label">Paid Plans</p>
+                <strong class="metric-card__value">{{ stats.paid_plans }}</strong>
+                <span class="metric-card__meta">Via Gumroad</span>
+            </div>
+        </article>
+        <article class="metric-card metric-card--orange">
+            <div class="metric-card__icon">🛒</div>
+            <div class="metric-card__content">
+                <p class="metric-card__label">Orders</p>
+                <strong class="metric-card__value">{{ stats.total_orders }}</strong>
+                <span class="metric-card__meta">{{ stats.completed_orders }} completed</span>
+            </div>
+        </article>
+    </section>
+
+    <section class="admin-panel" aria-labelledby="plan-table-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">📦 Plan Inventory</p>
+                <h2 class="admin-panel__title" id="plan-table-heading">Your House Plans</h2>
+            </div>
+            <a class="btn-admin btn-admin--primary" href="{{ url_for('admin.add_plan') }}">
+                <span class="btn-admin__icon">✨</span>
+                <span>Add Plan</span>
+            </a>
+        </div>
+        <div class="admin-table-wrapper">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Plan Details</th>
+                        <th>Free Pack</th>
+                        <th>Pack 2</th>
+                        <th>Pack 3</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in plan_table %}
+                    <tr>
+                        <td>
+                            <div class="plan-title">{{ plan.title }}</div>
+                            <div class="plan-category">
+                                {% if plan.categories %}
+                                    {% for c in plan.categories %}
+                                        {{ c.name }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    Uncategorized
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if plan.free_pdf_file %}
+                            <span class="status-badge status-badge--success">✓ Available</span>
+                            {% else %}
+                            <span class="status-badge status-badge--neutral">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.gumroad_pack_2_url %}
+                            <span class="status-badge status-badge--info">🔗 Linked</span>
+                            {% else %}
+                            <span class="status-badge status-badge--neutral">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.gumroad_pack_3_url %}
+                            <span class="status-badge status-badge--info">🔗 Linked</span>
+                            {% else %}
+                            <span class="status-badge status-badge--neutral">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.is_published %}
+                            <span class="status-badge status-badge--published">✓ Published</span>
+                            {% else %}
+                            <span class="status-badge status-badge--draft">✏ Draft</span>
+                            {% endif %}
+                        </td>
+                        <td class="admin-table__actions">
+                            <a class="btn-action btn-action--edit" href="{{ url_for('admin.edit_plan', id=plan.id) }}">Edit</a>
+                            <form method="post" action="{{ url_for('admin.delete_plan', id=plan.id) }}" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
+                                {{ csrf_token() if csrf_token is defined else '' }}
+                                <button type="submit" class="btn-action btn-action--delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="admin-split">
+        <section class="admin-panel" aria-labelledby="orders-heading">
+            <div class="admin-panel__head">
+                <div>
+                    <p class="eyebrow">Latest activity</p>
+                    <h2 id="orders-heading">Recent orders</h2>
+                </div>
+            </div>
+            <ul class="admin-list">
+                {% for order in recent_orders %}
+                <li>
+                    <div>
+                        <strong>{{ order.order_number }}</strong>
+                        <span>{{ order.billing_email }}</span>
+                    </div>
+                    <div class="admin-list__meta">
+                        <span>${{ order.amount }}</span>
+                        <span class="badge badge--outline">{{ order.status }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <section class="admin-panel" aria-labelledby="popular-heading">
+            <div class="admin-panel__head">
+                <div>
+                    <p class="eyebrow">Top performers</p>
+                    <h2 id="popular-heading">Most viewed plans</h2>
+                </div>
+            </div>
+            <ul class="admin-list">
+                {% for p in popular_plans %}
+                <li>
+                    <div>
+                        <a href="{{ url_for('admin.edit_plan', id=p.id) }}">{{ p.title }}</a>
+                        <span>
+                            {% if p.categories %}
+                                {{ p.categories | map(attribute='name') | join(', ') }}
+                            {% else %}
+                                Unassigned
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="admin-list__meta">
+                        <span>{{ p.views_count }} views</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+</div>
+{% endblock %}

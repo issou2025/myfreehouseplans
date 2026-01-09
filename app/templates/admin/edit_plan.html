@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header admin-header--form">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">✏️ Edit Plan</p>
+            <h1 class="admin-title">Update House Plan</h1>
+            <p class="admin-subtitle">Modify the details below to update this house plan listing.</p>
+        </div>
+    </header>
+
+    {% if plan %}
+    <section class="admin-reference-card" aria-label="Reference code">
+        <div>
+            <p class="eyebrow">Reference code</p>
+            <h2>{{ plan.reference_code }}</h2>
+            <p class="muted">Share this code with prospects so the support inbox can locate the plan instantly.</p>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if form.errors %}
+    <div class="form-alert form-alert--error" role="alert">
+        <div class="form-alert__icon">⚠️</div>
+        <div class="form-alert__content">
+            <p class="form-alert__title">Please fix the following errors:</p>
+            <ul class="form-alert__list">
+                {% for field_errors in form.errors.values() %}
+                    {% for err in field_errors %}
+                    <li>{{ err }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <form class="admin-form" method="post" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <!-- Basic Information -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">📝</div>
+                <h2 class="form-card__title">Basic Information</h2>
+            </div>
+            <div class="form-grid form-grid--2">
+                <div class="form-group">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-input", placeholder="e.g., Modern 3-Bedroom Family Home") }}
+                    <p class="form-help">The public name of the house plan as customers will see it.</p>
+                    {% for err in form.title.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.category_ids.label(class="form-label") }}
+                    <div class="category-picker" role="group" aria-label="Categories">
+                        {% for choice in form.category_ids.iter_choices() %}
+                        {% set value = choice[0] %}
+                        {% set label = choice[1] %}
+                        {% set checked = choice[2] %}
+                        <label class="category-pill">
+                            <input type="checkbox" name="category_ids" value="{{ value }}" {% if checked %}checked{% endif %}>
+                            <span>{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="form-help">Choose one or more categories. Customers will use these to filter plans.</p>
+                    {% for err in form.category_ids.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group form-group--full">
+                    {{ form.short_description.label(class="form-label") }}
+                    {{ form.short_description(class="form-textarea", rows=3, placeholder="A beautiful modern family home featuring...") }}
+                    <p class="form-help">A brief, attractive summary that highlights the main idea of the design.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architectural Details -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">🏗️</div>
+                <h2 class="form-card__title">Architectural Details</h2>
+            </div>
+            <div class="form-grid form-grid--3">
+                <div class="form-group">
+                    {{ form.bedrooms.label(class="form-label") }}
+                    {{ form.bedrooms(class="form-input", type="number") }}
+                    <p class="form-help">Total number of bedrooms included in the plan.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.bathrooms.label(class="form-label") }}
+                    {{ form.bathrooms(class="form-input", type="number", step="0.5") }}
+                    <p class="form-help">Total number of bathrooms (including guest bathrooms).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.garage.label(class="form-label") }}
+                    {{ form.garage(class="form-input", type="number") }}
+                    <p class="form-help">Number of garage spaces or parking spots.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.total_area_m2.label(class="form-label") }}
+                    {{ form.total_area_m2(class="form-input", type="number", step="0.1", placeholder="150.5") }}
+                    <p class="form-help">Total built area in square meters (m²).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.total_area_sqft.label(class="form-label") }}
+                    {{ form.total_area_sqft(class="form-input", type="number", step="1", placeholder="1620") }}
+                    <p class="form-help">Total built area in square feet (sq ft).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.stories.label(class="form-label") }}
+                    {{ form.stories(class="form-input", type="number") }}
+                    <p class="form-help">Number of floors or levels (1 = single-story).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Description -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">📄</div>
+                <h2 class="form-card__title">Full Description</h2>
+            </div>
+            <div class="form-group">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-textarea", rows=8, placeholder="Describe the house plan in detail...") }}
+                <p class="form-help">Write a complete description of the house plan, highlighting its features and benefits.</p>
+                {% for err in form.description.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </div>
+        </div>
+
+        <!-- Files & Media -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">📷</div>
+                <h2 class="form-card__title">Files & Media</h2>
+            </div>
+            <div class="form-grid form-grid--2">
+                <div class="form-group">
+                    {{ form.cover_image.label(class="form-label") }}
+                    {{ form.cover_image(class="form-input") }}
+                    <p class="form-help">Main image shown on the website to represent the plan.</p>
+                    {% for err in form.cover_image.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.free_pdf_file.label(class="form-label") }}
+                    {{ form.free_pdf_file(class="form-input") }}
+                    <p class="form-help">Free PDF file available for download without payment.</p>
+                    {% for err in form.free_pdf_file.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pack Pricing -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">💰</div>
+                <h2 class="form-card__title">Pack Pricing</h2>
+            </div>
+            <div class="form-grid form-grid--3">
+                <div class="form-group">
+                    {{ form.price_pack_1.label(class="form-label") }}
+                    {{ form.price_pack_1(class="form-input", type="number", step="0.01") }}
+                    <p class="form-help">Set to 0 to keep the introductory download free.</p>
+                    {% for err in form.price_pack_1.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.price_pack_2.label(class="form-label") }}
+                    {{ form.price_pack_2(class="form-input", type="number", step="0.01") }}
+                    <p class="form-help">Mirror the Gumroad price for the PDF Pro Pack.</p>
+                    {% for err in form.price_pack_2.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.price_pack_3.label(class="form-label") }}
+                    {{ form.price_pack_3(class="form-input", type="number", step="0.01") }}
+                    <p class="form-help">Mirror the Gumroad price for the Ultimate CAD Pack.</p>
+                    {% for err in form.price_pack_3.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Paid Packs (Gumroad) -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">💎</div>
+                <h2 class="form-card__title">Paid Packs (Gumroad)</h2>
+            </div>
+            <div class="form-grid form-grid--1">
+                <div class="form-group">
+                    {{ form.gumroad_pack_2_url.label(class="form-label") }}
+                    {{ form.gumroad_pack_2_url(class="form-input", placeholder="https://gumroad.com/l/...") }}
+                    <p class="form-help">Paste the Gumroad purchase link for the PDF Pro Pack.</p>
+                    {% for err in form.gumroad_pack_2_url.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.gumroad_pack_3_url.label(class="form-label") }}
+                    {{ form.gumroad_pack_3_url(class="form-input", placeholder="https://gumroad.com/l/...") }}
+                    <p class="form-help">Paste the Gumroad purchase link for the Ultimate CAD Pack.</p>
+                    {% for err in form.gumroad_pack_3_url.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- SEO Optimization -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">🔍</div>
+                <h2 class="form-card__title">SEO Optimization</h2>
+            </div>
+            <div class="form-grid form-grid--1">
+                <div class="form-group">
+                    {{ form.seo_title.label(class="form-label") }}
+                    {{ form.seo_title(class="form-input", placeholder="Modern 3-Bedroom House Plan | Free Download") }}
+                    <p class="form-help">Title used by search engines (Google). Keep it short and relevant.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.seo_description.label(class="form-label") }}
+                    {{ form.seo_description(class="form-textarea", rows=3, placeholder="Download free modern 3-bedroom house plans...") }}
+                    <p class="form-help">Short description shown in search results.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.seo_keywords.label(class="form-label") }}
+                    {{ form.seo_keywords(class="form-input", placeholder="house plans, modern home, 3 bedroom, free download") }}
+                    <p class="form-help">Comma-separated keywords related to this plan.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Fields (Optional) -->
+        <div class="form-card form-card--optional">
+            <div class="form-card__header">
+                <div class="form-card__icon">⚙️</div>
+                <h2 class="form-card__title">Additional Details (Optional)</h2>
+            </div>
+            <div class="form-grid form-grid--3">
+                <div class="form-group">
+                    {{ form.building_width.label(class="form-label") }}
+                    {{ form.building_width(class="form-input", type="number", step="0.1") }}
+                    <p class="form-help">Building width in meters.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.building_length.label(class="form-label") }}
+                    {{ form.building_length(class="form-input", type="number", step="0.1") }}
+                    <p class="form-help">Building length in meters.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.ceiling_height.label(class="form-label") }}
+                    {{ form.ceiling_height(class="form-input", type="number", step="0.05") }}
+                    <p class="form-help">Standard ceiling height in meters.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.roof_type.label(class="form-label") }}
+                    {{ form.roof_type(class="form-input", placeholder="e.g., Gable / Hip / Flat") }}
+                    <p class="form-help">Type of roof construction.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.structure_type.label(class="form-label") }}
+                    {{ form.structure_type(class="form-input", placeholder="e.g., Reinforced concrete") }}
+                    <p class="form-help">Main structural material.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.foundation_type.label(class="form-label") }}
+                    {{ form.foundation_type(class="form-input", placeholder="e.g., Strip footing") }}
+                    <p class="form-help">Type of foundation system.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.construction_complexity.label(class="form-label") }}
+                    {{ form.construction_complexity(class="form-select") }}
+                    <p class="form-help">Overall construction difficulty level.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.ideal_for.label(class="form-label") }}
+                    {{ form.ideal_for(class="form-input", placeholder="Family home, Vacation") }}
+                    <p class="form-help">Best use cases for this design.</p>
+                </div>
+                <div class="form-group">
+                    {{ form.suitable_climate.label(class="form-label") }}
+                    {{ form.suitable_climate(class="form-input", placeholder="Tropical, Hot & dry") }}
+                    <p class="form-help">Climate zones where this plan works best.</p>
+                </div>
+                <div class="form-group form-group--full">
+                    {{ form.room_details.label(class="form-label") }}
+                    {{ form.room_details(class="form-textarea", rows=4) }}
+                    <p class="form-help">Detailed room-by-room breakdown (optional).</p>
+                </div>
+                <div class="form-group form-group--full">
+                    {{ form.main_features.label(class="form-label") }}
+                    {{ form.main_features(class="form-textarea", rows=4) }}
+                    <p class="form-help">List key features (one per line).</p>
+                </div>
+                <div class="form-group form-group--full">
+                    {{ form.construction_notes.label(class="form-label") }}
+                    {{ form.construction_notes(class="form-textarea", rows=4) }}
+                    <p class="form-help">Technical notes for builders (optional).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.estimated_construction_cost_note.label(class="form-label") }}
+                    {{ form.estimated_construction_cost_note(class="form-input") }}
+                    <p class="form-help">Construction cost estimate (optional).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.price.label(class="form-label") }}
+                    {{ form.price(class="form-input", type="number", step="0.01") }}
+                    <p class="form-help">Regular price (optional).</p>
+                </div>
+                <div class="form-group">
+                    {{ form.sale_price.label(class="form-label") }}
+                    {{ form.sale_price(class="form-input", type="number", step="0.01") }}
+                    <p class="form-help">Sale price (optional).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <div class="form-toggles">
+                <label class="form-checkbox">
+                    {{ form.is_published() }}
+                    <span class="form-checkbox__label">{{ form.is_published.label.text }}</span>
+                    <p class="form-checkbox__help">Make this plan visible on the website</p>
+                </label>
+                <label class="form-checkbox">
+                    {{ form.is_featured() }}
+                    <span class="form-checkbox__label">{{ form.is_featured.label.text }}</span>
+                    <p class="form-checkbox__help">Show in featured section</p>
+                </label>
+            </div>
+            <div class="form-submit">
+                {{ form.submit(class="btn-submit") }}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

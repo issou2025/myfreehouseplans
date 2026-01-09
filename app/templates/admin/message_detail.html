@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell message-shell">
+    <a class="link-back" href="{{ url_for('admin.messages') }}">← Back to inbox</a>
+
+    <header class="message-header">
+        <div>
+            <p class="admin-eyebrow">Message #{{ message.id }}</p>
+            <h1>{{ message.subject }}</h1>
+            <p class="message-recipient">{{ message.name }} · {{ message.email }}</p>
+            <div class="message-tags">
+                <span class="status-badge status-badge--{{ 'published' if message.status in ['new','in_progress'] else ('success' if message.status == 'responded' else 'neutral') }}">{{ status_labels.get(message.status, message.status) }}</span>
+                <span class="badge badge--outline">{{ inquiry_labels.get(message.inquiry_type, message.inquiry_type|capitalize) }}</span>
+                {% if message.plan_snapshot %}<span class="badge badge--outline">{{ message.plan_snapshot }}</span>{% endif %}
+                {% if message.reference_code %}<span class="badge badge--outline">Ref {{ message.reference_code }}</span>{% endif %}
+                {% if message.subscribe %}<span class="attachment-chip attachment-chip--accent">📬 Opt-in</span>{% endif %}
+            </div>
+        </div>
+        <div class="message-actions">
+            {% if message.has_attachment %}
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.message_attachment', message_id=message.id) }}">Download attachment</a>
+            {% endif %}
+            <a class="btn-admin btn-admin--ghost" href="mailto:{{ message.email }}?subject=Re:%20{{ message.subject|urlencode }}">Reply via email</a>
+        </div>
+    </header>
+
+    <div class="message-detail-grid">
+        <section class="message-card" aria-labelledby="message-body-heading">
+            <h2 id="message-body-heading">Message</h2>
+            <div class="message-body">
+                {{ message.message | e | replace('\n', '<br>') | safe }}
+            </div>
+            <dl class="message-meta">
+                <div>
+                    <dt>Received</dt>
+                    <dd>{{ message.created_at.strftime('%b %d, %Y · %H:%M UTC') if message.created_at else '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Phone</dt>
+                    <dd>{{ message.phone or 'Not provided' }}</dd>
+                </div>
+                <div>
+                    <dt>Plan link</dt>
+                    <dd>
+                        {% if message.plan_id %}
+                            <a href="{{ url_for('admin.edit_plan', id=message.plan_id) }}">Go to plan</a>
+                        {% else %}
+                            Not selected
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <aside class="message-sidebar" aria-labelledby="message-status-heading">
+            <h2 id="message-status-heading">Update status</h2>
+            <form method="post" class="message-form">
+                {{ form.hidden_tag() }}
+                <label>
+                    <span>{{ form.status.label.text }}</span>
+                    {{ form.status(class="form-select") }}
+                    {% for error in form.status.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </label>
+                <label>
+                    <span>{{ form.admin_notes.label.text }}</span>
+                    {{ form.admin_notes(class="form-textarea", rows=6) }}
+                    {% for error in form.admin_notes.errors %}<span class="form-error">{{ error }}</span>{% endfor %}
+                </label>
+                <button type="submit" class="btn-admin btn-admin--primary">Save changes</button>
+            </form>
+
+            <div class="message-system">
+                <h3>System info</h3>
+                <ul>
+                    <li>
+                        <span>Email delivery</span>
+                        <strong>{{ message.email_status|capitalize }}</strong>
+                        {% if message.email_error %}<p class="message-note">{{ message.email_error }}</p>{% endif %}
+                    </li>
+                    <li>
+                        <span>Last updated</span>
+                        <strong>{{ message.status_updated_at.strftime('%b %d, %Y · %H:%M UTC') if message.status_updated_at else '—' }}</strong>
+                    </li>
+                    <li>
+                        <span>Responded</span>
+                        <strong>{{ message.responded_at.strftime('%b %d, %Y · %H:%M UTC') if message.responded_at else 'Not marked yet' }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

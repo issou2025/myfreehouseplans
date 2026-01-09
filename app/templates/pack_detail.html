@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+{% if product_schema %}
+<script type="application/ld+json">{{ product_schema | tojson | safe }}</script>
+{% endif %}
+{% if breadcrumb_schema %}
+<script type="application/ld+json">{{ breadcrumb_schema | tojson | safe }}</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="shell">
+    <article class="plan-detail" itemscope itemtype="https://schema.org/Product">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="{{ url_for('main.index') }}">Home</a>
+            <a href="{{ url_for('main.packs') }}">Plans</a>
+            <span aria-current="page">{{ plan.title }}</span>
+        </nav>
+
+        <div class="plan-hero">
+            <div class="plan-hero__media">
+                {% set hero_image = plan.cover_image or plan.main_image %}
+                {% if hero_image %}
+                <figure>
+                    <img src="{{ url_for('static', filename='uploads/' + hero_image) }}" alt="{{ plan.title }}" itemprop="image">
+                    <figcaption>{{ plan.title }} · Perspective study</figcaption>
+                </figure>
+                {% else %}
+                <div class="plan-card__placeholder">Rendering in progress</div>
+                {% endif %}
+                <div class="plan-hero__tags">
+                    {% if plan.is_featured %}<span class="badge badge--glow">Signature pick</span>{% endif %}
+                    {% if plan.suitable_climate %}<span class="badge badge--outline">{{ plan.suitable_climate }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="plan-hero__summary">
+                <p class="plan-card__eyebrow">
+                    {% if plan.categories %}
+                        {% for c in plan.categories %}
+                            <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        Residential concept
+                    {% endif %}
+                </p>
+                <h1 itemprop="name">{{ plan.title }}</h1>
+                <p class="plan-hero__lead" itemprop="description">{{ plan.architectural_summary }}</p>
+                <div class="plan-meta-bar">
+                    <span class="badge badge--ghost">Ref {{ plan.reference_code }}</span>
+                    {% if plan.has_free_download %}
+                        <span class="badge badge--soft">Free pack ready</span>
+                    {% else %}
+                        <span class="badge badge--outline">Free preview coming soon</span>
+                    {% endif %}
+                </div>
+                <ul class="plan-chips" aria-label="Key characteristics">
+                    {% if plan.area_sqft %}<li>{{ plan.area_sqft|round|int }} sq ft</li>{% endif %}
+                    {% if plan.area_m2 %}<li>{{ plan.area_m2|round(1) }} m²</li>{% endif %}
+                    {% if plan.bedrooms_count %}<li>{{ plan.bedrooms_count }} bedrooms</li>{% endif %}
+                    {% if plan.bathrooms_count %}<li>{{ plan.bathrooms_count }} baths</li>{% endif %}
+                    {% if plan.floors_count %}<li>{{ plan.floors_count }} levels</li>{% endif %}
+                    {% if plan.parking_count %}<li>{{ plan.parking_count }} parking</li>{% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <section class="plan-overview" aria-labelledby="overview-heading">
+            {% set raw_overview = (plan.short_description | striptags) if plan.short_description else ((plan.description | striptags) if plan.description else '') %}
+            {% set overview_snippet = raw_overview[:280] if raw_overview else 'Studio-ready concept for modern living and hospitality projects.' %}
+            {% set desc_length = (plan.description | striptags | length) if plan.description else 0 %}
+            <div class="plan-overview__summary">
+                <p class="eyebrow">Overview</p>
+                <h2 id="overview-heading">Project snapshot</h2>
+                <p class="lead">{{ overview_snippet }}{% if (not plan.short_description) and desc_length > 280 %}…{% endif %}</p>
+                <div class="plan-keynotes">
+                    <div>
+                        <span class="plan-keynotes__label">Suitable climate</span>
+                        <span>{{ plan.suitable_climate or 'Any temperate region' }}</span>
+                    </div>
+                    <div>
+                        <span class="plan-keynotes__label">Ideal occupants</span>
+                        <span>{{ plan.ideal_for or 'Growing families or boutique hospitality' }}</span>
+                    </div>
+                    <div>
+                        <span class="plan-keynotes__label">Construction complexity</span>
+                        <span>{{ plan.construction_complexity or 'Standard GC coordination' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="plan-overview__facts">
+                <dl class="plan-facts">
+                    <div><dt>Total area</dt><dd>{% if plan.area_sqft %}{{ plan.area_sqft|round|int }} sq ft{% else %}—{% endif %}{% if plan.area_m2 %}<span class="muted"> · {{ plan.area_m2|round(1) }} m²</span>{% endif %}</dd></div>
+                    <div><dt>Footprint</dt><dd>{{ plan.dimensions_summary or 'Awaiting field data' }}</dd></div>
+                    <div><dt>Bedrooms</dt><dd>{{ plan.bedrooms_count or '—' }}</dd></div>
+                    <div><dt>Bathrooms</dt><dd>{{ plan.bathrooms_count or '—' }}</dd></div>
+                    <div><dt>Levels</dt><dd>{{ plan.floors_count or '—' }}</dd></div>
+                    <div><dt>Parking</dt><dd>{{ plan.parking_count or '—' }}</dd></div>
+                    <div><dt>Roof</dt><dd>{{ plan.roof_type or 'Flexible' }}</dd></div>
+                    <div><dt>Structure</dt><dd>{{ plan.structure_type or 'Conventional frame' }}</dd></div>
+                    <div><dt>Foundation</dt><dd>{{ plan.foundation_type or 'Slab or crawlspace' }}</dd></div>
+                    <div><dt>Ceiling height</dt><dd>{% if plan.ceiling_height %}{{ plan.ceiling_height }} m{% else %}Varies{% endif %}</dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="pack-comparison" aria-labelledby="pack-heading" itemprop="offers" itemscope itemtype="https://schema.org/AggregateOffer">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Pack comparison</p>
+                    <h2 id="pack-heading">Choose the documentation that fits your stage</h2>
+                    <p class="muted">Start with the free preview, then step up to full PDF or CAD deliverables when your consultants are ready.</p>
+                </div>
+            </div>
+            {% set package_meta_default = {
+                'name': 'Studio Pack',
+                'description': 'Comprehensive documentation suitable for coordination and review.',
+                'features': ['Portable PDF deliverable', 'Studio support via email'],
+                'cta_label': 'Contact the studio',
+                'card_class': 'standard',
+                'button_class': 'package-button--neutral'
+            } %}
+            {% set package_meta = {
+                1: {
+                    'name': 'Free Pack',
+                    'description': 'Preview-ready PDF sampler for early client reviews and fast references.',
+                    'features': ['Metric + imperial teaser sheets', 'Reference schedules and finishes summary'],
+                    'cta_label': 'Free Download',
+                    'card_class': 'free',
+                    'button_class': 'package-button--free'
+                },
+                2: {
+                    'name': 'PDF Pro Pack',
+                    'description': 'Full PDF set for permit coordination, elevations, and annotated sections.',
+                    'features': ['Complete PDF deliverable', 'Elevation + section annotations'],
+                    'cta_label': 'Buy PDF Pack',
+                    'card_class': 'pro',
+                    'button_class': 'package-button--pro'
+                },
+                3: {
+                    'name': 'Ultimate CAD Pack',
+                    'description': 'Production-ready CAD and IFC files plus every PDF in the library.',
+                    'features': ['2D/3D CAD + IFC handoff', 'Includes the full PDF Pro Pack'],
+                    'cta_label': 'Buy CAD Pack',
+                    'card_class': 'cad',
+                    'button_class': 'package-button--cad'
+                }
+            } %}
+            <div class="pack-comparison__grid">
+                {% for tier in plan.pricing_tiers %}
+                    {% set meta = package_meta.get(tier.pack, package_meta_default) %}
+                    <article class="package-card package-card--{{ meta.card_class }}" aria-label="{{ meta.name }}">
+                        <header class="package-card__header">
+                            <p class="eyebrow">Pack 0{{ tier.pack }}</p>
+                            <h3>{{ meta.name }}</h3>
+                            <p class="package-price">
+                                {% if tier.price and tier.price > 0 %}
+                                    ${{ tier.price|round(0)|int }} USD
+                                {% elif tier.pack == 1 %}
+                                    Free
+                                {% else %}
+                                    Contact for quote
+                                {% endif %}
+                            </p>
+                        </header>
+                        <p class="package-copy">{{ meta.description }}</p>
+                        <ul class="package-points">
+                            {% for point in meta.features %}
+                                <li>{{ point }}</li>
+                            {% endfor %}
+                        </ul>
+                        <div class="package-cta">
+                            {% if tier.pack == 1 %}
+                                {% if plan.free_pdf_file %}
+                                    <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.download_free', plan_id=plan.id) }}">{{ meta.cta_label }}</a>
+                                {% else %}
+                                    <button class="package-button package-button--disabled" disabled>Preview unavailable</button>
+                                {% endif %}
+                            {% elif tier.pack == 2 %}
+                                {% if plan.gumroad_pack_2_url %}
+                                    <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=2) }}">{{ meta.cta_label }}</a>
+                                {% else %}
+                                    <button class="package-button package-button--disabled" disabled>Reserve via studio</button>
+                                {% endif %}
+                            {% else %}
+                                {% if plan.gumroad_pack_3_url %}
+                                    <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=3) }}">{{ meta.cta_label }}</a>
+                                {% else %}
+                                    <button class="package-button package-button--disabled" disabled>CAD bundle in progress</button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+            <p class="package-note">Need licensing help? <a href="{{ url_for('main.contact') }}">Email entreprise2rc@gmail.com</a> or <a href="https://wa.me/22796380877" target="_blank" rel="noopener">message us on WhatsApp</a>.</p>
+            <meta itemprop="priceCurrency" content="USD">
+            <meta itemprop="lowPrice" content="{{ plan.starting_paid_price or 0 }}">
+            <meta itemprop="offerCount" content="{{ plan.pricing_tiers|length }}">
+        </section>
+
+        <section class="plan-panels" aria-label="Plan insights">
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Key characteristics</p>
+                    <h2>Project data</h2>
+                </div>
+                <div class="spec-grid">
+                    <div class="spec-item"><div class="spec-k">Total area</div><div class="spec-v">{% if plan.area_sqft %}{{ plan.area_sqft|round|int }} sq ft{% else %}—{% endif %}{% if plan.area_m2 %}<span class="muted"> · {{ plan.area_m2|round(1) }} m²</span>{% endif %}</div></div>
+                    <div class="spec-item"><div class="spec-k">Footprint</div><div class="spec-v">{{ plan.dimensions_summary or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Bedrooms</div><div class="spec-v">{{ plan.bedrooms_count or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Bathrooms</div><div class="spec-v">{{ plan.bathrooms_count or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Levels</div><div class="spec-v">{{ plan.floors_count or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Parking</div><div class="spec-v">{{ plan.parking_count or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Roof</div><div class="spec-v">{{ plan.roof_type or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Structure</div><div class="spec-v">{{ plan.structure_type or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Foundation</div><div class="spec-v">{{ plan.foundation_type or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Ceiling height</div><div class="spec-v">{% if plan.ceiling_height %}{{ plan.ceiling_height }} m{% else %}—{% endif %}</div></div>
+                    <div class="spec-item"><div class="spec-k">Complexity</div><div class="spec-v">{{ plan.construction_complexity or '—' }}</div></div>
+                    <div class="spec-item"><div class="spec-k">Ideal for</div><div class="spec-v">{{ plan.ideal_for or '—' }}</div></div>
+                </div>
+            </article>
+
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Editorial note</p>
+                    <h2>Design overview</h2>
+                </div>
+                <div class="rich-text" itemprop="description">{{ plan.description | safe }}</div>
+            </article>
+
+            {% if plan.main_features %}
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Highlights</p>
+                    <h2>Main features</h2>
+                </div>
+                <div class="rich-text">{{ plan.main_features | replace('\n','<br>') | safe }}</div>
+            </article>
+            {% endif %}
+
+            {% if plan.room_details %}
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Layouts</p>
+                    <h2>Room-by-room</h2>
+                </div>
+                <div class="rich-text">{{ plan.room_details | replace('\n','<br>') | safe }}</div>
+            </article>
+            {% endif %}
+
+            {% if plan.construction_notes or plan.estimated_construction_cost_note %}
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Site & build</p>
+                    <h2>Construction notes</h2>
+                </div>
+                {% if plan.estimated_construction_cost_note %}
+                    <p class="muted">{{ plan.estimated_construction_cost_note }}</p>
+                {% endif %}
+                {% if plan.construction_notes %}
+                    <div class="rich-text">{{ plan.construction_notes | replace('\n','<br>') | safe }}</div>
+                {% endif %}
+            </article>
+            {% endif %}
+        </section>
+
+        {% if related_plans %}
+        <section class="plan-related" aria-label="Related plans">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">You might also like</p>
+                    <h2>Similar layouts</h2>
+                </div>
+            </div>
+            <ul class="related-list">
+                {% for p in related_plans %}
+                    <li><a href="{{ url_for('main.pack_detail', slug=p.slug) }}">{{ p.title }}</a></li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set applied = filters or {} %}
+{% set persist = query_args or {} %}
+<div class="shell admin-shell">
+    <header class="section-heading">
+        <div>
+            <p class="eyebrow">Content</p>
+            <h1>House plans</h1>
+            <p class="lead">Search, filter, and track every deliverable before publishing updates.</p>
+        </div>
+        <a href="{{ url_for('admin.add_plan') }}" class="btn btn-primary">Add new plan</a>
+    </header>
+
+    {% if stats %}
+    <section class="admin-stats">
+        <article>
+            <p class="admin-stats__label">Total</p>
+            <p class="admin-stats__value">{{ stats.total }}</p>
+        </article>
+        <article>
+            <p class="admin-stats__label">Published</p>
+            <p class="admin-stats__value">{{ stats.published }}</p>
+        </article>
+        <article>
+            <p class="admin-stats__label">Drafts</p>
+            <p class="admin-stats__value">{{ stats.draft }}</p>
+        </article>
+        <article>
+            <p class="admin-stats__label">Free downloads</p>
+            <p class="admin-stats__value">{{ stats.free }}</p>
+        </article>
+    </section>
+    {% endif %}
+
+    <section class="admin-filter-card">
+        <form method="get" class="admin-filter-form" aria-label="Filter plans">
+            <label>
+                <span>Search</span>
+                <input type="text" name="q" placeholder="Reference code or title" value="{{ applied.search or '' }}">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="" {% if not applied.status %}selected{% endif %}>All</option>
+                    <option value="published" {% if applied.status == 'published' %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if applied.status == 'draft' %}selected{% endif %}>Draft</option>
+                </select>
+            </label>
+            <label>
+                <span>Category</span>
+                <select name="category">
+                    <option value="" {% if not applied.category %}selected{% endif %}>All collections</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if applied.category == category.id %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Pack type</span>
+                <select name="pack">
+                    <option value="" {% if not applied.pack %}selected{% endif %}>All</option>
+                    <option value="free" {% if applied.pack == 'free' %}selected{% endif %}>Free download ready</option>
+                    <option value="paid" {% if applied.pack == 'paid' %}selected{% endif %}>Paid packs linked</option>
+                </select>
+            </label>
+            <label>
+                <span>Sort</span>
+                <select name="sort">
+                    <option value="newest" {% if applied.sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="updated" {% if applied.sort == 'updated' %}selected{% endif %}>Recently updated</option>
+                    <option value="title" {% if applied.sort == 'title' %}selected{% endif %}>Title A → Z</option>
+                    <option value="views" {% if applied.sort == 'views' %}selected{% endif %}>Most viewed</option>
+                    <option value="price_low" {% if applied.sort == 'price_low' %}selected{% endif %}>Display price · Low → High</option>
+                </select>
+            </label>
+            <label>
+                <span>Rows</span>
+                <select name="per_page">
+                    {% for size in [10,20,50,100] %}
+                    <option value="{{ size }}" {% if applied.per_page == size %}selected{% endif %}>{{ size }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <div class="admin-filter-actions">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{{ url_for('admin.plans') }}" class="btn btn-soft">Reset</a>
+            </div>
+        </form>
+    </section>
+
+    <div class="table-responsive admin-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Pricing tiers</th>
+                    <th>Delivery</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in plans.items %}
+                <tr>
+                    <td>
+                        <div class="plan-ref">
+                            <span class="plan-ref__code">{{ p.reference_code }}</span>
+                            <div>
+                                <strong>{{ p.title }}</strong>
+                                <div class="muted">
+                                    {% if p.categories %}
+                                        {% for category in p.categories %}
+                                            <span class="badge badge--ghost">{{ category.name }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge badge--outline">Uncategorized</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="pack-stack">
+                            <div>
+                                <span class="pack-label">Free Pack</span>
+                                <strong>{% if p.price_pack_1 and p.price_pack_1 > 0 %}${{ p.price_pack_1 }}{% else %}Free{% endif %}</strong>
+                            </div>
+                            <div>
+                                <span class="pack-label">PDF Pro</span>
+                                <strong>{% if p.price_pack_2 %}${{ p.price_pack_2 }}{% else %}&mdash;{% endif %}</strong>
+                            </div>
+                            <div>
+                                <span class="pack-label">Ultimate CAD</span>
+                                <strong>{% if p.price_pack_3 %}${{ p.price_pack_3 }}{% else %}&mdash;{% endif %}</strong>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="delivery-stack">
+                            <span class="badge {% if p.free_pdf_file %}badge--soft{% else %}badge--outline{% endif %}">Free PDF {% if p.free_pdf_file %}ready{% else %}missing{% endif %}</span>
+                            <span class="badge {% if p.gumroad_pack_2_url %}badge--soft{% else %}badge--outline{% endif %}">PDF Pro {% if p.gumroad_pack_2_url %}linked{% else %}pending{% endif %}</span>
+                            <span class="badge {% if p.gumroad_pack_3_url %}badge--soft{% else %}badge--outline{% endif %}">CAD {% if p.gumroad_pack_3_url %}linked{% else %}pending{% endif %}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if p.is_published %}
+                            <span class="badge badge--glow">Published</span>
+                        {% else %}
+                            <span class="badge badge--outline">Draft</span>
+                        {% endif %}
+                        <div class="muted">Views: {{ p.views_count }}</div>
+                    </td>
+                    <td>
+                        <div>{{ p.updated_at.strftime('%b %d, %Y') if p.updated_at else '—' }}</div>
+                        <small class="muted">Created {{ p.created_at.strftime('%b %d, %Y') }}</small>
+                    </td>
+                    <td class="admin-table__actions">
+                        <a class="btn btn-soft" href="{{ url_for('admin.edit_plan', id=p.id) }}">Edit</a>
+                        <button type="button" class="btn btn-outline" disabled title="Plan deletion is disabled">Deletion locked</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if plans.items|length == 0 %}
+        <div class="empty-state">
+            <p>No plans match the selected filters.</p>
+            <a href="{{ url_for('admin.plans') }}" class="btn btn-outline">Clear filters</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <nav class="pagination" aria-label="Pagination">
+        {% if plans.has_prev %}
+            <a class="pagination__link" href="{{ url_for('admin.plans', page=plans.prev_num, **persist) }}">Previous</a>
+        {% endif %}
+        <span class="pagination__link is-active">Page {{ plans.page }} of {{ plans.pages }}</span>
+        {% if plans.has_next %}
+            <a class="pagination__link" href="{{ url_for('admin.plans', page=plans.next_num, **persist) }}">Next</a>
+        {% endif %}
+    </nav>
+</div>
+{% endblock %}

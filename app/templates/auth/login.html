@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Login</h1>
+
+    {% if form.csrf_token.errors %}
+        <div class="alert alert-danger">
+            {% for err in form.csrf_token.errors %}{{ err }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <div>{{ form.email.label }}{{ form.email(size=40) }}{% for err in form.email.errors %}<span class="error">{{ err }}</span>{% endfor %}</div>
+        <div>{{ form.password.label }}{{ form.password(size=40) }}{% for err in form.password.errors %}<span class="error">{{ err }}</span>{% endfor %}</div>
+        <div>{{ form.remember_me() }} {{ form.remember_me.label }}</div>
+        <div>{{ form.submit(class="btn") }}</div>
+    </form>
+    <p><a href="{{ url_for('auth.reset_password_request') }}">Forgot your password?</a></p>
+</div>
+{% endblock %}

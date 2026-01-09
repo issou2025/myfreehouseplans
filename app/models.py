@@ -1,0 +1,545 @@
+"""
+Database Models for MyFreeHousePlan Application
+
+This module defines all database models using SQLAlchemy ORM.
+Models include User, HousePlan, Category, and Order.
+"""
+
+from app.extensions import db, login_manager
+from flask import current_app
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+from slugify import slugify
+
+
+house_plan_categories = db.Table(
+    'house_plan_categories',
+    db.Column('plan_id', db.Integer, db.ForeignKey('house_plans.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('category_id', db.Integer, db.ForeignKey('categories.id', ondelete='CASCADE'), primary_key=True),
+    db.Index('ix_house_plan_categories_plan_id', 'plan_id'),
+    db.Index('ix_house_plan_categories_category_id', 'category_id'),
+)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login"""
+    return User.query.get(int(user_id))
+
+
+class User(UserMixin, db.Model):
+    """User model for authentication and customer management"""
+    
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    
+    # Relationships
+    orders = db.relationship('Order', backref='customer', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        """Hash and set user password"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Verify password against hash"""
+        return check_password_hash(self.password_hash, password)
+    
+    @property
+    def full_name(self):
+        """Return user's full name"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.username
+    
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+
+class Category(db.Model):
+    """Category model for organizing house plans"""
+    
+    __tablename__ = 'categories'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships (many-to-many)
+    plans = db.relationship(
+        'HousePlan',
+        secondary=house_plan_categories,
+        back_populates='categories',
+        lazy='selectin',
+        passive_deletes=True,
+    )
+    
+    def __init__(self, **kwargs):
+        super(Category, self).__init__(**kwargs)
+        if not self.slug and self.name:
+            self.slug = slugify(self.name)
+    
+    def __repr__(self):
+        return f'<Category {self.name}>'
+
+
+class HousePlan(db.Model):
+    """House Plan model for architectural plan listings"""
+    
+    __tablename__ = 'house_plans'
+    REFERENCE_PREFIX = 'MYFREEHOUSEPLANS'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(250), unique=True, nullable=False, index=True)
+    reference_code = db.Column(db.String(48), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text, nullable=False)
+    short_description = db.Column(db.String(300))
+
+    # Rich architectural characteristics (new)
+    total_area_m2 = db.Column(db.Float)
+    total_area_sqft = db.Column(db.Float)
+    number_of_bedrooms = db.Column(db.Integer)
+    number_of_bathrooms = db.Column(db.Float)
+    number_of_floors = db.Column(db.Integer)
+    building_width = db.Column(db.Float)
+    building_length = db.Column(db.Float)
+    roof_type = db.Column(db.String(100))
+    structure_type = db.Column(db.String(120))
+    foundation_type = db.Column(db.String(120))
+    parking_spaces = db.Column(db.Integer)
+    ceiling_height = db.Column(db.Float)
+    construction_complexity = db.Column(db.String(30))
+    estimated_construction_cost_note = db.Column(db.String(300))
+    suitable_climate = db.Column(db.String(200))
+    ideal_for = db.Column(db.String(200))
+    main_features = db.Column(db.Text)
+    room_details = db.Column(db.Text)
+    construction_notes = db.Column(db.Text)
+    
+    # Delivery
+    # Pack 1 (Free): Admin uploads a PDF. Stored server-side.
+    free_pdf_file = db.Column(db.String(300))
+    price_pack_1 = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+
+    # Pack 2/3 (Paid): Admin provides Gumroad purchase links.
+    gumroad_pack_2_url = db.Column(db.String(500))
+    gumroad_pack_3_url = db.Column(db.String(500))
+
+    price_pack_2 = db.Column(db.Numeric(10, 2))
+    price_pack_3 = db.Column(db.Numeric(10, 2))
+    zip_pack_2 = db.Column(db.String(300))
+    zip_pack_3 = db.Column(db.String(300))
+
+    # Media
+    cover_image = db.Column(db.String(300))
+    
+    # Plan specifications
+    bedrooms = db.Column(db.Integer)
+    bathrooms = db.Column(db.Float)
+    square_feet = db.Column(db.Integer)
+    stories = db.Column(db.Integer, default=1)
+    garage = db.Column(db.Integer, default=0)  # Number of car spaces
+    
+    # Pricing
+    # Legacy / display price (keeps compatibility)
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    sale_price = db.Column(db.Numeric(10, 2))  # Optional sale price
+    
+    # Media
+    main_image = db.Column(db.String(300))
+    floor_plan_image = db.Column(db.String(300))
+    pdf_file = db.Column(db.String(300))  # PDF plans file
+    
+    # SEO and metadata
+    seo_title = db.Column(db.String(200))
+    seo_description = db.Column(db.String(300))
+    seo_keywords = db.Column(db.String(300))
+    
+    # Status and visibility
+    is_featured = db.Column(db.Boolean, default=False)
+    is_published = db.Column(db.Boolean, default=True)
+    views_count = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    categories = db.relationship(
+        'Category',
+        secondary=house_plan_categories,
+        back_populates='plans',
+        lazy='selectin',
+    )
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    orders = db.relationship('Order', backref='plan', lazy='dynamic')
+    messages = db.relationship('ContactMessage', backref='plan', lazy='dynamic')
+    
+    def __init__(self, **kwargs):
+        super(HousePlan, self).__init__(**kwargs)
+        # Generate slug and ensure uniqueness
+        if not self.slug and self.title:
+            base = slugify(self.title)
+            self.slug = self._generate_unique_slug(base)
+
+        # Provide a short description if missing
+        if not self.short_description and self.description:
+            self.short_description = self.description[:297] + '...' if len(self.description) > 300 else self.description
+
+        if not self.reference_code:
+            self.ensure_reference_code()
+
+    @staticmethod
+    def _generate_unique_slug(base_slug):
+        """Generate a unique slug by appending a numeric suffix if needed."""
+        candidate = base_slug
+        index = 1
+        while HousePlan.query.filter_by(slug=candidate).first() is not None:
+            candidate = f"{base_slug}-{index}"
+            index += 1
+        return candidate
+    
+    @property
+    def current_price(self):
+        """Return sale price if available, otherwise regular price"""
+        return self.sale_price if self.sale_price else self.price
+    
+    @property
+    def is_on_sale(self):
+        """Check if plan is on sale"""
+        return bool(self.sale_price and self.sale_price < self.price)
+    
+    def increment_views(self):
+        """Increment view counter"""
+        try:
+            self.views_count += 1
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            try:
+                current_app.logger.exception('Failed to increment views for plan %s: %s', self.id, exc)
+            except RuntimeError:
+                pass
+
+    @staticmethod
+    def _parse_reference_sequence(code):
+        try:
+            segment = code.split('-', 1)[1]
+            numeric = segment.split('/', 1)[0]
+            return int(numeric)
+        except (ValueError, IndexError, AttributeError):
+            return 0
+
+    @classmethod
+    def generate_reference_code(cls):
+        """Generate the next reference code in the MYFREEHOUSEPLANS-XXXX/YYYY format."""
+        year = datetime.utcnow().year
+        like_pattern = f"{cls.REFERENCE_PREFIX}-%/{year}"
+        latest = (
+            cls.query.filter(cls.reference_code.like(like_pattern))
+            .order_by(cls.reference_code.desc())
+            .first()
+        )
+        next_sequence = cls._parse_reference_sequence(latest.reference_code) + 1 if latest else 1
+        return f"{cls.REFERENCE_PREFIX}-{next_sequence:04d}/{year}"
+
+    def ensure_reference_code(self):
+        if not self.reference_code:
+            self.reference_code = self.generate_reference_code()
+        return self.reference_code
+
+    @staticmethod
+    def _normalize_price(value):
+        if value in (None, ''):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def pricing_tiers(self):
+        """Return a structured view of pack pricing for UI rendering."""
+        free_price = self._normalize_price(self.price_pack_1) or 0
+        tiers = [
+            {
+                'pack': 1,
+                'label': 'Free Pack',
+                'price': free_price,
+                'is_free': free_price == 0,
+                'available': bool(self.free_pdf_file),
+            },
+            {
+                'pack': 2,
+                'label': 'PDF Pro Pack',
+                'price': self.price_pack_2,
+                'is_free': False,
+                'available': bool(self.gumroad_pack_2_url),
+            },
+            {
+                'pack': 3,
+                'label': 'Ultimate CAD Pack',
+                'price': self.price_pack_3,
+                'is_free': False,
+                'available': bool(self.gumroad_pack_3_url),
+            },
+        ]
+        return tiers
+
+    @property
+    def has_free_download(self):
+        return bool(self.free_pdf_file)
+
+    @property
+    def starting_paid_price(self):
+        """Return the lowest paid tier price for marketing cards."""
+        prices = [
+            self.sale_price,
+            self.price_pack_2,
+            self.price_pack_3,
+            self.price,
+        ]
+        normalized = []
+        for value in prices:
+            price = self._normalize_price(value)
+            if price:
+                normalized.append(price)
+        return min(normalized) if normalized else None
+
+    @staticmethod
+    def _sqft_from_m2(m2_value):
+        try:
+            return float(m2_value) * 10.7639
+        except Exception:
+            return None
+
+    @staticmethod
+    def _m2_from_sqft(sqft_value):
+        try:
+            return float(sqft_value) / 10.7639
+        except Exception:
+            return None
+
+    @property
+    def area_sqft(self):
+        """Preferred area in square feet (new fields first, then legacy)."""
+        if self.total_area_sqft:
+            return self.total_area_sqft
+        if self.square_feet:
+            return float(self.square_feet)
+        if self.total_area_m2:
+            return self._sqft_from_m2(self.total_area_m2)
+        return None
+
+    @property
+    def area_m2(self):
+        """Preferred area in square meters (new fields first, then derived)."""
+        if self.total_area_m2:
+            return self.total_area_m2
+        if self.total_area_sqft:
+            return self._m2_from_sqft(self.total_area_sqft)
+        if self.square_feet:
+            return self._m2_from_sqft(self.square_feet)
+        return None
+
+    @property
+    def bedrooms_count(self):
+        return self.number_of_bedrooms if self.number_of_bedrooms is not None else self.bedrooms
+
+    @property
+    def bathrooms_count(self):
+        return self.number_of_bathrooms if self.number_of_bathrooms is not None else self.bathrooms
+
+    @property
+    def floors_count(self):
+        return self.number_of_floors if self.number_of_floors is not None else self.stories
+
+    @property
+    def parking_count(self):
+        return self.parking_spaces if self.parking_spaces is not None else self.garage
+
+    @property
+    def dimensions_summary(self):
+        """Return a human-friendly building footprint summary."""
+        if self.building_width and self.building_length:
+            return f"{self.building_width:g} m × {self.building_length:g} m"
+        if self.building_width:
+            return f"Width {self.building_width:g} m"
+        if self.building_length:
+            return f"Length {self.building_length:g} m"
+        return None
+
+    @property
+    def architectural_summary(self):
+        """Short, client-facing summary used in the hero section."""
+        if self.short_description:
+            return self.short_description
+
+        parts = []
+        if self.floors_count:
+            parts.append(f"{int(self.floors_count)}-level")
+        if self.bedrooms_count:
+            parts.append(f"{int(self.bedrooms_count)}-bed")
+        if self.bathrooms_count:
+            try:
+                b = float(self.bathrooms_count)
+                parts.append(f"{b:g}-bath")
+            except Exception:
+                pass
+        if self.roof_type:
+            parts.append(f"{self.roof_type.strip().lower()} roof")
+        if parts:
+            return "A practical " + ", ".join(parts) + " layout designed for straightforward construction and comfortable day-to-day living."
+
+        return "A well-balanced house plan designed for comfortable living and clear, buildable documentation."
+
+    # SEO helper properties
+    @property
+    def meta_title(self):
+        """Return SEO title for templates"""
+        return self.seo_title or self.title
+
+    @property
+    def meta_description(self):
+        """Return SEO description for templates"""
+        return self.seo_description or self.short_description or ''
+
+    @property
+    def meta_keywords(self):
+        """Return SEO keywords for templates"""
+        return self.seo_keywords or ''
+    
+    def __repr__(self):
+        return f'<HousePlan {self.title}>'
+
+
+class Order(db.Model):
+    """Order model for tracking purchases"""
+    
+    __tablename__ = 'orders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Foreign keys
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('house_plans.id'), nullable=False)
+    
+    # Order details
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    status = db.Column(db.String(50), default='pending')  # pending, completed, failed, refunded
+    
+    # Payment information
+    payment_method = db.Column(db.String(50))
+    payment_status = db.Column(db.String(50), default='pending')
+    transaction_id = db.Column(db.String(200))
+    
+    # Customer information
+    billing_email = db.Column(db.String(120), nullable=False)
+    billing_name = db.Column(db.String(200))
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    def __init__(self, **kwargs):
+        super(Order, self).__init__(**kwargs)
+        if not self.order_number:
+            # Generate unique order number
+            self.order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    
+    @property
+    def is_completed(self):
+        """Check if order is completed"""
+        return self.status == 'completed'
+    
+    def __repr__(self):
+        return f'<Order {self.order_number}>'
+
+
+class ContactMessage(db.Model):
+    """Store inbound contact form submissions for admin follow-up."""
+
+    __tablename__ = 'messages'
+
+    STATUS_NEW = 'new'
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_RESPONDED = 'responded'
+    STATUS_ARCHIVED = 'archived'
+    STATUS_CHOICES = (
+        (STATUS_NEW, 'New'),
+        (STATUS_IN_PROGRESS, 'In progress'),
+        (STATUS_RESPONDED, 'Responded'),
+        (STATUS_ARCHIVED, 'Archived'),
+    )
+
+    EMAIL_PENDING = 'pending'
+    EMAIL_SENT = 'sent'
+    EMAIL_FAILED = 'failed'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(200), nullable=False, index=True)
+    phone = db.Column(db.String(40))
+    subject = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    inquiry_type = db.Column(db.String(40), nullable=False)
+    reference_code = db.Column(db.String(60))
+    subscribe = db.Column(db.Boolean, default=False)
+
+    plan_id = db.Column(db.Integer, db.ForeignKey('house_plans.id', ondelete='SET NULL'))
+    plan_snapshot = db.Column(db.String(255))
+
+    attachment_path = db.Column(db.String(300))
+    attachment_name = db.Column(db.String(255))
+    attachment_mime = db.Column(db.String(120))
+
+    status = db.Column(db.String(20), nullable=False, default=STATUS_NEW, index=True)
+    status_updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    responded_at = db.Column(db.DateTime)
+
+    email_status = db.Column(db.String(20), nullable=False, default=EMAIL_PENDING)
+    email_error = db.Column(db.Text)
+
+    admin_notes = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, server_default=db.func.now(), index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_messages_status_created', 'status', 'created_at'),
+    )
+
+    def mark_status(self, new_status):
+        """Update status while keeping timestamps consistent."""
+        if new_status not in {choice for choice, _ in self.STATUS_CHOICES}:
+            return
+        if self.status != new_status:
+            self.status = new_status
+            self.status_updated_at = datetime.utcnow()
+            if new_status == self.STATUS_RESPONDED and not self.responded_at:
+                self.responded_at = datetime.utcnow()
+
+    @property
+    def has_attachment(self):
+        return bool(self.attachment_path)
+
+    @property
+    def is_open(self):
+        return self.status in {self.STATUS_NEW, self.STATUS_IN_PROGRESS}
+
+    def __repr__(self):
+        return f'<ContactMessage {self.id} {self.subject!r}>'

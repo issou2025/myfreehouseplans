@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero hero--architect" aria-labelledby="hero-heading">
+    <div class="shell hero__grid">
+        <div class="hero__content">
+            <p class="eyebrow">Independent architecture studio</p>
+            <h1 id="hero-heading">Human-crafted house plans for real construction timelines</h1>
+            <p class="lead">{{ site_description }} Each plan is annotated by our architects with build notes, consultant hand-offs, and pricing tiers that respect modern delivery expectations.</p>
+            <div class="hero__actions">
+                <a href="{{ url_for('main.packs') }}" class="btn btn-primary">Browse the catalog</a>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-outline">Speak with an architect</a>
+            </div>
+            <div class="hero__metrics" aria-label="Studio metrics">
+                <div>
+                    {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
+                    <span class="metric-value">{{ stats.total_plans if stats else total_showcase }}</span>
+                    <span class="metric-label">Ready-to-build plans</span>
+                </div>
+                <div>
+                    <span class="metric-value">72h</span>
+                    <span class="metric-label">Average support response</span>
+                </div>
+                <div>
+                    <span class="metric-value">12+</span>
+                    <span class="metric-label">Architectural typologies</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero__preview" aria-hidden="true">
+            <div class="hero__visual">
+                <div class="hero__visual-frame"></div>
+                <div class="hero__tag">Downloadable sets</div>
+                <div class="hero__tag hero__tag--soft">Metric & Imperial</div>
+                <div class="hero__tag hero__tag--outline">CAD deliverables</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if featured_plans %}
+<section class="section" aria-labelledby="featured-heading">
+    <div class="shell">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Signature collection</p>
+                <h2 id="featured-heading">Architect-approved favorites</h2>
+            </div>
+            <a class="text-link" href="{{ url_for('main.packs') }}">View entire catalog</a>
+        </div>
+        <div class="plan-grid">
+            {% for plan in featured_plans %}
+            <article class="plan-card" itemscope itemtype="https://schema.org/Product">
+                <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
+                    {% set card_image = plan.cover_image or plan.main_image %}
+                    {% if card_image %}
+                        <img src="{{ url_for('static', filename='uploads/' + card_image) }}" alt="{{ plan.title }}" itemprop="image">
+                    {% else %}
+                        <div class="plan-card__placeholder">Rendering in progress</div>
+                    {% endif %}
+                    <span class="badge badge--glow">Featured</span>
+                </a>
+                <div class="plan-card__body">
+                    <p class="plan-card__eyebrow">
+                        {% if plan.categories %}
+                            {% for c in plan.categories %}
+                                <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Modern living
+                        {% endif %}
+                    </p>
+                    <h3 itemprop="name"><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
+                    <p class="plan-card__summary" itemprop="description">{{ plan.architectural_summary }}</p>
+                    <dl class="plan-card__specs" aria-label="Key characteristics">
+                        {% if plan.area_sqft %}<div><dt>Area</dt><dd>{{ plan.area_sqft|round|int }} sq ft</dd></div>{% endif %}
+                        {% if plan.bedrooms_count %}<div><dt>Beds</dt><dd>{{ plan.bedrooms_count }}</dd></div>{% endif %}
+                        {% if plan.bathrooms_count %}<div><dt>Baths</dt><dd>{{ plan.bathrooms_count }}</dd></div>{% endif %}
+                        {% if plan.floors_count %}<div><dt>Levels</dt><dd>{{ plan.floors_count }}</dd></div>{% endif %}
+                    </dl>
+                    <div class="plan-card__tiers" aria-label="Pack pricing overview">
+                        {% for tier in plan.pricing_tiers %}
+                        <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
+                            <span>Pack 0{{ tier.pack }}</span>
+                            <span>
+                                {% if tier.price and tier.price > 0 %}
+                                    ${{ tier.price|round(0)|int }}
+                                {% elif tier.pack == 1 %}
+                                    Free
+                                {% else %}
+                                    Forthcoming
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                        <div class="plan-card__price plan-card__price--stack">
+                            <span class="plan-card__ref">Ref {{ plan.reference_code }}</span>
+                            {% if plan.starting_paid_price %}
+                                <span class="price price--primary" itemprop="price">From ${{ plan.starting_paid_price|round(0)|int }}</span>
+                            {% else %}
+                                <span class="price price--primary" itemprop="price">Free</span>
+                            {% endif %}
+                            <meta itemprop="priceCurrency" content="USD">
+                        </div>
+                        <div class="plan-card__cta">
+                            <a class="btn btn-ghost" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">View plan</a>
+                            <a class="text-link" href="{{ url_for('main.contact') }}">Request guidance</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if recent_plans %}
+<section class="section section--soft" aria-labelledby="recent-heading">
+    <div class="shell">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Fresh releases</p>
+                <h2 id="recent-heading">New layouts every week</h2>
+            </div>
+        </div>
+        <div class="plan-grid plan-grid--scroll">
+            {% for plan in recent_plans %}
+            <article class="plan-card plan-card--compact">
+                <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">
+                    {% set card_image = plan.cover_image or plan.main_image %}
+                    {% if card_image %}
+                        <img src="{{ url_for('static', filename='uploads/' + card_image) }}" alt="{{ plan.title }}">
+                    {% else %}
+                        <div class="plan-card__placeholder">Visual coming soon</div>
+                    {% endif %}
+                    {% if plan.is_on_sale %}<span class="badge badge--outline">On sale</span>{% endif %}
+                </a>
+                <div class="plan-card__body">
+                    <p class="plan-card__eyebrow">
+                        {% if plan.categories %}
+                            {% for c in plan.categories %}
+                                <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Residential
+                        {% endif %}
+                    </p>
+                    <h3><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
+                    <p class="plan-card__summary">{{ plan.architectural_summary }}</p>
+                    <ul class="plan-card__chips plan-card__stats" aria-label="Key characteristics">
+                        {% if plan.area_sqft %}<li>{{ plan.area_sqft|round|int }} sq ft</li>{% endif %}
+                        {% if plan.bedrooms_count %}<li>{{ plan.bedrooms_count }} beds</li>{% endif %}
+                        {% if plan.bathrooms_count %}<li>{{ plan.bathrooms_count }} baths</li>{% endif %}
+                    </ul>
+                    <div class="plan-card__tiers plan-card__tiers--inline" aria-label="Pack pricing overview">
+                        {% for tier in plan.pricing_tiers %}
+                        <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
+                            <span>Pack 0{{ tier.pack }}</span>
+                            <span>
+                                {% if tier.price and tier.price > 0 %}
+                                    ${{ tier.price|round(0)|int }}
+                                {% elif tier.pack == 1 %}
+                                    Free
+                                {% else %}
+                                    Forthcoming
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="plan-card__footer">
+                        <span class="plan-card__ref">Ref {{ plan.reference_code }}</span>
+                        <a class="btn btn-outline" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">View plan</a>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="section section--duo" aria-labelledby="features-heading">
+    <div class="shell">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Studio advantages</p>
+                <h2 id="features-heading">Architecture expertise packaged for developers</h2>
+            </div>
+        </div>
+        <div class="value-grid value-grid--three">
+            <article>
+                <h3>Professional documentation</h3>
+                <p>Full drawing sets authored by licensed architects with precise dimensions, sections, and schedules.</p>
+            </article>
+            <article>
+                <h3>Tailored deliverables</h3>
+                <p>Start with the free PDF, then upgrade to Gumroad packs with metric, imperial, and CAD formats.</p>
+            </article>
+            <article>
+                <h3>Advisory support</h3>
+                <p>Our team guides you through code compliance, climate adaptation, and structural coordination.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section section--cta" aria-labelledby="cta-heading">
+    <div class="shell section-cta">
+        <div>
+            <p class="eyebrow">Need guidance?</p>
+            <h2 id="cta-heading">Let’s align on your next build</h2>
+            <p>Share your site, climate, and program—our architects will help match the right plan or craft a bespoke approach.</p>
+        </div>
+        <div class="section-cta__actions">
+            <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Start a conversation</a>
+            <a class="btn btn-soft" href="{{ url_for('main.about') }}">Meet the studio</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
