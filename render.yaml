@@ -4,6 +4,7 @@ services:
   - type: web
     name: myfreehouseplan
     env: python
+    pythonVersion: 3.11.9
     region: oregon  # Choose your preferred region
     plan: free  # Change to starter or higher for production
     branch: main
