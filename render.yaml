@@ -9,7 +9,7 @@ services:
     branch: main
     buildCommand: pip install -r requirements.txt
     releaseCommand: flask db upgrade || true
-    startCommand: gunicorn wsgi:app --workers 3 --bind 0.0.0.0:$PORT --timeout 120
+    startCommand: gunicorn wsgi:app
     envVars:
       - key: FLASK_APP
         value: wsgi.py
@@ -26,7 +26,7 @@ services:
           name: myfreehouseplan-db
           property: connectionString
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.9
 
   # Database (PostgreSQL)
   - type: pgsql
