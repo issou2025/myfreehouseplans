@@ -1,27 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
-	--color-bg: #f3f4f7;
-	--color-surface: #ffffff;
-	--color-surface-alt: #f8f9fb;
-	--color-border: #e4e7ec;
-	--color-border-strong: #cfd4dc;
-	--color-text: #0f172a;
-	--color-muted: #475467;
-	--color-soft: #98a2b3;
-	--color-primary: #111d4a;
-	--color-accent: #c8863d;
+	/* Natural & elegant palette */
+	--color-bg: #FAFAF8; /* off-white page background */
+	--color-surface: #FFFFFF; /* primary card surface */
+	--color-surface-alt: #F3EFE7; /* warm sand / beige */
+	--color-border: #E8E6E0; /* soft border */
+	--color-border-strong: #D8D6CF;
+	--color-text: #222222; /* charcoal text for readability */
+	--color-muted: #5B5B54; /* subtle muted text */
+	--color-soft: #9AA19A;
+	--color-primary: #1F3D2B; /* deep forest green */
+	--color-accent: #C97A5D; /* soft clay / terracotta */
 	--font-sans: 'Sora', 'Space Grotesk', 'Inter', 'Helvetica Neue', Arial, sans-serif;
 	--font-display: 'Sora', 'Space Grotesk', 'Inter', 'Helvetica Neue', Arial, sans-serif;
 	--radius-sm: 12px;
 	--radius-md: 18px;
 	--radius-lg: 26px;
-	--shadow-sm: 0 10px 30px rgba(15, 23, 42, 0.08);
-	--shadow-md: 0 16px 45px rgba(15, 23, 42, 0.12);
-	--shadow-ring: 0 18px 60px rgba(12, 18, 34, 0.12);
-	--shadow-elevated: 0 25px 65px rgba(15, 23, 42, 0.18);
+	--shadow-sm: 0 8px 20px rgba(31, 61, 43, 0.06);
+	--shadow-md: 0 12px 36px rgba(31, 61, 43, 0.08);
+	--shadow-ring: 0 12px 30px rgba(31, 61, 43, 0.06);
+	--shadow-elevated: 0 20px 48px rgba(31, 61, 43, 0.10);
 	--gradient-ink: linear-gradient(135deg, #0b1225 0%, #131f3c 50%, #0b1022 100%);
-	--gradient-accent: linear-gradient(135deg, #f7b16a 0%, #f2934d 50%, #dc6e33 100%);
+	--gradient-accent: linear-gradient(135deg, #E8A88F 0%, #D07A5E 50%, #C97A5D 100%);
 }
 
 html, body {
@@ -67,22 +68,22 @@ p {
 }
 
 .package-card {
-	background: white;
-	border-radius: 20px;
-	padding: 24px;
+	background: var(--color-surface);
+	border-radius: 16px;
+	padding: 20px;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
-	border: 2px solid transparent;
+	gap: 14px;
+	box-shadow: var(--shadow-sm);
+	border: 1px solid transparent;
 }
 
 .package-card__header h3 { margin: 0; font-size: 1.4rem; }
 .package-card__header .eyebrow { margin-bottom: 6px; }
 
-.package-card--free { border-color: rgba(34,197,94,0.35); background: linear-gradient(145deg, #f0fff4, #ffffff); }
-.package-card--pro { border-color: rgba(37,99,235,0.35); }
-.package-card--cad { border-color: rgba(124,58,237,0.35); }
+.package-card--free { border-color: rgba(31,61,43,0.08); background: linear-gradient(145deg, rgba(31,61,43,0.02), var(--color-surface)); }
+.package-card--pro { border-color: rgba(201,122,93,0.12); }
+.package-card--cad { border-color: rgba(31,61,43,0.08); }
 
 .package-price {
 	font-size: 1.5rem;
@@ -127,26 +128,27 @@ p {
 
 .package-button {
 	border: none;
-	border-radius: 999px;
+	border-radius: 12px;
 	padding: 12px 18px;
 	font-weight: 600;
-	font-size: 0.95rem;
+	font-size: 0.98rem;
 	text-align: center;
 	cursor: pointer;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 	text-decoration: none;
 	width: 100%;
+	box-shadow: none;
 }
 
 .package-button:hover:not(.package-button--disabled) {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+	box-shadow: var(--shadow-md);
 }
 
-.package-button--free { background: #16a34a; color: white; }
-.package-button--pro { background: #2563eb; color: white; }
-.package-button--cad { background: #7c3aed; color: white; }
-.package-button--neutral { background: #0f172a; color: white; }
+.package-button--free { background: var(--color-primary); color: #fff; }
+.package-button--pro { background: var(--color-accent); color: #fff; }
+.package-button--cad { background: var(--color-primary); color: #fff; }
+.package-button--neutral { background: #222222; color: #fff; }
 .package-button--disabled { background: var(--color-border); color: var(--color-soft); cursor: not-allowed; box-shadow: none; }
 
 .package-note {
@@ -255,26 +257,25 @@ p {
 	position: absolute;
 	top: 12px;
 	right: 12px;
-	border: 1px solid rgba(255,255,255,0.8);
-	background: rgba(15,23,42,0.55);
-	color: #fff;
+	border: 1px solid rgba(0,0,0,0.06);
+	background: rgba(255,255,255,0.92);
+	color: var(--color-muted);
 	border-radius: 999px;
 	padding: 6px 12px;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	font-size: 0.8rem;
+	font-size: 0.85rem;
 	font-weight: 600;
 	cursor: pointer;
-	backdrop-filter: blur(6px);
-	transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+	transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
 .favorite-toggle:hover,
 .favorite-toggle.is-active {
-	background: #fff;
+	background: var(--color-surface-alt);
 	color: var(--color-primary);
-	border-color: rgba(15,23,42,0.15);
+	border-color: rgba(31,61,43,0.08);
 }
 
 .favorite-toggle__icon {
@@ -342,12 +343,12 @@ p {
 .favorite-card {
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: 18px;
+	border-radius: 14px;
 	padding: 16px;
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+	box-shadow: var(--shadow-sm);
 }
 
 .favorite-card__media {
@@ -4290,6 +4291,40 @@ body {
 /* Smooth scrolling for anchor links */
 html {
 	scroll-behavior: smooth;
+}
+
+/* Theme helpers: primary/secondary button tokens and subtle outlines */
+.btn-primary,
+.btn--primary {
+	background: var(--color-primary);
+	color: #fff;
+	border: none;
+	border-radius: 10px;
+	padding: 10px 14px;
+	box-shadow: var(--shadow-sm);
+}
+
+.btn-accent,
+.btn--accent {
+	background: var(--color-accent);
+	color: #fff;
+	border: none;
+	border-radius: 10px;
+	padding: 10px 14px;
+}
+
+.btn-outline,
+.btn--outline {
+	background: transparent;
+	border: 1px solid var(--color-border);
+	color: var(--color-text);
+	border-radius: 10px;
+	padding: 10px 14px;
+}
+
+/* Mobile: ensure larger tap targets and full-width primary actions */
+@media (max-width: 600px) {
+	.btn-primary, .btn--primary, .btn-accent, .package-button { display:block; width:100%; padding:14px 18px; }
 }
 
 /* Improve button press feedback on mobile */
