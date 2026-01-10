@@ -1,28 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-	/* Natural & elegant palette */
-	--color-bg: #FAFAF8; /* off-white page background */
-	--color-surface: #FFFFFF; /* primary card surface */
-	--color-surface-alt: #F3EFE7; /* warm sand / beige */
-	--color-border: #E8E6E0; /* soft border */
-	--color-border-strong: #D8D6CF;
-	--color-text: #222222; /* charcoal text for readability */
-	--color-muted: #5B5B54; /* subtle muted text */
-	--color-soft: #9AA19A;
-	--color-primary: #1F3D2B; /* deep forest green */
-	--color-accent: #C97A5D; /* soft clay / terracotta */
-	--font-sans: 'Sora', 'Space Grotesk', 'Inter', 'Helvetica Neue', Arial, sans-serif;
-	--font-display: 'Sora', 'Space Grotesk', 'Inter', 'Helvetica Neue', Arial, sans-serif;
-	--radius-sm: 12px;
-	--radius-md: 18px;
-	--radius-lg: 26px;
-	--shadow-sm: 0 8px 20px rgba(31, 61, 43, 0.06);
-	--shadow-md: 0 12px 36px rgba(31, 61, 43, 0.08);
-	--shadow-ring: 0 12px 30px rgba(31, 61, 43, 0.06);
-	--shadow-elevated: 0 20px 48px rgba(31, 61, 43, 0.10);
-	--gradient-ink: linear-gradient(135deg, #0b1225 0%, #131f3c 50%, #0b1022 100%);
-	--gradient-accent: linear-gradient(135deg, #E8A88F 0%, #D07A5E 50%, #C97A5D 100%);
+	/* Modern vibrant design tokens (mapped to existing variable names) */
+	--color-bg: #F9FAFB; /* background main */
+	--color-surface: #FFFFFF; /* card surface */
+	--color-surface-alt: #FFFFFF; /* keep surfaces clean */
+	--color-border: #D1D5DB; /* neutral border */
+	--color-border-strong: #9CA3AF;
+	--color-text: #111827; /* primary text */
+	--color-muted: #6B7280; /* muted text */
+	--color-soft: #94A3B8;
+	--color-primary: #2563EB; /* vivid blue (primary) */
+	--color-secondary: #22C55E; /* vibrant green (success/highlight) */
+	--color-accent: #F59E0B; /* warm amber (accent) */
+	--color-danger: #EF4444; /* clean red */
+	--font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--radius-sm: 8px;
+	--radius-md: 14px;
+	--radius-lg: 24px;
+	--shadow-sm: 0 10px 25px rgba(0,0,0,0.06);
+	--shadow-md: 0 18px 40px rgba(0,0,0,0.10);
+	--shadow-ring: 0 6px 18px rgba(37,99,235,0.12);
+	--shadow-elevated: 0 18px 40px rgba(0,0,0,0.10);
+	--focus-ring: 0 0 0 4px rgba(147,197,253,0.35);
 }
 
 html, body {
@@ -145,6 +146,54 @@ p {
 	box-shadow: var(--shadow-md);
 }
 
+/* Forms & Buttons — modern vibrant theme (preserve layout order and spacing) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+	height: 44px;
+	min-height: 44px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	border: 1px solid var(--color-border);
+	background: #FFFFFF;
+	color: var(--color-text);
+	font-family: var(--font-sans);
+	font-size: 0.95rem;
+	transition: box-shadow 0.18s ease, border-color 0.12s ease;
+}
+
+textarea { min-height: 120px; padding-top: 12px; padding-bottom: 12px; }
+
+input:focus, textarea:focus, select:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: var(--focus-ring);
+}
+
+label { display: block; margin-bottom: 8px; color: var(--color-text); font-weight: 600; }
+
+.form-row { display: flex; gap: 12px; align-items: center; }
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+.btn, .package-button { border-radius: 10px; font-weight: 600; }
+.btn-primary, .package-button--free {
+	background: var(--color-primary);
+	color: #fff;
+	box-shadow: 0 6px 18px rgba(37,99,235,0.12);
+	transition: transform var(--transition, 180ms) ease, box-shadow var(--transition, 180ms) ease;
+}
+.btn-primary:hover, .package-button--free:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+.btn-secondary { background: var(--color-secondary); color: #fff; }
+.price-tag { color: var(--color-accent); font-weight: 700; }
+
+/* Ensure clickable areas meet minimum touch target */
+button, .btn { min-height: 44px; padding: 10px 16px; }
+
+
 .package-button--free { background: var(--color-primary); color: #fff; }
 .package-button--pro { background: var(--color-accent); color: #fff; }
 .package-button--cad { background: var(--color-primary); color: #fff; }
@@ -155,6 +204,18 @@ p {
 	margin: 0;
 	font-size: 0.85rem;
 	color: var(--color-muted);
+}
+
+/* Cards — consistent padding, radius, and subtle elevation */
+.package-card, .favorite-card, .favorite-card__media, .package-card--free, .package-card--pro, .package-card--cad {
+	border-radius: var(--radius-md);
+	padding: 20px;
+	box-shadow: var(--shadow-sm);
+}
+
+.package-card:hover, .favorite-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-md);
 }
 
 .microcopy {
