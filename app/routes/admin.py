@@ -48,28 +48,30 @@ def ensure_admin_exists():
         except (OperationalError, IntegrityError) as db_exc:
             current_app.logger.error('Database error when checking for existing admin: %s', db_exc)
             db.session.rollback()
-            # If table doesn't exist or schema mismatch, recreate
-            try:
-                db.session.execute(db.text('DROP TABLE IF EXISTS users'))
-                db.session.commit()
-                db.create_all()
-            except Exception as e:
-                current_app.logger.error('Failed to recreate users table: %s', e)
+            # In production we must not attempt destructive recovery here.
+            # Return None so the caller can fail gracefully and operator can
+            # run migrations manually.
             return None
 
         if admin_user:
             return admin_user
 
-        seeded_admin = User(
-            username='admin',
-            password='123',
-            role='superadmin',
-            is_active=True,
-        )
-        db.session.add(seeded_admin)
-        db.session.commit()
-        current_app.logger.info('Admin bootstrap completed via login for %s', seeded_admin.username)
-        return seeded_admin
+        # Auto-seeding an admin account is allowed only in non-production
+        # development/testing environments. In production, operators should
+        # provision admin credentials via CLI or environment configuration.
+        if current_app.config.get('DEBUG') or current_app.config.get('TESTING'):
+            seeded_admin = User(
+                username='admin',
+                password='123',
+                role='superadmin',
+                is_active=True,
+            )
+            db.session.add(seeded_admin)
+            db.session.commit()
+            current_app.logger.info('Admin bootstrap completed via login for %s', seeded_admin.username)
+            return seeded_admin
+        current_app.logger.warning('No admin user found; skipping auto-seed in production-like environment.')
+        return None
     except (OperationalError, IntegrityError) as exc:
         db.session.rollback()
         current_app.logger.error('Admin bootstrap DB error: %s', exc)
