@@ -81,6 +81,16 @@ def create_app(config_name='default'):
             db.create_all()
             app.logger.info('Database tables initialized successfully')
 
+            # Check critical env vars for admin bootstrap and sessions
+            missing = []
+            if not app.config.get('SECRET_KEY') or app.config.get('SECRET_KEY') == 'dev-secret-key-change-in-production':
+                missing.append('SECRET_KEY')
+            if not os.getenv('ADMIN_PASSWORD') and not os.getenv('ADMIN_DEFAULT_PASSWORD'):
+                # Not fatal, but log a warning so operators can set secure admin password
+                app.logger.warning('ADMIN_PASSWORD not set in environment; using default bootstrap password (non-fatal).')
+            if missing:
+                app.logger.warning('Potential security configuration missing: %s', ','.join(missing))
+
             # Ensure at least one administrator exists using environment credentials
             admin_seed = _bootstrap_admin_user(app)
             if admin_seed:

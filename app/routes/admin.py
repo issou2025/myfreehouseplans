@@ -21,6 +21,7 @@ from slugify import slugify
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file
 from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
+from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
 
 # Create Blueprint
@@ -40,7 +41,15 @@ def ensure_admin_exists():
     """Bootstrap an admin account from environment variables when missing."""
 
     try:
-        admin_user = User.query.filter_by(is_admin=True).first()
+        # Query safely for existing admin
+        admin_user = None
+        try:
+            admin_user = User.query.filter_by(is_admin=True).first()
+        except (OperationalError, IntegrityError) as db_exc:
+            current_app.logger.error('Database error when checking for existing admin: %s', db_exc)
+            db.session.rollback()
+            return None
+
         if admin_user:
             return admin_user
 
@@ -59,6 +68,10 @@ def ensure_admin_exists():
         db.session.commit()
         current_app.logger.info('Admin bootstrap completed via login for %s', username)
         return seeded_admin
+    except (OperationalError, IntegrityError) as exc:
+        db.session.rollback()
+        current_app.logger.error('Admin bootstrap DB error: %s', exc)
+        return None
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error('Admin bootstrap attempt failed: %s', exc)
@@ -93,10 +106,15 @@ def admin_login():
                 user = User.query.filter_by(email=identifier.lower()).first()
             else:
                 user = User.query.filter_by(username=identifier).first()
-        except Exception as e:
-            current_app.logger.error('Admin login query failed: %s', e)
+        except (OperationalError, IntegrityError) as e:
+            current_app.logger.error('Admin login DB error: %s', e)
             db.session.rollback()
-            flash('Database error. Please contact support.', 'danger')
+            flash('Database temporarily unavailable. Please try again shortly.', 'danger')
+            return render_template('admin/login.html', form=form)
+        except Exception as e:
+            current_app.logger.exception('Unexpected error during admin login query: %s', e)
+            db.session.rollback()
+            flash('An unexpected error occurred. Please contact support.', 'danger')
             return render_template('admin/login.html', form=form)
 
         if not user or not user.is_admin or not user.check_password(form.password.data):
