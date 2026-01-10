@@ -43,6 +43,11 @@
                     {% for err in form.title.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
                 </div>
                 <div class="form-group">
+                    {{ form.plan_type.label(class="form-label") }}
+                    {{ form.plan_type(class="form-select") }}
+                    <p class="form-help">Used for discovery filters and recommendation rails.</p>
+                </div>
+                <div class="form-group">
                     {{ form.category_ids.label(class="form-label") }}
                     <div class="category-picker" role="group" aria-label="Categories">
                         {% for choice in form.category_ids.iter_choices() %}
@@ -62,6 +67,28 @@
                     {{ form.short_description.label(class="form-label") }}
                     {{ form.short_description(class="form-textarea", rows=3, placeholder="A beautiful modern family home featuring...") }}
                     <p class="form-help">A brief, attractive summary that highlights the main idea of the design.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editorial depth -->
+        <div class="form-card">
+            <div class="form-card__header">
+                <div class="form-card__icon">🧭</div>
+                <h2 class="form-card__title">Editorial depth</h2>
+            </div>
+            <div class="form-grid form-grid--1">
+                <div class="form-group">
+                    {{ form.design_philosophy.label(class="form-label") }}
+                    {{ form.design_philosophy(class="form-textarea", rows=5, placeholder="Explain the intent: light, proportion, circulation, structure...") }}
+                </div>
+                <div class="form-group">
+                    {{ form.lifestyle_suitability.label(class="form-label") }}
+                    {{ form.lifestyle_suitability(class="form-textarea", rows=5, placeholder="Who this plan fits best: families, rental operators, aging-in-place...") }}
+                </div>
+                <div class="form-group">
+                    {{ form.customization_potential.label(class="form-label") }}
+                    {{ form.customization_potential(class="form-textarea", rows=5, placeholder="What can be adapted: roofline, façade, room swaps, climate tuning...") }}
                 </div>
             </div>
         </div>

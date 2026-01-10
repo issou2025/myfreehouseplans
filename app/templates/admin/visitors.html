@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">🧭 Studio Analytics</p>
+            <h1 class="admin-title">Visitor overview</h1>
+            <p class="admin-subtitle">Daily traffic is captured privately (IP + browser only). Names and emails appear only if a visitor used the contact form.</p>
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.dashboard') }}">
+                <span class="btn-admin__icon">↩</span>
+                <span>Back to dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="visitor-metrics" aria-label="Visitor highlights">
+        <article class="visitor-card visitor-card--primary">
+            <p class="visitor-card__label">Today's visitors</p>
+            <strong class="visitor-card__value">{{ stats.today }}</strong>
+            <p class="visitor-card__note">Updates every page load.</p>
+        </article>
+        <article class="visitor-card visitor-card--accent">
+            <p class="visitor-card__label">Last 7 days</p>
+            <strong class="visitor-card__value">{{ stats.week }}</strong>
+            <p class="visitor-card__note">Rolling seven-day window.</p>
+        </article>
+        <article class="visitor-card">
+            <p class="visitor-card__label">Total visitors</p>
+            <strong class="visitor-card__value">{{ stats.total }}</strong>
+            <p class="visitor-card__note">Since tracking was enabled.</p>
+        </article>
+    </section>
+
+    <section class="admin-panel" aria-labelledby="visitor-table-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">Daily activity</p>
+                <h2 class="admin-panel__title" id="visitor-table-heading">Visitors grouped by day</h2>
+                <p class="admin-panel__hint">Each row shows page, time, and whether the visitor stayed anonymous or shared contact details.</p>
+            </div>
+        </div>
+        <div class="admin-table-wrapper">
+            {% if visitors %}
+            <table class="admin-table visitors-table">
+                <thead>
+                    <tr>
+                        <th>Visitor</th>
+                        <th>Email</th>
+                        <th>Page</th>
+                        <th>Time</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set current_date = None %}
+                    {% for visit in visitors %}
+                        {% if current_date != visit.visit_date %}
+                            {% set current_date = visit.visit_date %}
+                            <tr class="visitors-date-row">
+                                <td colspan="5">
+                                    <div class="visitors-date">
+                                        <div>
+                                            <p class="eyebrow">{{ visit.visit_date.strftime('%A, %B %d, %Y') }}</p>
+                                            <strong>{{ date_counts.get(visit.visit_date, 0) }} visits</strong>
+                                        </div>
+                                        <span class="badge badge--outline">Daily rollup</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td>
+                                <div class="visitor-identity">
+                                    <strong>{{ visit.visitor_name or 'Anonymous visitor' }}</strong>
+                                    <p class="visitor-note">
+                                        {% if visit.visitor_name or visit.email %}
+                                            Visitor left contact information
+                                        {% else %}
+                                            Anonymous visitor
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </td>
+                            <td>{{ visit.email or '—' }}</td>
+                            <td>
+                                <span class="visitor-page">{{ visit.page_visited }}</span>
+                            </td>
+                            <td>{{ visit.created_at.strftime('%H:%M') }}</td>
+                            <td>{{ visit.ip_address }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="visitors-empty">
+                <p>No visits recorded yet. Traffic will appear here as soon as someone loads a page.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if pagination.pages > 1 %}
+        <nav class="admin-pagination" aria-label="Visitor pagination">
+            {% if pagination.has_prev %}
+            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors', page=pagination.prev_num, **query_args) }}">&larr; Newer</a>
+            {% else %}
+            <span class="btn-admin btn-admin--ghost is-disabled">&larr; Newer</span>
+            {% endif %}
+            <span class="admin-pagination__status">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors', page=pagination.next_num, **query_args) }}">Older &rarr;</a>
+            {% else %}
+            <span class="btn-admin btn-admin--ghost is-disabled">Older &rarr;</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

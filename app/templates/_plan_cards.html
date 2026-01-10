@@ -1,0 +1,75 @@
+{% for plan in plans %}
+<a class="plan-card plan-card--lux plan-card--tap" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" aria-label="View plan {{ plan.title }}" itemscope itemtype="https://schema.org/Product" itemprop="url">
+    <div class="plan-card__media" aria-hidden="true">
+        {% set card_image = plan.cover_image or plan.main_image %}
+        {% if card_image %}
+            {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy') }}
+        {% else %}
+            <div class="plan-card__placeholder">Visual coming soon</div>
+        {% endif %}
+        <div class="plan-card__labels">
+            {% if plan.is_featured %}<span class="badge badge--glow">Featured</span>{% endif %}
+            {% if plan.is_on_sale %}<span class="badge badge--outline">On sale</span>{% endif %}
+        </div>
+        <button
+            class="favorite-toggle"
+            type="button"
+            title="Save {{ plan.title }}"
+            aria-pressed="false"
+            data-favorite-toggle
+            data-plan-id="{{ plan.id }}"
+            data-plan-slug="{{ plan.slug }}"
+            data-plan-title="{{ plan.title }}"
+            data-plan-reference="{{ plan.reference_code }}"
+            data-plan-thumb="{{ upload_url(card_image) if card_image else '' }}">
+            <span class="favorite-toggle__icon" aria-hidden="true">♡</span>
+            <span class="favorite-toggle__label">Add to favorites</span>
+        </button>
+    </div>
+    <div class="plan-card__body">
+        <div class="plan-card__top">
+            <h3 class="plan-card__title" itemprop="name">{{ plan.title }}</h3>
+            <div class="plan-card__ref" aria-label="Reference code">{{ plan.reference_code }}</div>
+        </div>
+
+        <div class="plan-card__facts" aria-label="Key facts">
+            {% if plan.area_sqft %}<span class="plan-fact"><strong>{{ plan.area_sqft|round|int }}</strong> sq ft</span>{% endif %}
+            {% if plan.bedrooms_count %}<span class="plan-fact"><strong>{{ plan.bedrooms_count }}</strong> beds</span>{% endif %}
+            {% if plan.bathrooms_count %}<span class="plan-fact"><strong>{{ plan.bathrooms_count }}</strong> baths</span>{% endif %}
+        </div>
+
+        <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            {% if plan.starting_paid_price %}
+                <div class="plan-card__price" itemprop="price">From ${{ plan.starting_paid_price|round(0)|int }}</div>
+            {% else %}
+                <div class="plan-card__price" itemprop="price">Free</div>
+            {% endif %}
+            <meta itemprop="priceCurrency" content="USD">
+        </div>
+        <div class="plan-card__actions">
+            <button
+                class="compare-toggle"
+                type="button"
+                aria-pressed="false"
+                data-compare-toggle
+                data-plan-id="{{ plan.id }}"
+                data-plan-slug="{{ plan.slug }}"
+                data-plan-title="{{ plan.title }}"
+                data-plan-reference="{{ plan.reference_code }}"
+                data-plan-thumb="{{ upload_url(card_image) if card_image else '' }}"
+                data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or '' }}"
+                data-plan-area-m2="{{ plan.area_m2 or '' }}"
+                data-plan-bedrooms="{{ plan.bedrooms_count or '' }}"
+                data-plan-bathrooms="{{ plan.bathrooms_count or '' }}"
+                data-plan-floors="{{ plan.floors_count or '' }}"
+                data-plan-parking="{{ plan.parking_count or '' }}"
+                data-plan-price="{{ plan.starting_paid_price or '' }}"
+                data-plan-free="{{ '1' if plan.has_free_download else '0' }}"
+                data-plan-categories="{{ plan.categories|map(attribute='name')|join(' · ') if plan.categories else '' }}"
+                data-plan-url="{{ url_for('main.pack_detail', slug=plan.slug) }}">
+                <span class="compare-toggle__label">Add to compare</span>
+            </button>
+        </div>
+    </div>
+</a>
+{% endfor %}

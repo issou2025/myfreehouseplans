@@ -10,6 +10,8 @@ from flask import current_app
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
+from app.utils.storage import upload_to_cloud
+
 
 def _max_size() -> Optional[int]:
     try:
@@ -57,6 +59,19 @@ def save_uploaded_file(
 
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     safe_name = f"{timestamp}_{filename}"
+
+    cloud_url = None
+    try:
+        cloud_url = upload_to_cloud(file, folder)
+    except Exception as exc:
+        try:
+            current_app.logger.warning('Cloud upload failed; falling back to local storage: %s', exc)
+        except Exception:
+            pass
+        cloud_url = None
+
+    if cloud_url:
+        return cloud_url
 
     protected_folders = current_app.config.get('PROTECTED_FOLDERS', {'pdfs'})
     if folder in protected_folders:

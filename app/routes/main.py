@@ -8,7 +8,7 @@ This blueprint handles all public-facing routes including:
 - Sitemap
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, jsonify
 from flask import send_file, abort
 from datetime import datetime
 from app.models import HousePlan, Category, Order, ContactMessage
@@ -16,14 +16,306 @@ from app.forms import ContactForm, SearchForm
 from app.extensions import db, mail
 from app.seo import generate_meta_tags, generate_product_schema, generate_breadcrumb_schema, generate_sitemap
 from flask_mail import Message as MailMessage
-from sqlalchemy import or_
+from sqlalchemy import or_, func, cast
+from sqlalchemy.orm import selectinload
+from sqlalchemy.types import Float
 import os
 import mimetypes
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file
+from app.utils.media import is_absolute_url, upload_url
+from app.utils.visitor_tracking import tag_visit_identity
 
 # Create Blueprint
 main_bp = Blueprint('main', __name__)
+
+
+NARRATIVE_FILTERS = {
+    'active_family': {
+        'label': 'For an active family',
+        'summary': 'Flexible layouts, gear storage, and at least three bedrooms.',
+        'helper': 'Enough room for homework, bikes, and weekend sleepovers.',
+    },
+    'rental_ready': {
+        'label': 'Ideal for rental investment',
+        'summary': 'Efficient footprints with easy-to-maintain finishes.',
+        'helper': 'Balanced bedroom mixes and simple circulation.',
+    },
+    'hot_climate': {
+        'label': 'Comfortable in hot climates',
+        'summary': 'Passive cooling cues and shaded outdoor areas.',
+        'helper': 'Look for verandas, cross-ventilation, and roof overhangs.',
+    },
+    'compact_affordable': {
+        'label': 'Compact and affordable',
+        'summary': 'Under 1,400 sq ft with modest pricing.',
+        'helper': 'Light on materials, big on usability.',
+    },
+}
+
+
+GUIDE_ARTICLES = {
+    'choose-family-plan': {
+        'title': 'Comment choisir un plan familial équilibré',
+        'description': 'Une méthode simple pour comparer surfaces, zones de vie et budget avant de s’engager.',
+        'sections': [
+            'Commencez par le quotidien : combien d’activités se déroulent réellement dans la maison, et quelles pièces doivent rester calmes ?',
+            'Priorisez les espaces transitionnels (mudroom, buanderie lumineuse) pour absorber le rythme familial.',
+            'Cherchez des plans offrant au moins une chambre au rez-de-chaussée : parfait pour les invités ou le télétravail.',
+        ],
+        'cta': 'Voir tous les plans familiaux',
+        'cta_url': '/plans?type=family',
+    },
+    'budget-vs-surface': {
+        'title': 'Budget versus surface : trouver le bon équilibre',
+        'description': 'Nos architectes expliquent comment raisonner en coût par mètre carré et éviter les surprises.',
+        'sections': [
+            'Fixez un budget global puis déduisez 10 % pour les imprévus. Le reste est votre enveloppe plan + construction.',
+            'Comparez les plans à l’aide du coût par mètre carré : cela révèle où la complexité se cache.',
+            'Investissez dans l’enveloppe (structure, isolation) avant les finitions. Cela garantit la valeur long terme.',
+        ],
+        'cta': 'Plans optimisés budget/surface',
+        'cta_url': '/plans?sort=price_low',
+    },
+    'build-hot-climate': {
+        'title': 'Construire dans les climats chauds',
+        'description': 'Orientation, ventilation croisée et matériaux adaptés : le trio gagnant.',
+        'sections': [
+            'Privilégiez les toitures ventilées et les plafonds hauts pour stocker la chaleur.',
+            'Ajoutez des débords de toiture généreux et des pièces traversantes.',
+            'Choisissez des matériaux clairs et des protections solaires mobiles pour rester flexible.',
+        ],
+        'cta': 'Plans pensés pour les climats tropicaux',
+        'cta_url': '/plans?narrative=hot_climate',
+    },
+}
+
+
+def _get_arg(args, key, cast=None):
+    """Safely fetch query parameters from MultiDict or plain dict."""
+    if isinstance(args, dict):
+        value = args.get(key)
+    else:
+        value = args.get(key)
+
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped == '':
+            return None
+        value = stripped
+
+    if cast is not None:
+        try:
+            return cast(value)
+        except (TypeError, ValueError):
+            return None
+    return value
+
+
+def _build_catalog_query(args):
+    """Centralized builder for catalog queries (listing, fragments, API)."""
+
+    query = HousePlan.query.filter_by(is_published=True)
+    order_clauses = []
+
+    search = _get_arg(args, 'q')
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                HousePlan.reference_code.ilike(like),
+                HousePlan.title.ilike(like),
+                HousePlan.description.ilike(like),
+            )
+        )
+
+        numeric = None
+        try:
+            numeric = float(search.replace(',', ''))
+        except Exception:
+            numeric = None
+        if numeric is not None:
+            area_expr = func.coalesce(HousePlan.total_area_sqft, cast(HousePlan.square_feet, Float), 0.0)
+            order_clauses.append(func.abs(area_expr - numeric).asc())
+
+    category_slug = _get_arg(args, 'category')
+    if category_slug:
+        category = Category.query.filter_by(slug=category_slug).first_or_404()
+        query = query.join(HousePlan.categories).filter(Category.id == category.id)
+
+    plan_type = _get_arg(args, 'type')
+    if plan_type:
+        query = query.filter(HousePlan.plan_type == plan_type)
+
+    min_bedrooms = _get_arg(args, 'bedrooms', int)
+    if min_bedrooms:
+        beds_expr = func.coalesce(HousePlan.number_of_bedrooms, HousePlan.bedrooms, 0)
+        query = query.filter(beds_expr >= min_bedrooms)
+
+    min_bathrooms = _get_arg(args, 'bathrooms', int)
+    if min_bathrooms:
+        baths_expr = func.coalesce(HousePlan.number_of_bathrooms, HousePlan.bathrooms, 0)
+        query = query.filter(baths_expr >= min_bathrooms)
+
+    area_min = _get_arg(args, 'area_min', float)
+    area_max = _get_arg(args, 'area_max', float)
+    if area_min is not None or area_max is not None:
+        area_expr = func.coalesce(HousePlan.total_area_sqft, cast(HousePlan.square_feet, Float), 0.0)
+        if area_min is not None:
+            query = query.filter(area_expr >= area_min)
+        if area_max is not None:
+            query = query.filter(area_expr <= area_max)
+
+    budget_min = _get_arg(args, 'budget_min', float)
+    budget_max = _get_arg(args, 'budget_max', float)
+    if budget_min is not None or budget_max is not None:
+        price_expr = func.coalesce(HousePlan.sale_price, HousePlan.price)
+        if budget_min is not None:
+            query = query.filter(price_expr >= budget_min)
+        if budget_max is not None:
+            query = query.filter(price_expr <= budget_max)
+
+    sort = _get_arg(args, 'sort') or 'newest'
+    if sort == 'price_low':
+        order_clauses.append(HousePlan.price.asc())
+    elif sort == 'price_high':
+        order_clauses.append(HousePlan.price.desc())
+    elif sort == 'popular':
+        order_clauses.append(HousePlan.views_count.desc())
+    else:
+        order_clauses.append(HousePlan.created_at.desc())
+
+    narrative = _get_arg(args, 'narrative')
+    if narrative:
+        query = _apply_narrative_filter(query, narrative)
+
+    if not order_clauses:
+        order_clauses.append(HousePlan.created_at.desc())
+
+    query = query.order_by(*order_clauses)
+
+    return query
+
+
+def _apply_narrative_filter(query, narrative_key):
+    """Translate lifestyle narratives into SQL-friendly filters."""
+
+    key = (narrative_key or '').strip()
+    beds_expr = func.coalesce(HousePlan.number_of_bedrooms, HousePlan.bedrooms, 0)
+    baths_expr = func.coalesce(HousePlan.number_of_bathrooms, HousePlan.bathrooms, 0)
+    area_expr = func.coalesce(HousePlan.total_area_sqft, cast(HousePlan.square_feet, Float), 0.0)
+    price_expr = func.coalesce(HousePlan.sale_price, HousePlan.price)
+
+    if key == 'active_family':
+        query = query.filter(beds_expr >= 3)
+        query = query.filter(area_expr >= 1400)
+        query = query.filter(or_(HousePlan.plan_type == 'family', HousePlan.ideal_for.ilike('%family%')))
+    elif key == 'rental_ready':
+        query = query.filter(or_(HousePlan.plan_type == 'rental', HousePlan.ideal_for.ilike('%rental%')))
+        query = query.filter(baths_expr >= 2)
+    elif key == 'hot_climate':
+        query = query.filter(or_(HousePlan.suitable_climate.ilike('%hot%'), HousePlan.suitable_climate.ilike('%tropical%')))
+    elif key == 'compact_affordable':
+        query = query.filter(area_expr <= 1400)
+        query = query.filter(price_expr <= 120000)
+    return query
+
+
+def _get_popular_plans(limit=6):
+    return (
+        HousePlan.query
+        .filter_by(is_published=True)
+        .order_by(HousePlan.views_count.desc(), HousePlan.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def _get_new_arrivals(limit=6):
+    return (
+        HousePlan.query
+        .filter_by(is_published=True)
+        .order_by(HousePlan.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def _get_climate_focus(limit=6):
+    base = (
+        HousePlan.query
+        .filter(HousePlan.is_published.is_(True))
+        .filter(or_(HousePlan.suitable_climate.ilike('%tropical%'), HousePlan.suitable_climate.ilike('%hot%')))
+        .order_by(HousePlan.created_at.desc())
+    )
+    plans = base.limit(limit).all()
+    if plans:
+        return plans
+    return _get_new_arrivals(limit)
+
+
+def _find_similar_plans(plan: HousePlan, limit: int = 6):
+    """Return plans similar to the provided plan based on category, bedrooms, and area."""
+
+    limit = max(1, min(limit or 6, 12))
+    category_ids = [c.id for c in getattr(plan, 'categories', [])]
+    beds_value = plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or 0
+    area_value = plan.area_sqft or plan.total_area_sqft or plan.square_feet or 0
+
+    query = (
+        HousePlan.query
+        .filter(HousePlan.is_published.is_(True))
+        .filter(HousePlan.id != plan.id)
+        .options(selectinload(HousePlan.categories))
+    )
+
+    if category_ids:
+        query = query.join(HousePlan.categories).filter(Category.id.in_(category_ids))
+
+    if beds_value:
+        beds_expr = func.coalesce(HousePlan.number_of_bedrooms, HousePlan.bedrooms, 0)
+        query = query.filter(func.abs(beds_expr - beds_value) <= 1)
+
+    area_expr = func.coalesce(HousePlan.total_area_sqft, cast(HousePlan.square_feet, Float), 0.0)
+    if area_value:
+        window = float(area_value)
+        lower = max(0.0, window * 0.8)
+        upper = window * 1.2
+        query = query.filter(area_expr.between(lower, upper))
+        query = query.order_by(func.abs(area_expr - window).asc(), HousePlan.views_count.desc())
+    else:
+        query = query.order_by(HousePlan.views_count.desc(), HousePlan.created_at.desc())
+
+    if category_ids:
+        query = query.distinct()
+
+    return query.limit(limit).all()
+
+
+def _serialize_plan_summary(plan: HousePlan):
+    cover_image = plan.cover_image or plan.main_image or ''
+    area_raw = getattr(plan, 'area_sqft', None) or getattr(plan, 'total_area_sqft', None) or getattr(plan, 'square_feet', None)
+    beds_raw = getattr(plan, 'bedrooms_count', None) or getattr(plan, 'number_of_bedrooms', None) or getattr(plan, 'bedrooms', None)
+    try:
+        area_value = float(area_raw) if area_raw else None
+    except (TypeError, ValueError):
+        area_value = None
+    try:
+        bedrooms_value = int(beds_raw) if beds_raw else None
+    except (TypeError, ValueError):
+        bedrooms_value = None
+    return {
+        'slug': plan.slug,
+        'title': plan.title,
+        'reference': plan.reference_code,
+        'thumb': upload_url(cover_image) if cover_image else '',
+        'area': area_value,
+        'bedrooms': bedrooms_value,
+        'starting_price': plan.starting_paid_price,
+    }
 
 
 def _protected_filepath(relative_path):
@@ -40,6 +332,10 @@ def download_free(plan_id):
     plan = HousePlan.query.get_or_404(plan_id)
     if not plan.free_pdf_file:
         abort(404)
+
+    if is_absolute_url(plan.free_pdf_file):
+        return redirect(plan.free_pdf_file)
+
     path = _protected_filepath(plan.free_pdf_file)
     if not path or not os.path.exists(path):
         abort(404)
@@ -111,57 +407,39 @@ def index():
 @main_bp.route('/plans')
 def packs():
     """House plans listing page with filtering and pagination"""
-    
-    # Get pagination parameters
+
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('PLANS_PER_PAGE', 12)
-    
-    # Build query
-    query = HousePlan.query.filter_by(is_published=True)
-    
-    # Filter by search term
-    search = request.args.get('q', '').strip()
-    if search:
-        query = query.filter(
-            or_(
-                HousePlan.title.ilike(f'%{search}%'),
-                HousePlan.description.ilike(f'%{search}%')
-            )
-        )
-    
-    # Filter by category
-    category_slug = request.args.get('category', type=str)
-    if category_slug:
-        category = Category.query.filter_by(slug=category_slug).first_or_404()
-        query = query.join(HousePlan.categories).filter(Category.id == category.id)
-    
-    # Filter by bedrooms
-    min_bedrooms = request.args.get('bedrooms', type=int)
-    if min_bedrooms:
-        query = query.filter(HousePlan.bedrooms >= min_bedrooms)
-    
-    # Filter by bathrooms
-    min_bathrooms = request.args.get('bathrooms', type=int)
-    if min_bathrooms:
-        query = query.filter(HousePlan.bathrooms >= min_bathrooms)
-    
-    # Sorting
-    sort = request.args.get('sort', 'newest')
-    if sort == 'price_low':
-        query = query.order_by(HousePlan.price.asc())
-    elif sort == 'price_high':
-        query = query.order_by(HousePlan.price.desc())
-    elif sort == 'popular':
-        query = query.order_by(HousePlan.views_count.desc())
-    else:  # newest
-        query = query.order_by(HousePlan.created_at.desc())
-    
-    # Paginate results
+    query = _build_catalog_query(request.args)
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     plans = pagination.items
+    narrative_key = request.args.get('narrative', '').strip()
+    narrative_meta = NARRATIVE_FILTERS.get(narrative_key)
     
-    # Get all categories for filter
-    categories = Category.query.all()
+    # Filter metadata
+    categories = Category.query.order_by(Category.name.asc()).all()
+    plan_types = [
+        row[0]
+        for row in (
+            db.session.query(HousePlan.plan_type)
+            .filter(HousePlan.is_published.is_(True))
+            .filter(HousePlan.plan_type.isnot(None))
+            .distinct()
+            .order_by(HousePlan.plan_type.asc())
+            .all()
+        )
+        if row[0]
+    ]
+
+    result_summary = f"{pagination.total} plan{'s' if pagination.total != 1 else ''} available"
+    if narrative_meta:
+        result_summary += f" · {narrative_meta['label']}"
+
+    popular_plans = _get_popular_plans()
+    new_arrivals = _get_new_arrivals()
+    climate_focus = _get_climate_focus()
+
+    suggestion_targets = popular_plans[:2] or new_arrivals[:2]
     
     # SEO meta tags
     meta = generate_meta_tags(
@@ -174,7 +452,77 @@ def packs():
                          plans=plans,
                          pagination=pagination,
                          categories=categories,
+                         plan_types=plan_types,
+                         result_summary=result_summary,
+                         narrative_filters=NARRATIVE_FILTERS,
+                         active_narrative=narrative_key,
+                         popular_plans=popular_plans,
+                         new_arrivals=new_arrivals,
+                         climate_focus=climate_focus,
+                         suggestion_targets=suggestion_targets,
+                         guides=GUIDE_ARTICLES,
                          meta=meta)
+
+
+@main_bp.route('/plans/fragment')
+def plans_fragment():
+    """HTML fragment endpoint for progressively loading more plans."""
+
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('PLANS_PER_PAGE', 12)
+    query = _build_catalog_query(request.args)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    html = render_template('_plan_cards.html', plans=pagination.items)
+    resp = Response(html, mimetype='text/html')
+    resp.headers['X-Has-Next'] = '1' if pagination.has_next else '0'
+    resp.headers['X-Next-Page'] = str(pagination.next_num) if pagination.has_next else ''
+    return resp
+
+
+@main_bp.route('/plans/data')
+def plans_data():
+    """JSON endpoint powering real-time catalog filtering."""
+
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('PLANS_PER_PAGE', 12)
+    query = _build_catalog_query(request.args)
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    cards_html = render_template('_plan_cards.html', plans=pagination.items)
+    pagination_html = ''
+    if pagination.pages > 1:
+        pagination_html = render_template('_pagination.html', pagination=pagination, endpoint='main.packs')
+
+    summary_text = f"{pagination.total} plan{'s' if pagination.total != 1 else ''} available"
+
+    payload = {
+        'cardsHtml': cards_html,
+        'paginationHtml': pagination_html,
+        'hasResults': bool(pagination.items),
+        'hasNext': pagination.has_next,
+        'nextPage': pagination.next_num if pagination.has_next else None,
+        'page': pagination.page,
+        'pages': pagination.pages,
+        'total': pagination.total,
+        'summaryText': summary_text,
+    }
+    return jsonify(payload)
+
+
+@main_bp.route('/plans/similar/<string:slug>')
+def plans_similar(slug: str):
+    """Return similar plans for personalization rails."""
+
+    limit = request.args.get('limit', 6, type=int)
+    plan = (
+        HousePlan.query
+        .options(selectinload(HousePlan.categories))
+        .filter_by(slug=slug, is_published=True)
+        .first_or_404()
+    )
+    similar = _find_similar_plans(plan, limit=limit)
+    return jsonify({'plans': [_serialize_plan_summary(p) for p in similar]})
 
 
 @main_bp.route('/plans/category/<string:slug>')
@@ -202,11 +550,58 @@ def plans_by_category(slug: str):
         url=url_for('main.plans_by_category', slug=category.slug, _external=True),
     )
 
+    item_list_elements = []
+    for idx, plan in enumerate(plans[:20], start=1):
+        item_list_elements.append({
+            "@type": "ListItem",
+            "position": idx,
+            "url": url_for('main.pack_detail', slug=plan.slug, _external=True),
+            "name": plan.title,
+        })
+
+    category_schema = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": seo_title,
+        "description": seo_description,
+        "url": url_for('main.plans_by_category', slug=category.slug, _external=True),
+        "about": category.description or f"{category.name} house plans",
+        "itemList": {
+            "@type": "ItemList",
+            "name": f"{category.name} plans",
+            "numberOfItems": len(plans),
+            "itemListElement": item_list_elements,
+        },
+    }
+
     return render_template(
         'plans_by_category.html',
         category=category,
         categories=categories,
         plans=plans,
+        meta=meta,
+        category_schema=category_schema,
+    )
+
+@main_bp.route('/insights/<string:slug>')
+def insight_page(slug):
+    article = GUIDE_ARTICLES.get(slug)
+    if not article:
+        abort(404)
+
+    related = _get_new_arrivals(limit=4)
+
+    meta = generate_meta_tags(
+        title=article['title'],
+        description=article['description'],
+        url=url_for('main.insight_page', slug=slug, _external=True),
+    )
+
+    return render_template(
+        'insight_page.html',
+        article=article,
+        slug=slug,
+        related_plans=related,
         meta=meta,
     )
 
@@ -216,33 +611,17 @@ def pack_detail(slug):
     """House plan detail page"""
     
     # Get plan by slug or 404
-    plan = HousePlan.query.filter_by(slug=slug, is_published=True).first_or_404()
+    plan = (
+        HousePlan.query
+        .options(selectinload(HousePlan.categories))
+        .filter_by(slug=slug, is_published=True)
+        .first_or_404()
+    )
     
     # Increment view count
     plan.increment_views()
     
-    # Get related plans (same category)
-    category_ids = [c.id for c in getattr(plan, 'categories', [])]
-    if category_ids:
-        related_plans = (
-            HousePlan.query
-            .filter_by(is_published=True)
-            .join(HousePlan.categories)
-            .filter(Category.id.in_(category_ids))
-            .filter(HousePlan.id != plan.id)
-            .distinct()
-            .limit(4)
-            .all()
-        )
-    else:
-        related_plans = (
-            HousePlan.query
-            .filter_by(is_published=True)
-            .filter(HousePlan.id != plan.id)
-            .order_by(HousePlan.id.desc())
-            .limit(4)
-            .all()
-        )
+    similar_plans = _find_similar_plans(plan, limit=6)
     
     # SEO meta tags
     meta = generate_meta_tags(
@@ -266,10 +645,131 @@ def pack_detail(slug):
     
     return render_template('pack_detail.html',
                          plan=plan,
-                         related_plans=related_plans,
+                         similar_plans=similar_plans,
                          meta=meta,
                          product_schema=product_schema,
                          breadcrumb_schema=breadcrumb_schema)
+
+
+@main_bp.route('/favorites')
+def favorites():
+    """Client-side favorites page (localStorage powered)."""
+
+    meta = generate_meta_tags(
+        title='My Favorites',
+        description='Save house plans you love and revisit them anytime on this device.',
+        url=url_for('main.favorites', _external=True),
+    )
+
+    return render_template('favorites.html', meta=meta)
+
+
+@main_bp.route('/compare')
+def compare():
+    """Client-side comparison landing page."""
+
+    meta = generate_meta_tags(
+        title='Compare House Plans',
+        description='Select up to three house plans and review their specs, areas, and pack pricing side by side.',
+        url=url_for('main.compare', _external=True),
+    )
+
+    return render_template('compare.html', meta=meta)
+
+
+@main_bp.route('/compare/data')
+def compare_data():
+    slugs_param = (request.args.get('slugs') or '').strip()
+    if not slugs_param:
+        return jsonify({'plans': []})
+
+    slugs = []
+    for chunk in slugs_param.split(','):
+        slug = chunk.strip()
+        if not slug:
+            continue
+        if slug in slugs:
+            continue
+        slugs.append(slug)
+        if len(slugs) >= 3:
+            break
+
+    if not slugs:
+        return jsonify({'plans': []})
+
+    plans = (
+        HousePlan.query
+        .filter(HousePlan.slug.in_(slugs), HousePlan.is_published == True)
+        .options(selectinload(HousePlan.categories))
+        .all()
+    )
+
+    plan_lookup = {}
+    for plan in plans:
+        tiers = []
+        for tier in plan.pricing_tiers:
+            price = tier.get('price')
+            try:
+                normalized_price = float(price) if price is not None else None
+            except (TypeError, ValueError):
+                normalized_price = None
+            tiers.append({
+                'pack': tier.get('pack'),
+                'label': tier.get('label'),
+                'price': normalized_price,
+                'is_free': tier.get('is_free'),
+                'available': tier.get('available'),
+            })
+
+        plan_lookup[plan.slug] = {
+            'slug': plan.slug,
+            'title': plan.title,
+            'reference_code': plan.reference_code,
+            'area_sqft': plan.area_sqft,
+            'area_m2': plan.area_m2,
+            'bedrooms': plan.bedrooms_count,
+            'bathrooms': plan.bathrooms_count,
+            'plan_type': plan.plan_type,
+            'categories': [c.name for c in plan.categories] if plan.categories else [],
+            'starting_price': plan.starting_paid_price,
+            'tiers': tiers,
+        }
+
+    ordered = [plan_lookup[slug] for slug in slugs if slug in plan_lookup]
+    return jsonify({'plans': ordered})
+
+
+@main_bp.route('/newsletter', methods=['POST'])
+def newsletter_signup():
+    payload = request.get_json(silent=True) or request.form
+    email = (payload.get('email') if payload else '') or ''
+    email = email.strip()
+    if not email:
+        return jsonify({'ok': False, 'message': 'Merci d’inscrire un email.'}), 400
+
+    record = ContactMessage(
+        name='Newsletter subscriber',
+        email=email,
+        phone=None,
+        subject='Newsletter opt-in',
+        message='Newsletter signup via public form',
+        inquiry_type='newsletter',
+        subscribe=True,
+    )
+    try:
+        db.session.add(record)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning('Failed to save newsletter signup: %s', exc)
+        return jsonify({'ok': False, 'message': 'Impossible de sauvegarder pour le moment.'}), 500
+
+    success_msg = 'Merci ! Nous vous avertirons dès qu’un nouveau plan sort.'
+    if request.headers.get('X-Requested-With') == 'fetch' or request.accept_mimetypes.accept_json:
+        return jsonify({'ok': True, 'message': success_msg})
+
+    flash(success_msg, 'success')
+    return redirect(request.referrer or url_for('main.packs'))
 
 
 @main_bp.route('/about')
@@ -416,6 +916,8 @@ def contact():
             flash('Thanks! We logged your message and notified the studio. Expect a reply within two business days.', 'success')
         else:
             flash('We saved your message but could not reach the studio mailbox automatically. Our team will review it shortly.', 'warning')
+
+        tag_visit_identity(name=message_record.name, email=message_record.email)
         return redirect(url_for('main.contact'))
     
     return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)

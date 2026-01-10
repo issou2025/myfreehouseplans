@@ -12,14 +12,16 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
 import os
-from app.models import HousePlan, Category, Order, User, ContactMessage
+from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor
 from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm
 from app.extensions import db
-from datetime import datetime
-from sqlalchemy import or_
+from datetime import datetime, date, timedelta
+from sqlalchemy import or_, func
 from slugify import slugify
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file
+from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
+from app.utils.media import is_absolute_url
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -153,6 +155,55 @@ def dashboard():
                          inbox_counts=inbox_counts,
                          inquiry_labels=INQUIRY_LABELS,
                          status_labels=status_labels)
+
+
+@admin_bp.route('/visitors')
+@login_required
+@admin_required
+def visitors():
+    """Visitor analytics dashboard."""
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = max(10, min(per_page, 100))
+
+    pagination = (
+        Visitor.query
+        .order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    today = date.today()
+    week_start = today - timedelta(days=6)
+
+    stats = {
+        'today': Visitor.query.filter(Visitor.visit_date == today).count(),
+        'week': Visitor.query.filter(Visitor.visit_date >= week_start).count(),
+        'total': Visitor.query.count(),
+    }
+
+    page_dates = {visit.visit_date for visit in pagination.items}
+    date_counts = {}
+    if page_dates:
+        rows = (
+            db.session.query(Visitor.visit_date, func.count(Visitor.id))
+            .filter(Visitor.visit_date.in_(page_dates))
+            .group_by(Visitor.visit_date)
+            .all()
+        )
+        date_counts = {visit_date: count for visit_date, count in rows}
+
+    query_args = request.args.to_dict(flat=True)
+    query_args.pop('page', None)
+
+    return render_template(
+        'admin/visitors.html',
+        visitors=pagination.items,
+        pagination=pagination,
+        stats=stats,
+        date_counts=date_counts,
+        query_args=query_args,
+    )
 
 
 @admin_bp.route('/')
@@ -385,6 +436,9 @@ def message_attachment(message_id):
     if not message.attachment_path:
         abort(404)
 
+    if is_absolute_url(message.attachment_path):
+        return redirect(message.attachment_path)
+
     absolute_path = _protected_attachment_path(message.attachment_path)
     if not absolute_path or not os.path.exists(absolute_path):
         abort(404)
@@ -412,6 +466,7 @@ def add_plan():
             title=form.title.data,
             description=form.description.data,
             short_description=form.short_description.data,
+            plan_type=form.plan_type.data or None,
             bedrooms=form.bedrooms.data,
             bathrooms=form.bathrooms.data,
             stories=form.stories.data,
@@ -449,6 +504,10 @@ def add_plan():
             plan.room_details = form.room_details.data
             plan.construction_notes = form.construction_notes.data
 
+            plan.design_philosophy = form.design_philosophy.data
+            plan.lifestyle_suitability = form.lifestyle_suitability.data
+            plan.customization_potential = form.customization_potential.data
+
             if plan.total_area_sqft:
                 plan.square_feet = int(plan.total_area_sqft)
             elif plan.total_area_m2:
@@ -468,6 +527,13 @@ def add_plan():
             plan.seo_title = form.seo_title.data
             plan.seo_description = form.seo_description.data
             plan.seo_keywords = form.seo_keywords.data
+
+            diagnostics = diagnose_plan(plan)
+            # Non-blocking: surface policy issues as flash messages to reduce
+            # manual admin reasoning while preserving existing behavior.
+            if form.is_published.data or plan.gumroad_pack_2_url or plan.gumroad_pack_3_url:
+                for category, message in diagnostics_to_flash_messages(diagnostics):
+                    flash(message, category)
 
             db.session.add(plan)
             db.session.commit()
@@ -503,6 +569,7 @@ def edit_plan(id):
             plan.title = form.title.data
             plan.description = form.description.data
             plan.short_description = form.short_description.data
+            plan.plan_type = form.plan_type.data or None
             plan.bedrooms = form.bedrooms.data
             plan.bathrooms = form.bathrooms.data
             plan.stories = form.stories.data
@@ -546,6 +613,10 @@ def edit_plan(id):
             plan.room_details = form.room_details.data
             plan.construction_notes = form.construction_notes.data
 
+            plan.design_philosophy = form.design_philosophy.data
+            plan.lifestyle_suitability = form.lifestyle_suitability.data
+            plan.customization_potential = form.customization_potential.data
+
             if plan.total_area_sqft:
                 plan.square_feet = int(plan.total_area_sqft)
             elif plan.total_area_m2:
@@ -565,6 +636,13 @@ def edit_plan(id):
             plan.seo_title = form.seo_title.data
             plan.seo_description = form.seo_description.data
             plan.seo_keywords = form.seo_keywords.data
+
+            diagnostics = diagnose_plan(plan)
+            # Non-blocking: surface policy issues as flash messages to reduce
+            # manual admin reasoning while preserving existing behavior.
+            if form.is_published.data or plan.gumroad_pack_2_url or plan.gumroad_pack_3_url:
+                for category, message in diagnostics_to_flash_messages(diagnostics):
+                    flash(message, category)
             
             plan.updated_at = datetime.utcnow()
             

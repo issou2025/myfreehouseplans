@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell compare-page">
+    <header class="section-heading compare-page__intro">
+        <div>
+            <p class="eyebrow">Side-by-side review</p>
+            <h1>Compare up to three house plans</h1>
+            <p class="lead">Toggle “Add to compare” on any plan card or detail page. We’ll keep your picks ready in this tray so you can evaluate key specs, pricing, and deliverables in one view.</p>
+        </div>
+        <div class="compare-page__cta">
+            <a class="btn btn-primary" href="{{ url_for('main.packs') }}">Browse catalog</a>
+            <button class="btn btn-soft" type="button" data-compare-export hidden>Download PDF summary</button>
+            <button class="btn btn-outline" type="button" data-compare-clear hidden>Clear selection</button>
+        </div>
+    </header>
+
+    <section aria-label="Comparison results">
+        <div id="compareEmpty" class="compare-empty">
+            <p>No plans selected yet. Add up to three plans using the “Add to compare” button, then return here to see them side by side.</p>
+        </div>
+        <div id="compareTableWrapper" class="compare-table-wrapper" hidden>
+            <div class="compare-table" id="compareTable" role="table" aria-live="polite"></div>
+        </div>
+    </section>
+</div>
+{% endblock %}

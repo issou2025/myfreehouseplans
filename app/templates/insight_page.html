@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell insight-page">
+    <header class="insight-hero">
+        <p class="eyebrow">Studio guide</p>
+        <h1>{{ article.title }}</h1>
+        <p class="lead">{{ article.description }}</p>
+        <a class="btn btn-primary" href="{{ article.cta_url }}">{{ article.cta }}</a>
+        <p class="microcopy">Rédigé par nos architectes · Mise à jour continue</p>
+    </header>
+
+    <section class="insight-body" aria-label="Article">
+        {% for block in article.sections %}
+        <article class="insight-section">
+            <p>{{ block }}</p>
+        </article>
+        {% endfor %}
+    </section>
+
+    {% if related_plans %}
+    <section class="plan-related" aria-label="Plans recommandés">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Continuez avec</p>
+                <h2>Plans cités dans ce guide</h2>
+                <p class="muted">Chaque lien ouvre une fiche détaillée avec packs et FAQ.</p>
+            </div>
+        </div>
+        <div class="plan-grid plan-grid--scroll plan-related__grid">
+            {% with plans=related_plans %}
+                {% include "_plan_cards.html" with context %}
+            {% endwith %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

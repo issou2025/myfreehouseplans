@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block structured_data %}
+{% if category_schema %}
+<script type="application/ld+json">{{ category_schema | tojson | safe }}</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="shell">
     <header class="section-heading">
@@ -14,6 +20,14 @@
         </div>
     </header>
 
+    {% if categories %}
+    <nav class="category-nav" aria-label="Browse categories">
+        {% for c in categories %}
+            <a class="category-chip {% if c.id == category.id %}is-active{% endif %}" href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
     {% if plans %}
         <div class="plan-grid plan-grid--catalog">
             {% for plan in plans %}
@@ -21,7 +35,7 @@
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
-                        <img src="{{ url_for('static', filename='uploads/' + card_image) }}" alt="{{ plan.title }}" itemprop="image">
+                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" itemprop="image">
                     {% else %}
                         <div class="plan-card__placeholder">Visual coming soon</div>
                     {% endif %}

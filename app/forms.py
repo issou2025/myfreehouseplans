@@ -134,6 +134,17 @@ class HousePlanForm(FlaskForm):
         Length(max=300)
     ])
 
+    plan_type = SelectField(
+        'Plan type',
+        validators=[Optional()],
+        choices=[
+            ('', 'Select…'),
+            ('family', 'Family'),
+            ('rental', 'Rental / Income'),
+            ('luxury', 'Luxury'),
+        ],
+    )
+
     # General overview
     total_area_m2 = FloatField('Total built area (m²)', validators=[Optional(), NumberRange(min=0)])
     total_area_sqft = FloatField('Total built area (sq ft)', validators=[Optional(), NumberRange(min=0)])
@@ -181,6 +192,10 @@ class HousePlanForm(FlaskForm):
     main_features = TextAreaField('Main features', validators=[Optional(), Length(max=4000)])
     room_details = TextAreaField('Room-by-room description', validators=[Optional(), Length(max=6000)])
     construction_notes = TextAreaField('Construction notes', validators=[Optional(), Length(max=6000)])
+
+    design_philosophy = TextAreaField('Design philosophy', validators=[Optional(), Length(max=6000)])
+    lifestyle_suitability = TextAreaField('Lifestyle suitability', validators=[Optional(), Length(max=6000)])
+    customization_potential = TextAreaField('Customization potential', validators=[Optional(), Length(max=6000)])
     
     # Pricing
     price_pack_1 = DecimalField('Free Pack value ($)', default=0, validators=[

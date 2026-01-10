@@ -1,0 +1,54 @@
+"""Cloud storage helpers.
+
+This module provides a thin abstraction for uploading user-provided files to a
+cloud provider when configured (production), while keeping a local fallback for
+development.
+
+Supported providers:
+- Cloudinary (recommended for Render): set CLOUDINARY_URL.
+
+The upload functions return a public URL.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Optional
+
+from flask import current_app
+from werkzeug.datastructures import FileStorage
+
+
+def _cloudinary_enabled() -> bool:
+    return bool(os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL"))
+
+
+def upload_to_cloud(file: FileStorage, folder: str) -> Optional[str]:
+    """Upload a file to the configured cloud provider and return a URL."""
+
+    if not file or not getattr(file, "filename", ""):
+        return None
+
+    if _cloudinary_enabled():
+        import cloudinary
+        import cloudinary.uploader
+
+        cloudinary_url = os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL")
+        if cloudinary_url:
+            cloudinary.config(cloudinary_url=cloudinary_url)
+
+        filename = (file.filename or "upload").strip()
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        resource_type = "image" if ext in {"png", "jpg", "jpeg", "gif", "webp", "avif"} else "raw"
+
+        result = cloudinary.uploader.upload(
+            file,
+            folder=f"myfreehouseplans/{folder}",
+            resource_type=resource_type,
+            use_filename=True,
+            unique_filename=True,
+            overwrite=False,
+        )
+        return result.get("secure_url") or result.get("url")
+
+    return None

@@ -1,0 +1,22 @@
+{% set pagination_endpoint = endpoint or 'main.packs' %}
+{% if pagination and pagination.pages > 1 %}
+<nav class="pagination" aria-label="Pagination" data-pagination>
+    {% if pagination.has_prev %}
+    <a class="pagination__link" href="{{ url_for(pagination_endpoint, page=pagination.prev_num, **query_args(['page'])) }}" data-pagination-link data-page="{{ pagination.prev_num }}">Previous</a>
+    {% endif %}
+    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if page_num %}
+            {% if page_num == pagination.page %}
+            <span class="pagination__link is-active" aria-current="page">{{ page_num }}</span>
+            {% else %}
+            <a class="pagination__link" href="{{ url_for(pagination_endpoint, page=page_num, **query_args(['page'])) }}" data-pagination-link data-page="{{ page_num }}">{{ page_num }}</a>
+            {% endif %}
+        {% else %}
+            <span class="pagination__ellipsis" aria-hidden="true">···</span>
+        {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <a class="pagination__link" href="{{ url_for(pagination_endpoint, page=pagination.next_num, **query_args(['page'])) }}" data-pagination-link data-page="{{ pagination.next_num }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}

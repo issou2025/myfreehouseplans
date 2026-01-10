@@ -10,8 +10,17 @@
 {% endblock %}
 
 {% block content %}
+{% set hero_image = plan.cover_image or plan.main_image %}
 <div class="shell">
     <article class="plan-detail" itemscope itemtype="https://schema.org/Product">
+           <div data-plan-track hidden
+             data-plan-slug="{{ plan.slug }}"
+             data-plan-title="{{ plan.title }}"
+             data-plan-reference="{{ plan.reference_code }}"
+             data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
+             data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
+               data-plan-bedrooms="{{ plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or '' }}"
+               data-plan-price="{{ plan.starting_paid_price or '' }}"></div>
         <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="{{ url_for('main.index') }}">Home</a>
             <a href="{{ url_for('main.packs') }}">Plans</a>
@@ -20,10 +29,9 @@
 
         <div class="plan-hero">
             <div class="plan-hero__media">
-                {% set hero_image = plan.cover_image or plan.main_image %}
                 {% if hero_image %}
                 <figure>
-                    <img src="{{ url_for('static', filename='uploads/' + hero_image) }}" alt="{{ plan.title }}" itemprop="image">
+                    {{ picture_tag(hero_image, alt=plan.title, preset=HERO_PRESET, orientation_swap=True, loading='eager', itemprop='image') }}
                     <figcaption>{{ plan.title }} · Perspective study</figcaption>
                 </figure>
                 {% else %}
@@ -54,6 +62,63 @@
                         <span class="badge badge--outline">Free preview coming soon</span>
                     {% endif %}
                 </div>
+                <div class="plan-hero__favorites">
+                    <button
+                        class="favorite-toggle favorite-toggle--inline"
+                        type="button"
+                        aria-pressed="false"
+                        data-favorite-toggle
+                        data-plan-id="{{ plan.id }}"
+                        data-plan-slug="{{ plan.slug }}"
+                        data-plan-title="{{ plan.title }}"
+                        data-plan-reference="{{ plan.reference_code }}"
+                        data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}">
+                        <span class="favorite-toggle__icon" aria-hidden="true">♡</span>
+                        <span class="favorite-toggle__label">Add to favorites</span>
+                    </button>
+                    <p class="microcopy">Favorites are stored locally—no sign-up needed.</p>
+                </div>
+                <div class="plan-hero__compare">
+                    <button
+                        class="compare-toggle compare-toggle--inline"
+                        type="button"
+                        aria-pressed="false"
+                        data-compare-toggle
+                        data-plan-id="{{ plan.id }}"
+                        data-plan-slug="{{ plan.slug }}"
+                        data-plan-title="{{ plan.title }}"
+                        data-plan-reference="{{ plan.reference_code }}"
+                        data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
+                        data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
+                        data-plan-area-m2="{{ plan.area_m2 or '' }}"
+                        data-plan-bedrooms="{{ plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or '' }}"
+                        data-plan-bathrooms="{{ plan.bathrooms_count or plan.number_of_bathrooms or plan.bathrooms or '' }}"
+                        data-plan-floors="{{ plan.floors_count or plan.number_of_floors or '' }}"
+                        data-plan-parking="{{ plan.parking_count or '' }}"
+                        data-plan-price="{{ plan.starting_paid_price or '' }}"
+                        data-plan-free="{{ '1' if plan.has_free_download else '0' }}"
+                        data-plan-categories="{{ plan.categories|map(attribute='name')|join(' · ') if plan.categories else '' }}"
+                        data-plan-url="{{ url_for('main.pack_detail', slug=plan.slug) }}">
+                        <span class="compare-toggle__label">Add to compare</span>
+                    </button>
+                    <p class="microcopy">Pick up to three plans to compare side by side.</p>
+                </div>
+                <div class="plan-trust-badges" role="list" aria-label="Trust notes">
+                    <span role="listitem">Architect-designed</span>
+                    <span role="listitem">Build-ready drawings</span>
+                    <span role="listitem">Reference {{ plan.reference_code }}</span>
+                </div>
+                <blockquote class="plan-testimonial">
+                    «&nbsp;Nous livrons le même niveau de soin que pour nos clients privés : documentation claire, support humain, pas de surprise.&nbsp;»
+                    <cite>— Studio principal</cite>
+                </blockquote>
+                <p class="trust-row" aria-label="Trust notes">
+                    <span>Architect-curated</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Clear, build-ready sheets</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Friendly support if you need it</span>
+                </p>
                 <ul class="plan-chips" aria-label="Key characteristics">
                     {% if plan.area_sqft %}<li>{{ plan.area_sqft|round|int }} sq ft</li>{% endif %}
                     {% if plan.area_m2 %}<li>{{ plan.area_m2|round(1) }} m²</li>{% endif %}
@@ -104,13 +169,58 @@
             </div>
         </section>
 
+        {# 1) Plan use cases (human, quick scan) #}
+        {% set use_cases = [] %}
+        {% if plan.plan_type == 'family' %}
+            {% set _ = use_cases.append('Family living') %}
+        {% elif plan.plan_type == 'rental' %}
+            {% set _ = use_cases.append('Rental investment') %}
+        {% elif plan.plan_type == 'luxury' %}
+            {% set _ = use_cases.append('Professional development') %}
+        {% endif %}
+        {% if plan.has_free_download %}
+            {% set _ = use_cases.append('Fast client review') %}
+        {% endif %}
+        {% if plan.customization_potential %}
+            {% set _ = use_cases.append('Custom builds') %}
+        {% endif %}
+        {% if plan.area_sqft and plan.area_sqft < 1300 %}
+            {% set _ = use_cases.append('Compact living') %}
+        {% endif %}
+        {% if use_cases %}
+        <section class="plan-use-cases" aria-label="Plan use cases">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Perfect for</p>
+                    <h2>Who this plan fits</h2>
+                    <p class="muted">A quick way to see if this matches your project.</p>
+                </div>
+            </div>
+            <ul class="use-case-chips" aria-label="Use cases">
+                {% for item in use_cases[:4] %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
         <section class="pack-comparison" aria-labelledby="pack-heading" itemprop="offers" itemscope itemtype="https://schema.org/AggregateOffer">
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Pack comparison</p>
                     <h2 id="pack-heading">Choose the documentation that fits your stage</h2>
-                    <p class="muted">Start with the free preview, then step up to full PDF or CAD deliverables when your consultants are ready.</p>
+                    <p class="muted">Clear pricing up front. Simple choices. Pick what you need today.</p>
                 </div>
+            </div>
+
+            <div class="decision-guide" aria-label="Guidance">
+                <p class="decision-guide__title">Not sure which one to choose?</p>
+                <ul class="decision-guide__list">
+                    <li><strong>Pack 1</strong> is best for quick viewing and sharing.</li>
+                    <li><strong>Pack 2</strong> is best when you need the full PDF set.</li>
+                    <li><strong>Pack 3</strong> is best when you need editable CAD or BIM files (DWG / RVT / IFC).</li>
+                </ul>
+                <p class="microcopy">Nos fichiers restent disponibles même après les mises à jour. Vous pouvez re-télécharger vos packs quand vous le souhaitez.</p>
             </div>
             {% set package_meta_default = {
                 'name': 'Studio Pack',
@@ -139,8 +249,8 @@
                 },
                 3: {
                     'name': 'Ultimate CAD Pack',
-                    'description': 'Production-ready CAD and IFC files plus every PDF in the library.',
-                    'features': ['2D/3D CAD + IFC handoff', 'Includes the full PDF Pro Pack'],
+                    'description': 'Editable files for professional workflows, plus the full PDF set.',
+                    'features': ['DWG files', 'Revit (RVT) files', 'IFC files'],
                     'cta_label': 'Buy CAD Pack',
                     'card_class': 'cad',
                     'button_class': 'package-button--cad'
@@ -164,7 +274,7 @@
                             </p>
                         </header>
                         <p class="package-copy">{{ meta.description }}</p>
-                        <ul class="package-points">
+                        <ul class="package-points" aria-label="What you get">
                             {% for point in meta.features %}
                                 <li>{{ point }}</li>
                             {% endfor %}
@@ -173,20 +283,26 @@
                             {% if tier.pack == 1 %}
                                 {% if plan.free_pdf_file %}
                                     <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.download_free', plan_id=plan.id) }}">{{ meta.cta_label }}</a>
+                                    <p class="microcopy">Instant download · No registration required</p>
                                 {% else %}
                                     <button class="package-button package-button--disabled" disabled>Preview unavailable</button>
+                                    <p class="microcopy">We’re finishing this file. Check back soon.</p>
                                 {% endif %}
                             {% elif tier.pack == 2 %}
                                 {% if plan.gumroad_pack_2_url %}
                                     <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=2) }}">{{ meta.cta_label }}</a>
+                                    <p class="microcopy">You’ll be redirected to Gumroad for secure checkout.</p>
                                 {% else %}
                                     <button class="package-button package-button--disabled" disabled>Reserve via studio</button>
+                                    <p class="microcopy">Email us and we’ll help you get it.</p>
                                 {% endif %}
                             {% else %}
                                 {% if plan.gumroad_pack_3_url %}
                                     <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=3) }}">{{ meta.cta_label }}</a>
+                                    <p class="microcopy">Works with AutoCAD, Revit, and many BIM tools.</p>
                                 {% else %}
                                     <button class="package-button package-button--disabled" disabled>CAD bundle in progress</button>
+                                    <p class="microcopy">We’ll publish it as soon as it’s ready.</p>
                                 {% endif %}
                             {% endif %}
                         </div>
@@ -224,10 +340,39 @@
             <article class="plan-panel">
                 <div class="plan-panel__head">
                     <p class="eyebrow">Editorial note</p>
-                    <h2>Design overview</h2>
+                    <h2>The story of this plan</h2>
                 </div>
                 <div class="rich-text" itemprop="description">{{ plan.description | safe }}</div>
             </article>
+
+            {% if plan.design_philosophy or plan.lifestyle_suitability or plan.customization_potential %}
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Studio depth</p>
+                    <h2>How it feels to live here</h2>
+                </div>
+                <div class="plan-accordion" aria-label="Expandable plan insights">
+                    {% if plan.design_philosophy %}
+                    <details class="plan-accordion__item" open>
+                        <summary>Why it was designed this way</summary>
+                        <div class="rich-text">{{ plan.design_philosophy | replace('\n','<br>') | safe }}</div>
+                    </details>
+                    {% endif %}
+                    {% if plan.lifestyle_suitability %}
+                    <details class="plan-accordion__item">
+                        <summary>What lifestyle it supports</summary>
+                        <div class="rich-text">{{ plan.lifestyle_suitability | replace('\n','<br>') | safe }}</div>
+                    </details>
+                    {% endif %}
+                    {% if plan.customization_potential %}
+                    <details class="plan-accordion__item">
+                        <summary>How it adapts to your needs</summary>
+                        <div class="rich-text">{{ plan.customization_potential | replace('\n','<br>') | safe }}</div>
+                    </details>
+                    {% endif %}
+                </div>
+            </article>
+            {% endif %}
 
             {% if plan.main_features %}
             <article class="plan-panel">
@@ -265,19 +410,74 @@
             {% endif %}
         </section>
 
-        {% if related_plans %}
-        <section class="plan-related" aria-label="Related plans">
+        <section class="plan-faq" aria-labelledby="plan-faq-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Questions rapides</p>
+                    <h2 id="plan-faq-heading">Mini FAQ pour avancer sereinement</h2>
+                    <p class="muted">Des réponses directes, sans jargon.</p>
+                </div>
+            </div>
+            <div class="plan-faq__grid">
+                <article>
+                    <h3>Peut-on modifier les plans&nbsp;?</h3>
+                    <p>Oui. Le <strong>Pack 3</strong> inclut les fichiers DWG / Revit / IFC prêts pour votre bureau d’études. Nous pouvons aussi recommander des partenaires si besoin.</p>
+                </article>
+                <article>
+                    <h3>Comment sont livrés les fichiers&nbsp;?</h3>
+                    <p>Les téléchargements se font via un lien sécurisé (Gumroad ou notre coffre-fort). Les fichiers restent accessibles même après les mises à jour studio.</p>
+                </article>
+                <article>
+                    <h3>Et si mon climat est différent&nbsp;?</h3>
+                    <p>{{ plan.suitable_climate or 'La plupart de nos plans sont adaptés aux climats tempérés ; écrivez-nous pour valider vos contraintes.' }}</p>
+                </article>
+                <article>
+                    <h3>Quel support après l’achat&nbsp;?</h3>
+                    <p>Vous pouvez répondre à l’email de livraison ou nous écrire directement. Nous partageons volontiers les notes de chantier ou les conseils d’adaptation.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="plan-version" aria-labelledby="plan-version-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Version history</p>
+                    <h2 id="plan-version-heading">Suivi des mises à jour</h2>
+                    <p class="muted">Transparence sur l’évolution du dossier.</p>
+                </div>
+            </div>
+            <ul>
+                <li>Dernière mise à jour · {{ plan.updated_at.strftime('%B %d, %Y') if plan.updated_at else 'À confirmer' }}</li>
+                <li>Première publication · {{ plan.created_at.strftime('%B %d, %Y') if plan.created_at else 'À confirmer' }}</li>
+                <li>Référence dossier · {{ plan.reference_code }}</li>
+            </ul>
+        </section>
+
+        <section class="plan-related plan-related--history" aria-labelledby="recently-heading" data-recently-section hidden>
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Continue exploring</p>
+                    <h2 id="recently-heading">Recently viewed</h2>
+                    <p class="muted" data-recently-empty>Plans you open will show up here for quick access.</p>
+                </div>
+            </div>
+            <div class="plan-grid plan-grid--scroll plan-related__grid" data-recently-grid data-recently-limit="6"></div>
+        </section>
+
+        {% if similar_plans %}
+        <section class="plan-related" aria-label="Similar plans" data-similar-section data-similar-static="true">
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">You might also like</p>
                     <h2>Similar layouts</h2>
+                    <p class="muted">We matched these using categories, bedroom count, and footprint.</p>
                 </div>
             </div>
-            <ul class="related-list">
-                {% for p in related_plans %}
-                    <li><a href="{{ url_for('main.pack_detail', slug=p.slug) }}">{{ p.title }}</a></li>
-                {% endfor %}
-            </ul>
+            <div class="plan-grid plan-grid--catalog plan-related__grid">
+                {% with plans=similar_plans %}
+                    {% include "_plan_cards.html" with context %}
+                {% endwith %}
+            </div>
         </section>
         {% endif %}
     </article>

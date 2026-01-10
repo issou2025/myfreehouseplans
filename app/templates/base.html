@@ -59,6 +59,9 @@
             <nav id="primary-navigation" class="nav" aria-label="Primary">
                 <a class="{% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
                 <a class="{% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">Plans</a>
+                <a class="{% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Guides</a>
+                <a class="{% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">Favorites</a>
+                <a class="{% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">Compare</a>
                 <a class="{% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">About</a>
                 <a class="{% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
                 {% if current_user.is_authenticated and current_user.is_admin %}
@@ -96,6 +99,8 @@
         {% block content %}{% endblock %}
     </main>
 
+    <div id="compareTray" class="compare-tray" aria-live="polite" hidden></div>
+
     {# Footer #}
     <footer class="site-footer">
         <div class="shell">
@@ -110,6 +115,8 @@
                         <li><a href="{{ url_for('main.about') }}">About the practice</a></li>
                         <li><a href="{{ url_for('main.contact') }}">Studio contact</a></li>
                         <li><a href="{{ url_for('main.packs') }}">Plan catalog</a></li>
+                        <li><a href="{{ url_for('main.compare') }}">Compare plans</a></li>
+                        <li><a href="{{ url_for('main.favorites') }}">My favorites</a></li>
                     </ul>
                 </div>
                 <div>

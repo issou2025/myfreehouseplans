@@ -108,6 +108,12 @@ class HousePlan(db.Model):
     description = db.Column(db.Text, nullable=False)
     short_description = db.Column(db.String(300))
 
+    # Discovery / editorial depth
+    plan_type = db.Column(db.String(40), index=True)
+    design_philosophy = db.Column(db.Text)
+    lifestyle_suitability = db.Column(db.Text)
+    customization_potential = db.Column(db.Text)
+
     # Rich architectural characteristics (new)
     total_area_m2 = db.Column(db.Float)
     total_area_sqft = db.Column(db.Float)
@@ -248,13 +254,17 @@ class HousePlan(db.Model):
         """Generate the next reference code in the MYFREEHOUSEPLANS-XXXX/YYYY format."""
         year = datetime.utcnow().year
         like_pattern = f"{cls.REFERENCE_PREFIX}-%/{year}"
-        latest = (
-            cls.query.filter(cls.reference_code.like(like_pattern))
-            .order_by(cls.reference_code.desc())
-            .first()
+        existing = (
+            cls.query
+            .with_entities(cls.reference_code)
+            .filter(cls.reference_code.like(like_pattern))
+            .all()
         )
-        next_sequence = cls._parse_reference_sequence(latest.reference_code) + 1 if latest else 1
-        return f"{cls.REFERENCE_PREFIX}-{next_sequence:04d}/{year}"
+        max_seq = 0
+        for (code,) in existing:
+            max_seq = max(max_seq, cls._parse_reference_sequence(code))
+        next_sequence = max_seq + 1
+        return f"{cls.REFERENCE_PREFIX}-{next_sequence:03d}/{year}"
 
     def ensure_reference_code(self):
         if not self.reference_code:
@@ -543,3 +553,27 @@ class ContactMessage(db.Model):
 
     def __repr__(self):
         return f'<ContactMessage {self.id} {self.subject!r}>'
+
+
+class Visitor(db.Model):
+    """Lightweight visitor analytics record for admin dashboard."""
+
+    __tablename__ = 'visitors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    visit_date = db.Column(db.Date, nullable=False, index=True)
+    visitor_name = db.Column(db.String(120))
+    email = db.Column(db.String(200))
+    ip_address = db.Column(db.String(64), nullable=False)
+    user_agent = db.Column(db.String(500))
+    page_visited = db.Column(db.String(255), nullable=False, index=True)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=db.func.now(),
+        index=True,
+    )
+
+    def __repr__(self):
+        return f"<Visitor {self.visit_date} {self.page_visited}>"

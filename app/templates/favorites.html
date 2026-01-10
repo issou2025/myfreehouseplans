@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell favorites-page">
+    <header class="section-heading favorites-page__intro">
+        <div>
+            <p class="eyebrow">Saved shortlist</p>
+            <h1>My favorite house plans</h1>
+            <p class="lead">Plans saved on this device stay right here. Toggle favorites on any card or detail page to build an instant shortlist without creating an account.</p>
+        </div>
+        <div class="favorites-page__cta">
+            <a class="btn btn-primary" href="{{ url_for('main.packs') }}">Browse catalog</a>
+            <button class="btn btn-outline" type="button" data-favorites-clear hidden>Clear favorites</button>
+        </div>
+    </header>
+
+    <section aria-label="Favorite plans">
+        <div id="favoritesEmpty" class="favorites-empty">
+            <p>You have not saved any plans yet. Explore the catalog and tap “Add to favorites” whenever a plan catches your eye.</p>
+            <a class="btn btn-soft" href="{{ url_for('main.packs') }}">Find your first favorite</a>
+        </div>
+        <div id="favoritesGrid" class="favorites-grid" aria-live="polite" aria-busy="false"></div>
+    </section>
+</div>
+{% endblock %}
