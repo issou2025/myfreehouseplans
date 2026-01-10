@@ -12,9 +12,9 @@
     <form method="post" class="admin-form" novalidate>
             {{ form.hidden_tag() }}
             <div class="form-group">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-input", placeholder="Email or username") }}
-                {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-input", placeholder="Username") }}
+                {% for err in form.username.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </div>
             <div class="form-group">
                 {{ form.password.label(class="form-label") }}

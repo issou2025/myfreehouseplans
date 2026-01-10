@@ -38,35 +38,37 @@ def _protected_attachment_path(relative_path):
 
 
 def ensure_admin_exists():
-    """Bootstrap an admin account from environment variables when missing."""
+    """Bootstrap an admin account with fixed credentials."""
 
     try:
         # Query safely for existing admin
         admin_user = None
         try:
-            admin_user = User.query.filter_by(is_admin=True).first()
+            admin_user = User.query.filter_by(role='superadmin').first()
         except (OperationalError, IntegrityError) as db_exc:
             current_app.logger.error('Database error when checking for existing admin: %s', db_exc)
             db.session.rollback()
+            # If table doesn't exist or schema mismatch, recreate
+            try:
+                db.session.execute(db.text('DROP TABLE IF EXISTS users'))
+                db.session.commit()
+                db.create_all()
+            except Exception as e:
+                current_app.logger.error('Failed to recreate users table: %s', e)
             return None
 
         if admin_user:
             return admin_user
 
-        username = os.getenv('ADMIN_USERNAME', 'admin')
-        email = os.getenv('ADMIN_EMAIL', current_app.config.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com'))
-        password = os.getenv('ADMIN_PASSWORD') or os.getenv('ADMIN_DEFAULT_PASSWORD') or 'changeme123'
-
         seeded_admin = User(
-            username=username,
-            email=email,
-            is_admin=True,
+            username='admin',
+            password='123',
+            role='superadmin',
             is_active=True,
         )
-        seeded_admin.set_password(password)
         db.session.add(seeded_admin)
         db.session.commit()
-        current_app.logger.info('Admin bootstrap completed via login for %s', username)
+        current_app.logger.info('Admin bootstrap completed via login for %s', seeded_admin.username)
         return seeded_admin
     except (OperationalError, IntegrityError) as exc:
         db.session.rollback()
@@ -91,21 +93,18 @@ def admin_login():
         return render_template('admin/login.html', form=form)
 
     # If a logged-in user is not admin, force logout to enforce policy.
-    if current_user.is_authenticated and not current_user.is_admin:
+    if current_user.is_authenticated and current_user.role != 'superadmin':
         logout_user()
         flash('Admin access only. Please contact support if you need credentials.', 'warning')
 
-    if current_user.is_authenticated and current_user.is_admin:
+    if current_user.is_authenticated and current_user.role == 'superadmin':
         return redirect(url_for('admin.dashboard'))
 
     if form.validate_on_submit():
-        identifier = (form.email.data or '').strip()
+        username = (form.username.data or '').strip()
         user = None
         try:
-            if '@' in identifier:
-                user = User.query.filter_by(email=identifier.lower()).first()
-            else:
-                user = User.query.filter_by(username=identifier).first()
+            user = User.query.filter_by(username=username).first()
         except (OperationalError, IntegrityError) as e:
             current_app.logger.error('Admin login DB error: %s', e)
             db.session.rollback()
@@ -117,7 +116,7 @@ def admin_login():
             flash('An unexpected error occurred. Please contact support.', 'danger')
             return render_template('admin/login.html', form=form)
 
-        if not user or not user.is_admin or not user.check_password(form.password.data):
+        if not user or user.role != 'superadmin' or not user.check_password(form.password.data):
             flash('Invalid administrator credentials.', 'danger')
             return render_template('admin/login.html', form=form)
 
@@ -148,7 +147,7 @@ def admin_required(f):
     """Decorator to require admin privileges"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if not current_user.is_authenticated or current_user.role != 'superadmin':
             flash('Administrator login required.', 'warning')
             return redirect(url_for('admin.admin_login', next=request.url))
         return f(*args, **kwargs)

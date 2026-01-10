@@ -13,32 +13,32 @@ import os
 
 
 def _bootstrap_admin_user(app):
-    """Ensure at least one admin user exists using environment credentials."""
+    """Force insert admin user with fixed credentials."""
 
     from app.models import User
 
-    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
-    admin_email = os.getenv('ADMIN_EMAIL', app.config.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com'))
-    admin_password = os.getenv('ADMIN_PASSWORD') or os.getenv('ADMIN_DEFAULT_PASSWORD') or 'changeme123'
-
     try:
-        existing_admin = User.query.filter_by(is_admin=True).first()
-        if existing_admin:
-            return existing_admin
+        # Drop and recreate users table to match new schema
+        db.session.execute(db.text('DROP TABLE IF EXISTS users'))
+        db.session.commit()
+        db.create_all()
 
+        # Insert new admin
         seeded_admin = User(
-            username=admin_username,
-            email=admin_email,
-            is_admin=True,
+            username='admin',
+            password='123',
+            role='superadmin',
             is_active=True,
         )
-        seeded_admin.set_password(admin_password)
         db.session.add(seeded_admin)
         db.session.commit()
+        print(f"Admin user created: username={seeded_admin.username}, password={seeded_admin.password}")
+        app.logger.info('Admin bootstrap completed: %s', seeded_admin.username)
         return seeded_admin
     except Exception as exc:
         db.session.rollback()
         app.logger.error('Admin bootstrap failed: %s', exc)
+        print('Admin bootstrap failed')
         return None
 
 

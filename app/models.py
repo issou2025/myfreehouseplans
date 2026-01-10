@@ -8,7 +8,6 @@ Models include User, HousePlan, Category, and Order.
 from app.extensions import db, login_manager
 from flask import current_app
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from slugify import slugify
 
@@ -35,32 +34,26 @@ class User(UserMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
-    is_admin = db.Column(db.Boolean, default=False)
+    password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login = db.Column(db.DateTime)
     
     # Relationships
     orders = db.relationship('Order', backref='customer', lazy='dynamic', cascade='all, delete-orphan')
     
     def set_password(self, password):
-        """Hash and set user password"""
-        self.password_hash = generate_password_hash(password)
+        """Set user password (plain text)"""
+        self.password = password
     
     def check_password(self, password):
-        """Verify password against hash"""
-        return check_password_hash(self.password_hash, password)
+        """Verify password (plain text comparison)"""
+        return self.password == password
     
     @property
-    def full_name(self):
-        """Return user's full name"""
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
-        return self.username
+    def is_admin(self):
+        """Check if user is admin based on role"""
+        return self.role == 'superadmin'
     
     def __repr__(self):
         return f'<User {self.username}>'

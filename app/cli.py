@@ -7,7 +7,6 @@ from app.models import User, Category, HousePlan
 
 @click.command('create-admin')
 @click.option('--username', prompt=True, help='Admin username')
-@click.option('--email', prompt=True, help='Admin email address')
 @click.option(
     '--password',
     prompt=True,
@@ -16,36 +15,31 @@ from app.models import User, Category, HousePlan
     help='Admin password (will not be echoed)'
 )
 @with_appcontext
-def create_admin_command(username: str, email: str, password: str) -> None:
+def create_admin_command(username: str, password: str) -> None:
     """Create (or update) an admin user."""
     username = (username or '').strip()
-    email = (email or '').strip().lower()
 
     if not username:
         raise click.ClickException('Username is required.')
-    if not email or '@' not in email:
-        raise click.ClickException('A valid email is required.')
 
     existing_by_username = User.query.filter_by(username=username).first()
-    existing_by_email = User.query.filter_by(email=email).first()
 
-    user = existing_by_username or existing_by_email
+    user = existing_by_username
     if user is None:
-        user = User(username=username, email=email, is_admin=True, is_active=True)
+        user = User(username=username, role='superadmin', is_active=True)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        click.echo(f"Created admin user '{user.username}' ({user.email}).")
+        click.echo(f"Created admin user '{user.username}'.")
         return
 
     # Update path
     user.username = username
-    user.email = email
-    user.is_admin = True
+    user.role = 'superadmin'
     user.is_active = True
     user.set_password(password)
     db.session.commit()
-    click.echo(f"Updated admin user '{user.username}' ({user.email}).")
+    click.echo(f"Updated admin user '{user.username}'.")
 
 
 @click.command('reset-admin-password')
@@ -70,7 +64,7 @@ def reset_admin_password_command(username: str) -> None:
     user.is_active = True
     db.session.commit()
     
-    click.echo(f"✓ Password updated for user '{user.username}' ({user.email})")
+    click.echo(f"✓ Password updated for user '{user.username}'")
     click.echo(f"✓ Admin status: {user.is_admin}")
     click.echo(f"✓ Active status: {user.is_active}")
 

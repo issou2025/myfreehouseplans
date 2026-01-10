@@ -15,9 +15,9 @@ from app.models import User, Category, ContactMessage
 class LoginForm(FlaskForm):
     """User login form"""
     
-    email = StringField('Email or username', validators=[
-        DataRequired(message='Email or username is required'),
-        Length(max=120, message='Must be 120 characters or less')
+    username = StringField('Username', validators=[
+        DataRequired(message='Username is required'),
+        Length(max=80, message='Must be 80 characters or less')
     ])
     password = PasswordField('Password', validators=[
         DataRequired(message='Password is required')
