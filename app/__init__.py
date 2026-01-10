@@ -50,8 +50,26 @@ def create_app(config_name='default'):
             # Create all tables if they don't exist
             db.create_all()
             app.logger.info('Database tables initialized successfully')
+            
+            # Auto-create default admin if no users exist (first-time setup)
+            if User.query.count() == 0:
+                admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+                admin_email = os.getenv('ADMIN_EMAIL', 'admin@myfreehouseplan.com')
+                admin_password = os.getenv('ADMIN_PASSWORD', 'changeme123')
+                
+                default_admin = User(
+                    username=admin_username,
+                    email=admin_email,
+                    is_admin=True,
+                    is_active=True
+                )
+                default_admin.set_password(admin_password)
+                db.session.add(default_admin)
+                db.session.commit()
+                app.logger.info('Default admin user created: %s', admin_username)
         except Exception as e:
             app.logger.error('Database initialization failed: %s', e)
+            db.session.rollback()
             # Don't crash - let the app start and fail gracefully on queries
     
     # Register blueprints
