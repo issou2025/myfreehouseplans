@@ -78,8 +78,36 @@ def create_app(config_name='default'):
                     cli_args = ' '.join(sys.argv).lower()
                     running_migration = ('db' in sys.argv) or ('upgrade' in sys.argv) or ('alembic' in cli_args)
                     if not existing_tables and not running_migration:
-                        app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
-                        raise RuntimeError('Production database empty; initialize manually with migrations')
+                        # Opt-in automatic initialization when explicitly allowed via env var
+                        allow_init = os.environ.get('ALLOW_INIT_ON_STARTUP', '').lower() in ('1', 'true', 'yes')
+                        if allow_init:
+                            try:
+                                from alembic.config import Config as AlembicConfig
+                                from alembic import command as alembic_command
+
+                                # Try locating alembic.ini in project
+                                migrations_ini = os.path.abspath(os.path.join(os.getcwd(), 'migrations', 'alembic.ini'))
+                                if not os.path.exists(migrations_ini):
+                                    # fallback: package-relative
+                                    migrations_ini = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'migrations', 'alembic.ini'))
+
+                                if os.path.exists(migrations_ini):
+                                    alembic_cfg = AlembicConfig(migrations_ini)
+                                    alembic_cfg.set_main_option('sqlalchemy.url', app.config['SQLALCHEMY_DATABASE_URI'])
+                                    app.logger.info('Applying alembic migrations from %s', migrations_ini)
+                                    alembic_command.upgrade(alembic_cfg, 'head')
+                                    app.logger.info('Migrations applied successfully during startup')
+                                    inspector = inspect(db.engine)
+                                    existing_tables = inspector.get_table_names() or []
+                                else:
+                                    app.logger.error('alembic.ini not found; cannot run migrations automatically: %s', migrations_ini)
+                                    raise RuntimeError('Missing alembic.ini for automatic migrations')
+                            except Exception as ex:
+                                app.logger.exception('Automatic migration attempt failed: %s', ex)
+                                raise
+                        else:
+                            app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
+                            raise RuntimeError('Production database empty; initialize manually with migrations')
 
                 app.logger.info('Production database verified with %d existing tables', len(existing_tables))
             else:
