@@ -40,6 +40,20 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
     
+    # Ensure database tables exist (production safety net)
+    # This guarantees tables are created even if migrations haven't run
+    with app.app_context():
+        try:
+            # Import all models to ensure they're registered with SQLAlchemy
+            from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
+            
+            # Create all tables if they don't exist
+            db.create_all()
+            app.logger.info('Database tables initialized successfully')
+        except Exception as e:
+            app.logger.error('Database initialization failed: %s', e)
+            # Don't crash - let the app start and fail gracefully on queries
+    
     # Register blueprints
     register_blueprints(app)
     

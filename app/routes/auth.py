@@ -50,12 +50,16 @@ def reset_password_request():
     form = PasswordResetRequestForm()
     
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        
-        if user:
-            # TODO: Implement email sending with reset token
-            # send_password_reset_email(user)
-            pass
+        try:
+            user = User.query.filter_by(email=form.email.data).first()
+            
+            if user:
+                # TODO: Implement email sending with reset token
+                # send_password_reset_email(user)
+                pass
+        except Exception as e:
+            # Database error - log but don't crash
+            current_app.logger.error('Password reset query failed: %s', e)
         
         # Always show success message (security - don't reveal if email exists)
         flash('Check your email for instructions to reset your password.', 'info')

@@ -53,10 +53,15 @@ def admin_login():
     if form.validate_on_submit():
         identifier = (form.email.data or '').strip()
         user = None
-        if '@' in identifier:
-            user = User.query.filter_by(email=identifier.lower()).first()
-        else:
-            user = User.query.filter_by(username=identifier).first()
+        try:
+            if '@' in identifier:
+                user = User.query.filter_by(email=identifier.lower()).first()
+            else:
+                user = User.query.filter_by(username=identifier).first()
+        except Exception as e:
+            current_app.logger.error('Admin login query failed: %s', e)
+            flash('Database error. Please contact support.', 'danger')
+            return render_template('admin/login.html', form=form)
 
         if not user or not user.is_admin or not user.check_password(form.password.data):
             flash('Invalid administrator credentials.', 'danger')
