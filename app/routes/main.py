@@ -311,7 +311,7 @@ def _serialize_plan_summary(plan: HousePlan):
         'slug': plan.slug,
         'title': plan.title,
         'reference': plan.reference_code,
-        'thumb': upload_url(cover_image) if cover_image else '',
+        'thumb': url_for('static', filename=cover_image) if cover_image else '',
         'area': area_value,
         'bedrooms': bedrooms_value,
         'starting_price': plan.starting_paid_price,

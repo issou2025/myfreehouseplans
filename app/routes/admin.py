@@ -602,7 +602,7 @@ def add_plan():
 
             cover_upload = form.cover_image.data
             if cover_upload and getattr(cover_upload, 'filename', ''):
-                plan.cover_image = save_uploaded_file(cover_upload, 'images')
+                plan.cover_image = save_uploaded_file(cover_upload, 'plans')
 
             pdf_upload = form.free_pdf_file.data
             if pdf_upload and getattr(pdf_upload, 'filename', ''):
@@ -725,7 +725,7 @@ def edit_plan(id):
 
             cover_upload = form.cover_image.data
             if cover_upload and getattr(cover_upload, 'filename', ''):
-                plan.cover_image = save_uploaded_file(cover_upload, 'images')
+                plan.cover_image = save_uploaded_file(cover_upload, 'plans')
 
             pdf_upload = form.free_pdf_file.data
             if pdf_upload and getattr(pdf_upload, 'filename', ''):

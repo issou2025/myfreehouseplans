@@ -85,4 +85,4 @@ def save_uploaded_file(
     absolute_path = os.path.join(upload_path, safe_name)
     file.save(absolute_path)
 
-    return os.path.join(folder, safe_name).replace('\\', '/')
+    return os.path.join('uploads', folder, safe_name).replace('\\', '/')

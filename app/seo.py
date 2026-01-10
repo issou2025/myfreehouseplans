@@ -84,7 +84,7 @@ def generate_product_schema(plan):
         "@type": "Product",
         "name": plan.title,
         "description": plan.description,
-            "image": f"{site_url}{url_for('static', filename='uploads/' + (plan.cover_image or plan.main_image))}" if (plan.cover_image or plan.main_image) else None,
+            "image": f"{site_url}{url_for('static', filename=(plan.cover_image or plan.main_image))}" if (plan.cover_image or plan.main_image) else None,
         "sku": getattr(plan, 'reference_code', None) or f"PLAN-{plan.id}",
         "offers": {
             "@type": "Offer",

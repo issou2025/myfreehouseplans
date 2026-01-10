@@ -32,14 +32,14 @@ def _variant_relpath(original_rel: str, variant: str, width: int, fmt: str) -> s
     parent = p.parent
     stem = p.stem
     filename = f"{stem}__{variant}__w{width}.{fmt}"
-    return str(Path("variants") / parent / filename).replace('\\', '/')
+    return str(Path("uploads") / "variants" / parent.name / filename).replace('\\', '/')
 
 
 def _srcset(original_rel: str, variant: str, widths: Iterable[int], fmt: str) -> str:
     parts: list[str] = []
     for w in widths:
         rel = _variant_relpath(original_rel, variant=variant, width=w, fmt=fmt)
-        parts.append(f"{url_for('static', filename=f'uploads/{rel}')} {w}w")
+        parts.append(f"{url_for('static', filename=rel)} {w}w")
     return ", ".join(parts)
 
 

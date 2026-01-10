@@ -29,4 +29,4 @@ def upload_url(value: str | None) -> str | None:
         return None
     if is_absolute_url(value):
         return value
-    return url_for("static", filename=f"uploads/{value}")
+    return url_for("static", filename=value)
