@@ -34,6 +34,11 @@ html, body {
 	letter-spacing: -0.01em;
 }
 
+/* Enforce consistent box-sizing to avoid layout calculation issues */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
 	margin: 0;
 	min-height: 100%;
@@ -147,13 +152,45 @@ p {
 }
 
 /* Forms & Buttons — modern vibrant theme (preserve layout order and spacing) */
+/* Form layout rules to prevent overlap and enforce spacing */
+form, .form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	width: 100%;
+}
+
+/* Rows of form fields may be used for multi-column layouts; allow wrapping */
+.form-row {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	flex-wrap: wrap;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0 0 16px 0 !important;
+	min-height: 44px;
+	flex: 1 1 200px;
+	box-sizing: border-box;
+}
+
+/* Prevent inputs from using absolute positioning which can cause overlap */
+input, textarea, select, label {
+	position: relative !important;
+}
+
+/* Input basic styles */
+input[type="text"],
 input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="number"],
 select,
 textarea {
-	height: 44px;
 	min-height: 44px;
 	padding: 10px 12px;
 	border-radius: 8px;
@@ -163,8 +200,9 @@ textarea {
 	font-family: var(--font-sans);
 	font-size: 0.95rem;
 	transition: box-shadow 0.18s ease, border-color 0.12s ease;
+	width: 100%;
+	display: block;
 }
-
 textarea { min-height: 120px; padding-top: 12px; padding-bottom: 12px; }
 
 input:focus, textarea:focus, select:focus {
@@ -173,9 +211,12 @@ input:focus, textarea:focus, select:focus {
 	box-shadow: var(--focus-ring);
 }
 
-label { display: block; margin-bottom: 8px; color: var(--color-text); font-weight: 600; }
 
-.form-row { display: flex; gap: 12px; align-items: center; }
+/* Labels and spacing */
+label { display: block; margin-bottom: 6px; color: var(--color-text); font-weight: 600; }
+
+/* Ensure form rows don't use fixed heights and allow wrapping */
+.form-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 
 .btn, .package-button { border-radius: 10px; font-weight: 600; }
@@ -192,6 +233,23 @@ label { display: block; margin-bottom: 8px; color: var(--color-text); font-weigh
 
 /* Ensure clickable areas meet minimum touch target */
 button, .btn { min-height: 44px; padding: 10px 16px; }
+
+/* Focus-visible for keyboard users */
+:focus {
+	box-shadow: var(--focus-ring);
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 640px) {
+	form, .form { gap: 16px; }
+	.form-row { flex-direction: column; }
+	.form-group { flex: 1 1 auto; min-width: auto; }
+	input, select, textarea { width: 100%; }
+}
+
+/* Defensive: avoid negative margins and ensure overflow visible in forms */
+form * { margin: 0; }
+form { overflow: visible; }
 
 
 .package-button--free { background: var(--color-primary); color: #fff; }
