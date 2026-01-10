@@ -108,58 +108,74 @@ def admin_required(f):
 def dashboard():
     """Admin dashboard with statistics"""
     
-    # Get statistics
-    total_plans = HousePlan.query.count()
-    published_plans = HousePlan.query.filter_by(is_published=True).count()
-    total_orders = Order.query.count()
-    completed_orders = Order.query.filter_by(status='completed').count()
-    total_users = User.query.count()
-    total_categories = Category.query.count()
-    free_plans = HousePlan.query.filter(HousePlan.free_pdf_file.isnot(None)).count()
-    paid_plans = HousePlan.query.filter(
-        or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
-    ).count()
-    
-    # Recent orders
-    recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
-    
-    # Popular plans
-    popular_plans = HousePlan.query.order_by(HousePlan.views_count.desc()).limit(5).all()
-    plan_table = HousePlan.query.order_by(HousePlan.created_at.desc()).all()
-    open_statuses = [ContactMessage.STATUS_NEW, ContactMessage.STATUS_IN_PROGRESS]
-    inbox_counts = {
-        'total': ContactMessage.query.count(),
-        'new': ContactMessage.query.filter_by(status=ContactMessage.STATUS_NEW).count(),
-        'open': ContactMessage.query.filter(ContactMessage.status.in_(open_statuses)).count(),
-        'responded': ContactMessage.query.filter_by(status=ContactMessage.STATUS_RESPONDED).count(),
-    }
-    recent_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all()
-    
-    stats = {
-        'total_plans': total_plans,
-        'published_plans': published_plans,
-        'total_orders': total_orders,
-        'completed_orders': completed_orders,
-        'total_users': total_users,
-        'total_categories': total_categories,
-        'free_plans': free_plans,
-        'paid_plans': paid_plans,
-        'messages_total': inbox_counts['total'],
-        'messages_open': inbox_counts['open'],
-        'messages_new': inbox_counts['new'],
-    }
-    
-    status_labels = dict(ContactMessage.STATUS_CHOICES)
+    try:
+        # Get statistics
+        total_plans = HousePlan.query.count()
+        published_plans = HousePlan.query.filter_by(is_published=True).count()
+        total_orders = Order.query.count()
+        completed_orders = Order.query.filter_by(status='completed').count()
+        total_users = User.query.count()
+        total_categories = Category.query.count()
+        free_plans = HousePlan.query.filter(HousePlan.free_pdf_file.isnot(None)).count()
+        paid_plans = HousePlan.query.filter(
+            or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
+        ).count()
+        
+        # Recent orders
+        recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+        
+        # Popular plans
+        popular_plans = HousePlan.query.order_by(HousePlan.views_count.desc()).limit(5).all()
+        plan_table = HousePlan.query.order_by(HousePlan.created_at.desc()).all()
+        open_statuses = [ContactMessage.STATUS_NEW, ContactMessage.STATUS_IN_PROGRESS]
+        inbox_counts = {
+            'total': ContactMessage.query.count(),
+            'new': ContactMessage.query.filter_by(status=ContactMessage.STATUS_NEW).count(),
+            'open': ContactMessage.query.filter(ContactMessage.status.in_(open_statuses)).count(),
+            'responded': ContactMessage.query.filter_by(status=ContactMessage.STATUS_RESPONDED).count(),
+        }
+        recent_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all()
+        
+        stats = {
+            'total_plans': total_plans,
+            'published_plans': published_plans,
+            'total_orders': total_orders,
+            'completed_orders': completed_orders,
+            'total_users': total_users,
+            'total_categories': total_categories,
+            'free_plans': free_plans,
+            'paid_plans': paid_plans,
+            'messages_total': inbox_counts['total'],
+            'messages_open': inbox_counts['open'],
+            'messages_new': inbox_counts['new'],
+        }
+        
+        status_labels = dict(ContactMessage.STATUS_CHOICES)
 
-    return render_template('admin/dashboard.html',
-                         stats=stats,
-                         recent_orders=recent_orders,
-                         popular_plans=popular_plans,
-                         plan_table=plan_table,
-                         recent_messages=recent_messages,
-                         inbox_counts=inbox_counts,
+        return render_template('admin/dashboard.html',
+                             stats=stats,
+                             recent_orders=recent_orders,
+                             popular_plans=popular_plans,
+                             plan_table=plan_table,
+                             recent_messages=recent_messages,
+                             inbox_counts=inbox_counts,
                          inquiry_labels=INQUIRY_LABELS,
                          status_labels=status_labels)
+    except Exception as e:
+        current_app.logger.error('Admin dashboard query failed: %s', e)
+        flash('Dashboard temporarily unavailable. Database may be initializing.', 'warning')
+        return render_template('admin/dashboard.html',
+                             stats={'total_plans': 0, 'published_plans': 0, 'total_orders': 0,
+                                   'completed_orders': 0, 'total_users': 0, 'total_categories': 0,
+                                   'free_plans': 0, 'paid_plans': 0, 'messages_total': 0,
+                                   'messages_open': 0, 'messages_new': 0},
+                             recent_orders=[],
+                             popular_plans=[],
+                             plan_table=[],
+                             recent_messages=[],
+                             inbox_counts={'total': 0, 'new': 0, 'open': 0, 'responded': 0},
+                             inquiry_labels=INQUIRY_LABELS,
+                             status_labels={})
 
 
 @admin_bp.route('/visitors')
