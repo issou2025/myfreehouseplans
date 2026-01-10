@@ -48,6 +48,33 @@ def create_admin_command(username: str, email: str, password: str) -> None:
     click.echo(f"Updated admin user '{user.username}' ({user.email}).")
 
 
+@click.command('reset-admin-password')
+@click.option('--username', default='admin', help='Admin username (default: admin)')
+@with_appcontext
+def reset_admin_password_command(username: str) -> None:
+    """Reset admin password from environment variable ADMIN_PASSWORD or prompt."""
+    import os
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        raise click.ClickException(f"User '{username}' not found.")
+    
+    # Try to get password from environment variable first
+    password = os.getenv('ADMIN_PASSWORD')
+    
+    if not password:
+        password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
+    
+    user.set_password(password)
+    user.is_admin = True
+    user.is_active = True
+    db.session.commit()
+    
+    click.echo(f"✓ Password updated for user '{user.username}' ({user.email})")
+    click.echo(f"✓ Admin status: {user.is_admin}")
+    click.echo(f"✓ Active status: {user.is_active}")
+
+
 @click.command('seed-categories')
 @with_appcontext
 def seed_categories_command() -> None:

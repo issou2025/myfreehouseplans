@@ -174,8 +174,14 @@ def register_shell_context(app):
 
 def register_cli_commands(app):
     """Register custom Flask CLI commands."""
-    from app.cli import create_admin_command, seed_categories_command, seed_sample_plans_command
+    from app.cli import (
+        create_admin_command,
+        reset_admin_password_command,
+        seed_categories_command,
+        seed_sample_plans_command
+    )
     app.cli.add_command(create_admin_command)
+    app.cli.add_command(reset_admin_password_command)
     app.cli.add_command(seed_categories_command)
     app.cli.add_command(seed_sample_plans_command)
 

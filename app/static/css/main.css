@@ -141,8 +141,7 @@
 	position: sticky;
 	top: 0;
 	z-index: 100;
-	width: 86vw;
-	max-width: 320px;
+	width: 100%;
 	backdrop-filter: blur(18px);
 	border-bottom: 1px solid rgba(255,255,255,0.6);
 	box-shadow: var(--shadow-ring);
@@ -152,7 +151,7 @@
 	align-items: center;
 	gap: 12px;
 	justify-content: space-between;
-	padding: 12px 16px;
+	padding: 14px 18px;
 }
 
 .breadcrumbs { overflow-wrap: anywhere; }
@@ -743,8 +742,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 44px;
-	height: 44px;
+	width: 48px;
+	height: 48px;
 	border: none;
 	background: transparent;
 	font-size: 1.5rem;
@@ -753,6 +752,7 @@
 	z-index: 101;
 	border-radius: var(--radius-sm);
 	transition: background 0.2s ease;
+	-webkit-tap-highlight-color: transparent;
 }
 
 .nav-toggle:hover { background: var(--color-surface-alt); }
@@ -847,6 +847,8 @@
 	transition: transform 0.15s ease, box-shadow 0.15s ease;
 	text-align: center;
 	font-size: 0.95rem;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
 }
 
 @media (min-width: 768px) {
@@ -4002,3 +4004,117 @@ input[type="file"] {
 	}
 }
 
+/* ============================================
+   MOBILE OPTIMIZATIONS
+   ============================================ */
+
+/* Improve input fields on mobile */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+textarea,
+select {
+	font-size: 16px !important; /* Prevents iOS zoom on focus */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+	/* Stack form actions vertically on mobile */
+	.form-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	
+	.form-actions .btn {
+		width: 100%;
+		justify-content: center;
+	}
+	
+	/* Better mobile table scrolling */
+	.admin-table {
+		margin: 16px -12px; /* Negative margin for edge-to-edge on mobile */
+		padding: 0 12px;
+	}
+	
+	/* Improve admin cards on mobile */
+	.admin-card {
+		padding: 16px;
+	}
+	
+	/* Better mobile spacing */
+	.admin-shell {
+		padding: 16px;
+	}
+	
+	.shell {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+	
+	/* Responsive plan cards */
+	.plan-card {
+		grid-template-columns: 1fr;
+	}
+	
+	.plan-card__media {
+		width: 100%;
+	}
+	
+	/* Better mobile navigation */
+	.nav {
+		padding-top: 70px;
+	}
+	
+	/* Improve flash messages on mobile */
+	.flash-messages {
+		left: 8px;
+		right: 8px;
+		top: 8px;
+	}
+	
+	/* Better touch targets for links */
+	a {
+		-webkit-tap-highlight-color: transparent;
+	}
+	
+	/* Improve modal sizing on mobile */
+	.modal-content {
+		margin: 10px;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
+}
+
+/* Prevent text size adjustment on device orientation change */
+html {
+	-webkit-text-size-adjust: 100%;
+	-moz-text-size-adjust: 100%;
+	-ms-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+/* Better scrolling on iOS */
+body {
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Smooth scrolling for anchor links */
+html {
+	scroll-behavior: smooth;
+}
+
+/* Improve button press feedback on mobile */
+.btn:active,
+.compare-toggle:active,
+.favorite-toggle:active,
+.nav-toggle:active,
+button:active {
+	transform: scale(0.98);
+}
