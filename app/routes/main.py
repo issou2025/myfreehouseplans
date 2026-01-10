@@ -56,36 +56,36 @@ NARRATIVE_FILTERS = {
 
 GUIDE_ARTICLES = {
     'choose-family-plan': {
-        'title': 'Comment choisir un plan familial équilibré',
-        'description': 'Une méthode simple pour comparer surfaces, zones de vie et budget avant de s’engager.',
+        'title': 'How to pick a balanced family plan',
+        'description': 'A simple way to compare area, living zones, and budget before committing.',
         'sections': [
-            'Commencez par le quotidien : combien d’activités se déroulent réellement dans la maison, et quelles pièces doivent rester calmes ?',
-            'Priorisez les espaces transitionnels (mudroom, buanderie lumineuse) pour absorber le rythme familial.',
-            'Cherchez des plans offrant au moins une chambre au rez-de-chaussée : parfait pour les invités ou le télétravail.',
+            'Start with daily life: how many activities truly happen at home, and which rooms need to stay quiet?',
+            'Prioritize transitional spaces (mudroom, bright laundry) to absorb family rhythm.',
+            'Seek plans with at least one main-level bedroom: great for guests or remote work.',
         ],
-        'cta': 'Voir tous les plans familiaux',
+        'cta': 'See all family plans',
         'cta_url': '/plans?type=family',
     },
     'budget-vs-surface': {
-        'title': 'Budget versus surface : trouver le bon équilibre',
-        'description': 'Nos architectes expliquent comment raisonner en coût par mètre carré et éviter les surprises.',
+        'title': 'Budget versus area: finding the balance',
+        'description': 'Our architects explain how to reason in cost per square meter and avoid surprises.',
         'sections': [
-            'Fixez un budget global puis déduisez 10 % pour les imprévus. Le reste est votre enveloppe plan + construction.',
-            'Comparez les plans à l’aide du coût par mètre carré : cela révèle où la complexité se cache.',
-            'Investissez dans l’enveloppe (structure, isolation) avant les finitions. Cela garantit la valeur long terme.',
+            'Set an overall budget then remove 10% for contingencies. The remainder is for plans + construction.',
+            'Compare plans using cost per square meter/foot: it reveals where complexity hides.',
+            'Invest in the envelope (structure, insulation) before finishes. That preserves long-term value.',
         ],
-        'cta': 'Plans optimisés budget/surface',
+        'cta': 'Plans tuned for budget and area',
         'cta_url': '/plans?sort=price_low',
     },
     'build-hot-climate': {
-        'title': 'Construire dans les climats chauds',
-        'description': 'Orientation, ventilation croisée et matériaux adaptés : le trio gagnant.',
+        'title': 'Building in hot climates',
+        'description': 'Orientation, cross-ventilation, and the right materials: the winning trio.',
         'sections': [
-            'Privilégiez les toitures ventilées et les plafonds hauts pour stocker la chaleur.',
-            'Ajoutez des débords de toiture généreux et des pièces traversantes.',
-            'Choisissez des matériaux clairs et des protections solaires mobiles pour rester flexible.',
+            'Favor ventilated roofs and higher ceilings to buffer heat.',
+            'Add generous roof overhangs and breezeways for cross-ventilation.',
+            'Choose light materials and movable solar shading to stay flexible.',
         ],
-        'cta': 'Plans pensés pour les climats tropicaux',
+        'cta': 'Plans designed for tropical climates',
         'cta_url': '/plans?narrative=hot_climate',
     },
 }
@@ -745,7 +745,7 @@ def newsletter_signup():
     email = (payload.get('email') if payload else '') or ''
     email = email.strip()
     if not email:
-        return jsonify({'ok': False, 'message': 'Merci d’inscrire un email.'}), 400
+        return jsonify({'ok': False, 'message': 'Please enter an email.'}), 400
 
     record = ContactMessage(
         name='Newsletter subscriber',
@@ -762,9 +762,9 @@ def newsletter_signup():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning('Failed to save newsletter signup: %s', exc)
-        return jsonify({'ok': False, 'message': 'Impossible de sauvegarder pour le moment.'}), 500
+        return jsonify({'ok': False, 'message': 'We could not save your signup right now.'}), 500
 
-    success_msg = 'Merci ! Nous vous avertirons dès qu’un nouveau plan sort.'
+    success_msg = 'Thanks! We will notify you as soon as a new plan is published.'
     if request.headers.get('X-Requested-With') == 'fetch' or request.accept_mimetypes.accept_json:
         return jsonify({'ok': True, 'message': success_msg})
 

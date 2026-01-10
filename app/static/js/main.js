@@ -953,11 +953,11 @@
 		const formData = new FormData(form);
 		const email = (formData.get('email') || '').toString().trim();
 		if (!email) {
-			setMessage('Merci d’indiquer un email.', true);
+			setMessage('Please enter an email.', true);
 			return;
 		}
 		isSubmitting = true;
-		setMessage('Envoi en cours…', false);
+		setMessage('Sending...', false);
 		try {
 			const resp = await fetch('/newsletter', {
 				method: 'POST',
@@ -966,12 +966,12 @@
 			});
 			const data = await resp.json();
 			if (!resp.ok || !data.ok) {
-				throw new Error(data.message || 'Erreur réseau');
+				throw new Error(data.message || 'Network error');
 			}
 			form.reset();
-			setMessage(data.message || 'Merci !', false);
+			setMessage(data.message || 'Thanks!', false);
 		} catch (error) {
-			setMessage(error.message || 'Impossible de vous inscrire pour le moment.', true);
+			setMessage(error.message || 'We cannot sign you up right now.', true);
 		} finally {
 			isSubmitting = false;
 		}

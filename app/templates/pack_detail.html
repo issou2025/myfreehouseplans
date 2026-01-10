@@ -109,7 +109,7 @@
                     <span role="listitem">Reference {{ plan.reference_code }}</span>
                 </div>
                 <blockquote class="plan-testimonial">
-                    «&nbsp;Nous livrons le même niveau de soin que pour nos clients privés : documentation claire, support humain, pas de surprise.&nbsp;»
+                    “We deliver the same level of care as for our private clients: clear documentation, responsive humans, no surprises.”
                     <cite>— Studio principal</cite>
                 </blockquote>
                 <p class="trust-row" aria-label="Trust notes">
@@ -220,7 +220,7 @@
                     <li><strong>Pack 2</strong> is best when you need the full PDF set.</li>
                     <li><strong>Pack 3</strong> is best when you need editable CAD or BIM files (DWG / RVT / IFC).</li>
                 </ul>
-                <p class="microcopy">Nos fichiers restent disponibles même après les mises à jour. Vous pouvez re-télécharger vos packs quand vous le souhaitez.</p>
+                <p class="microcopy">Your files stay available after updates. You can re-download your packs anytime.</p>
             </div>
             {% set package_meta_default = {
                 'name': 'Studio Pack',
@@ -413,27 +413,27 @@
         <section class="plan-faq" aria-labelledby="plan-faq-heading">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow">Questions rapides</p>
-                    <h2 id="plan-faq-heading">Mini FAQ pour avancer sereinement</h2>
-                    <p class="muted">Des réponses directes, sans jargon.</p>
+                    <p class="eyebrow">Quick questions</p>
+                    <h2 id="plan-faq-heading">Short FAQ so you can keep moving</h2>
+                    <p class="muted">Direct answers without jargon.</p>
                 </div>
             </div>
             <div class="plan-faq__grid">
                 <article>
-                    <h3>Peut-on modifier les plans&nbsp;?</h3>
-                    <p>Oui. Le <strong>Pack 3</strong> inclut les fichiers DWG / Revit / IFC prêts pour votre bureau d’études. Nous pouvons aussi recommander des partenaires si besoin.</p>
+                    <h3>Can we modify the plans?</h3>
+                    <p>Yes. <strong>Pack 3</strong> includes DWG / Revit / IFC files ready for your engineers. We can also recommend partners if needed.</p>
                 </article>
                 <article>
-                    <h3>Comment sont livrés les fichiers&nbsp;?</h3>
-                    <p>Les téléchargements se font via un lien sécurisé (Gumroad ou notre coffre-fort). Les fichiers restent accessibles même après les mises à jour studio.</p>
+                    <h3>How are the files delivered?</h3>
+                    <p>Downloads come via a secure link (Gumroad or our vault). Files stay accessible even after studio updates.</p>
                 </article>
                 <article>
-                    <h3>Et si mon climat est différent&nbsp;?</h3>
-                    <p>{{ plan.suitable_climate or 'La plupart de nos plans sont adaptés aux climats tempérés ; écrivez-nous pour valider vos contraintes.' }}</p>
+                    <h3>What if my climate is different?</h3>
+                    <p>{{ plan.suitable_climate or 'Most plans suit temperate or tropical regions; email us to confirm your site constraints.' }}</p>
                 </article>
                 <article>
-                    <h3>Quel support après l’achat&nbsp;?</h3>
-                    <p>Vous pouvez répondre à l’email de livraison ou nous écrire directement. Nous partageons volontiers les notes de chantier ou les conseils d’adaptation.</p>
+                    <h3>What support do I get after purchase?</h3>
+                    <p>You can reply to the delivery email or write us directly. We gladly share field notes or adaptation tips.</p>
                 </article>
             </div>
         </section>
@@ -442,14 +442,14 @@
             <div class="section-heading">
                 <div>
                     <p class="eyebrow">Version history</p>
-                    <h2 id="plan-version-heading">Suivi des mises à jour</h2>
-                    <p class="muted">Transparence sur l’évolution du dossier.</p>
+                    <h2 id="plan-version-heading">Release timeline</h2>
+                    <p class="muted">Transparent view of how this file set evolves.</p>
                 </div>
             </div>
             <ul>
-                <li>Dernière mise à jour · {{ plan.updated_at.strftime('%B %d, %Y') if plan.updated_at else 'À confirmer' }}</li>
-                <li>Première publication · {{ plan.created_at.strftime('%B %d, %Y') if plan.created_at else 'À confirmer' }}</li>
-                <li>Référence dossier · {{ plan.reference_code }}</li>
+                <li>Last update · {{ plan.updated_at.strftime('%B %d, %Y') if plan.updated_at else 'To confirm' }}</li>
+                <li>First publication · {{ plan.created_at.strftime('%B %d, %Y') if plan.created_at else 'To confirm' }}</li>
+                <li>File reference · {{ plan.reference_code }}</li>
             </ul>
         </section>
 

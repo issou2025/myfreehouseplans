@@ -100,7 +100,7 @@
             </div>
 
             <div class="narrative-filter-group" role="group" aria-label="Lifestyle filters">
-                <p class="narrative-filter-group__label">Choisissez une intention&nbsp;:</p>
+                <p class="narrative-filter-group__label">Choose a focus:</p>
                 <div class="narrative-filter-group__chips">
                     {% for key, meta in narrative_filters.items() %}
                     <button type="button" class="narrative-chip {% if active_narrative == key %}is-active{% endif %}" data-narrative-trigger data-value="{{ key }}" data-helper="{{ meta.helper }}" aria-pressed="{{ 'true' if active_narrative == key else 'false' }}">
@@ -109,7 +109,7 @@
                     </button>
                     {% endfor %}
                 </div>
-                <p class="microcopy" data-narrative-helper>{{ narrative_filters.get(active_narrative, {}).get('helper', 'Filtrez par ambiance de vie plutôt que par simple critère technique.') }}</p>
+                <p class="microcopy" data-narrative-helper>{{ narrative_filters.get(active_narrative, {}).get('helper', 'Filter by lifestyle and lived experience, not just technical specs.') }}</p>
             </div>
 
             <p class="filters__summary" data-results-summary role="status" aria-live="polite">{{ result_summary }}</p>
@@ -134,13 +134,13 @@
 
     {% if suggestion_targets %}
     <section class="catalog-suggestions" aria-live="polite">
-        <p class="catalog-suggestions__title">Vous venez d’explorer cette série. Essayez aussi :</p>
+        <p class="catalog-suggestions__title">You just explored this series. Try these as well:</p>
         <ul>
             {% for plan in suggestion_targets %}
             <li><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }} · Ref {{ plan.reference_code }}</a></li>
             {% endfor %}
         </ul>
-        <p class="microcopy">Chaque clic ouvre un nouvel itinéraire de plans similaires.</p>
+        <p class="microcopy">Each click opens a fresh trail of similar plans.</p>
     </section>
     {% endif %}
 
@@ -175,8 +175,8 @@
         <div class="section-heading">
             <div>
                 <p class="eyebrow">Popular this week</p>
-                <h2 id="popular-week">Ce que les visiteurs comparent en ce moment</h2>
-                <p class="muted">Basé sur les vues récentes et les demandes studio.</p>
+                <h2 id="popular-week">What visitors are comparing right now</h2>
+                <p class="muted">Based on recent views and studio inquiries.</p>
             </div>
         </div>
         <div class="plan-grid plan-grid--scroll plan-related__grid">
@@ -192,8 +192,8 @@
         <div class="section-heading">
             <div>
                 <p class="eyebrow">New arrivals</p>
-                <h2 id="new-arrivals">Dernières publications studio</h2>
-                <p class="muted">Chaque plan est revu par l’équipe avant mise en ligne.</p>
+                <h2 id="new-arrivals">Latest studio releases</h2>
+                <p class="muted">Every plan is reviewed by the team before publishing.</p>
             </div>
         </div>
         <div class="plan-grid plan-grid--scroll plan-related__grid">
@@ -209,8 +209,8 @@
         <div class="section-heading">
             <div>
                 <p class="eyebrow">Climate-focused</p>
-                <h2 id="climate-rail">Sélection tropicale</h2>
-                <p class="muted">Toitures ventilées, débords généreux, pièces traversantes.</p>
+                <h2 id="climate-rail">Tropical-forward picks</h2>
+                <p class="muted">Ventilated roofs, generous overhangs, breezeways for crossflow.</p>
             </div>
         </div>
         <div class="plan-grid plan-grid--scroll plan-related__grid">
@@ -224,9 +224,9 @@
     <section class="insights-grid" aria-labelledby="insights-heading">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">Guides studio</p>
-                <h2 id="insights-heading">Conseils rapides pour choisir</h2>
-                <p class="muted">Des articles courts, rédigés par les architectes qui dessinent ces plans.</p>
+                <p class="eyebrow">Studio guides</p>
+                <h2 id="insights-heading">Quick decision helpers</h2>
+                <p class="muted">Short articles written by the architects who design these plans.</p>
             </div>
         </div>
         <div class="insights-grid__list">
@@ -243,16 +243,16 @@
     <section class="newsletter-panel" aria-labelledby="newsletter-heading">
         <div>
             <p class="eyebrow">Studio updates</p>
-            <h2 id="newsletter-heading">Recevez les nouvelles publications avant tout le monde</h2>
-            <p class="muted">Un email synthétique, seulement quand nous ajoutons un plan ou un guide utile.</p>
+            <h2 id="newsletter-heading">Get new releases first</h2>
+            <p class="muted">A concise email only when we add a plan or a useful guide.</p>
         </div>
         <form class="newsletter-panel__form" method="post" action="{{ url_for('main.newsletter_signup') }}" data-newsletter-form>
             <label>
-                <span>Votre email</span>
-                <input type="email" name="email" placeholder="vous@email.com" required>
+                <span>Your email</span>
+                <input type="email" name="email" placeholder="you@email.com" required>
             </label>
-            <button type="submit" class="btn btn-primary">Recevoir les updates</button>
-            <p class="microcopy">Instant opt-in · Vous pouvez vous désinscrire en un clic.</p>
+            <button type="submit" class="btn btn-primary">Get updates</button>
+            <p class="microcopy">Instant opt-in · Unsubscribe anytime.</p>
         </form>
         <p class="newsletter-panel__confirmation" data-newsletter-message role="status" aria-live="polite" hidden></p>
     </section>
