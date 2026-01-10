@@ -5,7 +5,7 @@ If you can't log in to the admin dashboard with the expected credentials, the ad
 
 ## Production Credentials
 - **Username**: admin
-- **Email**: admin@myfreehouseplan.com
+- **Email**: admin@myfreehouseplans.com
 - **Password**: MyFreeHouse2026!
 
 ## Automatic Reset on Deploy
@@ -55,13 +55,13 @@ flask create-admin --username newadmin --email admin@example.com
 ## Environment Variables
 The following environment variables are used:
 - `ADMIN_USERNAME` (default: admin)
-- `ADMIN_EMAIL` (default: admin@myfreehouseplan.com)  
+- `ADMIN_EMAIL` (default: admin@myfreehouseplans.com)  
 - `ADMIN_PASSWORD` (default: changeme123 locally, MyFreeHouse2026! on Render)
 
 ## Verification
 After resetting, the command will show:
 ```
-✓ Password updated for user 'admin' (admin@myfreehouseplan.com)
+✓ Password updated for user 'admin' (admin@myfreehouseplans.com)
 ✓ Admin status: True
 ✓ Active status: True
 ```

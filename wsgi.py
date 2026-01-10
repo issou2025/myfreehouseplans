@@ -1,5 +1,5 @@
 """
-WSGI Entry Point for MyFreeHousePlan Application
+WSGI Entry Point for MyFreeHousePlans Application
 
 This module serves as the entry point for WSGI servers (like Gunicorn)
 to run the Flask application in production environments.

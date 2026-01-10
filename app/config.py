@@ -1,5 +1,5 @@
 """
-Configuration Module for MyFreeHousePlan Application
+Configuration Module for MyFreeHousePlans Application
 
 This module defines configuration classes for different environments:
 - DevelopmentConfig: Local development with SQLite
@@ -61,7 +61,7 @@ class Config:
     SITE_KEYWORDS = 'house plans, architectural plans, home designs, blueprints'
     
     # Admin configuration
-    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'entreprise2rc@gmail.com')
+    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com')
 
 
 class DevelopmentConfig(Config):

@@ -157,9 +157,9 @@ def generate_organization_schema():
         "logo": f"{site_url}{url_for('static', filename='images/logo.png')}",
         "sameAs": [
             # Add social media URLs here when available
-            # "https://www.facebook.com/myfreehouseplan",
-            # "https://www.instagram.com/myfreehouseplan",
-            # "https://www.pinterest.com/myfreehouseplan"
+            # "https://www.facebook.com/myfreehouseplans",
+            # "https://www.instagram.com/myfreehouseplans",
+            # "https://www.pinterest.com/myfreehouseplans"
         ]
     }
 

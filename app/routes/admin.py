@@ -36,11 +36,46 @@ def _protected_attachment_path(relative_path):
     return os.path.join(base, relative_path)
 
 
+def ensure_admin_exists():
+    """Bootstrap an admin account from environment variables when missing."""
+
+    try:
+        admin_user = User.query.filter_by(is_admin=True).first()
+        if admin_user:
+            return admin_user
+
+        username = os.getenv('ADMIN_USERNAME', 'admin')
+        email = os.getenv('ADMIN_EMAIL', current_app.config.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com'))
+        password = os.getenv('ADMIN_PASSWORD') or os.getenv('ADMIN_DEFAULT_PASSWORD') or 'changeme123'
+
+        seeded_admin = User(
+            username=username,
+            email=email,
+            is_admin=True,
+            is_active=True,
+        )
+        seeded_admin.set_password(password)
+        db.session.add(seeded_admin)
+        db.session.commit()
+        current_app.logger.info('Admin bootstrap completed via login for %s', username)
+        return seeded_admin
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('Admin bootstrap attempt failed: %s', exc)
+        return None
+
+
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
     """Private administrator login endpoint."""
 
     form = LoginForm()
+
+    # Ensure an admin account exists before processing authentication.
+    bootstrap_admin = ensure_admin_exists()
+    if bootstrap_admin is None:
+        flash('Admin is initializing. Please retry in a moment.', 'warning')
+        return render_template('admin/login.html', form=form)
 
     # If a logged-in user is not admin, force logout to enforce policy.
     if current_user.is_authenticated and not current_user.is_admin:
@@ -60,6 +95,7 @@ def admin_login():
                 user = User.query.filter_by(username=identifier).first()
         except Exception as e:
             current_app.logger.error('Admin login query failed: %s', e)
+            db.session.rollback()
             flash('Database error. Please contact support.', 'danger')
             return render_template('admin/login.html', form=form)
 

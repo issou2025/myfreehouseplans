@@ -1,5 +1,5 @@
 """
-WTForms Form Classes for MyFreeHousePlan Application
+WTForms Form Classes for MyFreeHousePlans Application
 
 This module defines all forms used throughout the application
 for user input validation and CSRF protection.

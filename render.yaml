@@ -1,4 +1,4 @@
-# Render deployment configuration for MyFreeHousePlan
+# Render deployment configuration for MyFreeHousePlans
 services:
   # Web Service
   - type: web
@@ -22,7 +22,7 @@ services:
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_EMAIL
-        value: admin@myfreehouseplan.com
+        value: admin@myfreehouseplans.com
       - key: ADMIN_PASSWORD
         value: MyFreeHouse2026!
       - key: PROTECTED_UPLOAD_FOLDER

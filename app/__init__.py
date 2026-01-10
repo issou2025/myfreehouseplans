@@ -12,6 +12,36 @@ from datetime import datetime
 import os
 
 
+def _bootstrap_admin_user(app):
+    """Ensure at least one admin user exists using environment credentials."""
+
+    from app.models import User
+
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_email = os.getenv('ADMIN_EMAIL', app.config.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com'))
+    admin_password = os.getenv('ADMIN_PASSWORD') or os.getenv('ADMIN_DEFAULT_PASSWORD') or 'changeme123'
+
+    try:
+        existing_admin = User.query.filter_by(is_admin=True).first()
+        if existing_admin:
+            return existing_admin
+
+        seeded_admin = User(
+            username=admin_username,
+            email=admin_email,
+            is_admin=True,
+            is_active=True,
+        )
+        seeded_admin.set_password(admin_password)
+        db.session.add(seeded_admin)
+        db.session.commit()
+        return seeded_admin
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error('Admin bootstrap failed: %s', exc)
+        return None
+
+
 def create_app(config_name='default'):
     """
     Application factory function
@@ -46,27 +76,15 @@ def create_app(config_name='default'):
         try:
             # Import all models to ensure they're registered with SQLAlchemy
             from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
-            
+
             # Create all tables if they don't exist
             db.create_all()
             app.logger.info('Database tables initialized successfully')
-            
-            # Auto-create default admin if no users exist (first-time setup)
-            if User.query.count() == 0:
-                admin_username = os.getenv('ADMIN_USERNAME', 'admin')
-                admin_email = os.getenv('ADMIN_EMAIL', 'admin@myfreehouseplan.com')
-                admin_password = os.getenv('ADMIN_PASSWORD', 'changeme123')
-                
-                default_admin = User(
-                    username=admin_username,
-                    email=admin_email,
-                    is_admin=True,
-                    is_active=True
-                )
-                default_admin.set_password(admin_password)
-                db.session.add(default_admin)
-                db.session.commit()
-                app.logger.info('Default admin user created: %s', admin_username)
+
+            # Ensure at least one administrator exists using environment credentials
+            admin_seed = _bootstrap_admin_user(app)
+            if admin_seed:
+                app.logger.info('Admin bootstrap ready for %s', admin_seed.username)
         except Exception as e:
             app.logger.error('Database initialization failed: %s', e)
             db.session.rollback()

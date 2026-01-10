@@ -1,5 +1,5 @@
 """
-Database Models for MyFreeHousePlan Application
+Database Models for MyFreeHousePlans Application
 
 This module defines all database models using SQLAlchemy ORM.
 Models include User, HousePlan, Category, and Order.
