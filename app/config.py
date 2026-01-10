@@ -89,8 +89,10 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # PostgreSQL for production
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    # Production database: prefer environment-provided URL; fallback to a
+    # persistent path mounted at /data inside the container. Use four slashes
+    # for absolute paths (sqlite:////absolute/path).
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:////data/myfreehouseplans.db'
     
     # If using Render/Heroku, they provide DATABASE_URL with postgres://
     # but SQLAlchemy 1.4+ requires postgresql://

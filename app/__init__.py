@@ -10,36 +10,12 @@ from app.config import config
 from app.extensions import db, migrate, login_manager, mail
 from datetime import datetime
 import os
+from sqlalchemy import inspect
 
 
-def _bootstrap_admin_user(app):
-    """Force insert admin user with fixed credentials."""
-
-    from app.models import User
-
-    try:
-        # Drop and recreate users table to match new schema
-        db.session.execute(db.text('DROP TABLE IF EXISTS users'))
-        db.session.commit()
-        db.create_all()
-
-        # Insert new admin
-        seeded_admin = User(
-            username='admin',
-            password='123',
-            role='superadmin',
-            is_active=True,
-        )
-        db.session.add(seeded_admin)
-        db.session.commit()
-        print(f"Admin user created: username={seeded_admin.username}, password={seeded_admin.password}")
-        app.logger.info('Admin bootstrap completed: %s', seeded_admin.username)
-        return seeded_admin
-    except Exception as exc:
-        db.session.rollback()
-        app.logger.error('Admin bootstrap failed: %s', exc)
-        print('Admin bootstrap failed')
-        return None
+# NOTE: Removed destructive bootstrap behavior. Admin seeding and any
+# DROP/CREATE operations are intentionally disabled in the factory.
+# Use explicit CLI commands (app.cli) to seed data in controlled environments.
 
 
 def create_app(config_name='default'):
@@ -70,35 +46,46 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
     
-    # Ensure database tables exist (production safety net)
-    # This guarantees tables are created even if migrations haven't run
+    # Database initialization and verification. Do NOT perform destructive
+    # operations in production. Enforce presence of a persistent DB and
+    # abort startup if the production DB appears missing or ephemeral.
     with app.app_context():
         try:
             # Import all models to ensure they're registered with SQLAlchemy
             from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
 
-            # Create all tables if they don't exist
-            db.create_all()
-            app.logger.info('Database tables initialized successfully')
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names() or []
 
-            # Check critical env vars for admin bootstrap and sessions
-            missing = []
-            if not app.config.get('SECRET_KEY') or app.config.get('SECRET_KEY') == 'dev-secret-key-change-in-production':
-                missing.append('SECRET_KEY')
-            if not os.getenv('ADMIN_PASSWORD') and not os.getenv('ADMIN_DEFAULT_PASSWORD'):
-                # Not fatal, but log a warning so operators can set secure admin password
-                app.logger.warning('ADMIN_PASSWORD not set in environment; using default bootstrap password (non-fatal).')
-            if missing:
-                app.logger.warning('Potential security configuration missing: %s', ','.join(missing))
+            if config_name == 'production':
+                uri = app.config.get('SQLALCHEMY_DATABASE_URI')
+                if not uri:
+                    app.logger.error('Production requires SQLALCHEMY_DATABASE_URI to be set to a persistent database.')
+                    raise RuntimeError('Missing SQLALCHEMY_DATABASE_URI in production')
+                if uri.strip().startswith('sqlite:///:memory:'):
+                    app.logger.error('In-memory SQLite is forbidden in production.')
+                    raise RuntimeError('In-memory DB not allowed in production')
 
-            # Ensure at least one administrator exists using environment credentials
-            admin_seed = _bootstrap_admin_user(app)
-            if admin_seed:
-                app.logger.info('Admin bootstrap ready for %s', admin_seed.username)
+                # Prefer absolute /data mount for sqlite in production containers
+                if uri.startswith('sqlite:'):
+                    # Accept both sqlite:////data/... and sqlite:///data/...
+                    if '/data/' not in uri and not uri.startswith('sqlite:///'):
+                        app.logger.warning('Production sqlite database path does not contain /data/: %s', uri)
+
+                if not existing_tables:
+                    app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
+                    raise RuntimeError('Production database empty; initialize manually with migrations')
+
+                app.logger.info('Production database verified with %d existing tables', len(existing_tables))
+            else:
+                # Non-production: create tables if missing, but do NOT drop existing data
+                if not existing_tables:
+                    db.create_all()
+                    app.logger.info('Created database tables for non-production environment')
         except Exception as e:
-            app.logger.error('Database initialization failed: %s', e)
-            db.session.rollback()
-            # Don't crash - let the app start and fail gracefully on queries
+            app.logger.error('Database initialization/verification failed: %s', e)
+            # Fail fast in production to avoid accidental data loss
+            raise
     
     # Register blueprints
     register_blueprints(app)

@@ -30,9 +30,7 @@ services:
       - key: UPLOAD_FOLDER
         value: app/static/uploads
       - key: DATABASE_URL
-        fromDatabase:
-          name: myfreehouseplan-db
-          property: connectionString
+        value: sqlite:////data/myfreehouseplans.db
       - key: PYTHON_VERSION
         value: 3.11.9
 
