@@ -11,7 +11,7 @@ services:
     branch: main
     buildCommand: pip install -r requirements.txt
     releaseCommand: flask db upgrade && flask reset-admin-password
-    startCommand: gunicorn wsgi:app
+    startCommand: gunicorn --preload wsgi:app
     envVars:
       - key: FLASK_APP
         value: wsgi.py

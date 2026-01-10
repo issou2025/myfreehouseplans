@@ -15,7 +15,7 @@ class Config:
     """Base configuration with common settings"""
     
     # Secret key for session management and CSRF protection
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = "FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE"
     
     # Database configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -42,7 +42,8 @@ class Config:
     PROTECTED_FOLDERS = {'pdfs', 'support'}
     
     # Session configuration
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=720)
+    SESSION_REFRESH_EACH_REQUEST = True
     
     # Remember me cookie duration
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
@@ -50,7 +51,7 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     
     # Security headers
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     
@@ -100,8 +101,8 @@ class ProductionConfig(Config):
     SQLALCHEMY_ECHO = False
     
     # Production security
-    SESSION_COOKIE_SECURE = True
-    REMEMBER_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
 
 
 class TestingConfig(Config):

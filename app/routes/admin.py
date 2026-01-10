@@ -8,7 +8,7 @@ This blueprint handles administrative functionality including:
 - Order management
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file, abort, session
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
 import os
@@ -125,7 +125,11 @@ def admin_login():
             return render_template('admin/login.html', form=form)
 
         try:
-            login_user(user, remember=form.remember_me.data)
+            login_user(user, remember=True)
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['role'] = user.role
+            session.permanent = True
             user.last_login = datetime.utcnow()
             db.session.commit()
         except Exception as exc:
@@ -535,6 +539,10 @@ def add_plan():
         return redirect(url_for('admin.categories'))
     form.category_ids.choices = [(c.id, c.name) for c in categories]
     
+    if request.method == 'POST':
+        current_app.logger.info('Session before POST: user_id=%s, username=%s, role=%s, permanent=%s', 
+                               session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
+    
     if form.validate_on_submit():
         plan = HousePlan(
             title=form.title.data,
@@ -620,6 +628,8 @@ def add_plan():
             flash('Unable to save the plan. No data was written.', 'danger')
         else:
             flash(f'House plan "{plan.title}" has been added successfully!', 'success')
+            current_app.logger.info('Session after POST: user_id=%s, username=%s, role=%s, permanent=%s', 
+                                   session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
             return redirect(url_for('admin.plans'))
     
     return render_template('admin/add_plan.html', form=form)
