@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}FAQ — {{ meta.title if meta and meta.title else site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .faq-hero { padding: 48px 0; text-align: center; }
+  .faq-shell { max-width: 880px; margin: 0 auto; padding: 24px; }
+  .faq-list { margin-top: 18px; }
+  .faq-item { border-bottom: 1px solid var(--color-surface-alt); padding: 16px 0; }
+  .faq-q { display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-weight:600; }
+  .faq-a { margin-top: 10px; color: var(--color-primary); display: none; }
+  .faq-item[aria-expanded="true"] .faq-a { display: block; }
+  .faq-toggle { background: none; border: none; font-size: 18px; color: var(--color-accent); }
+  @media (max-width: 640px) { .faq-hero { padding: 28px 0; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="shell faq-hero">
+  <h1>Frequently Asked Questions</h1>
+  <p class="lede">Quick answers about plans, purchases, licensing, and support.</p>
+</section>
+
+<section class="shell faq-shell" aria-labelledby="faq-heading">
+  <h2 id="faq-heading" class="visually-hidden">FAQ</h2>
+
+  <div class="faq-list" role="list">
+    {% for item in faqs %}
+      <div class="faq-item" role="listitem" aria-expanded="false">
+        <button class="faq-q" aria-controls="faq-ans-{{ loop.index }}">
+          <span>{{ item.q }}</span>
+          <span class="faq-toggle" aria-hidden="true">+</span>
+        </button>
+        <div id="faq-ans-{{ loop.index }}" class="faq-a">{{ item.a }}</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <p class="muted" style="margin-top:20px">Still have questions? <a href="{{ url_for('main.contact') }}">Contact our support team</a>.</p>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    const items = document.querySelectorAll('.faq-item');
+    items.forEach(item => {
+      const btn = item.querySelector('.faq-q');
+      btn.addEventListener('click', () => {
+        const expanded = item.getAttribute('aria-expanded') === 'true';
+        // collapse others
+        items.forEach(i => { i.setAttribute('aria-expanded', 'false'); });
+        if(!expanded) {
+          item.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

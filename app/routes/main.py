@@ -785,6 +785,30 @@ def about():
     return render_template('about.html', meta=meta)
 
 
+@main_bp.route('/faq')
+def faq():
+    """Frequently asked questions page"""
+    meta = generate_meta_tags(
+        title='FAQ',
+        description='Frequently asked questions about MyFreeHousePlans — plans, purchases, downloads, and licensing.',
+        url=url_for('main.faq', _external=True)
+    )
+
+    faqs = [
+        {'q': 'How do I purchase a plan?', 'a': 'Choose a plan from the catalog, follow the purchase link, and you will receive download instructions after payment.'},
+        {'q': 'What is included in a plan pack?', 'a': 'Every pack contains a set of PDF drawings, a dimensioned floor plan, elevations, and a basic materials list. Some packs include CAD files or multiple size options.'},
+        {'q': 'Can I modify a plan for my site?', 'a': 'Yes — plans can be adapted by a local architect or designer. We recommend hiring a licensed professional to ensure compliance with local codes.'},
+        {'q': 'Are these plans compliant with local building codes?', 'a': 'Plans are created as general construction documents. Local code compliance, site-specific adjustments, and structural engineering are the purchaser’s responsibility.'},
+        {'q': 'Which file formats do you provide?', 'a': 'Most packs include high-resolution PDF files; many also include DWG/CAD files or SketchUp models when noted on the plan page.'},
+        {'q': 'How do I download my purchase?', 'a': 'After payment you will receive a download link via email and on the purchase confirmation page. Save the files and back them up.'},
+        {'q': 'What is your refund policy?', 'a': 'We offer refunds for mistaken purchases within a short window. Custom work and modified downloads are generally non-refundable — contact support for details.'},
+        {'q': 'Can I request additional documentation or permit sets?', 'a': 'We can produce extended documentation for an additional fee. Contact us with the plan reference code and your requirements.'},
+        {'q': 'How does licensing work for builders?', 'a': 'Our plans are sold per-project; commercial or multi-build licenses are available. See our terms or contact sales for licensing options.'},
+        {'q': 'How do I get support or ask a question?', 'a': 'Email entreprise2rc@gmail.com or use the contact form. We typically reply within 1–3 business days.'},
+    ]
+
+    return render_template('faq.html', meta=meta, faqs=faqs)
+
 @main_bp.route('/contact', methods=['GET', 'POST'])
 def contact():
     """Contact page with form"""
