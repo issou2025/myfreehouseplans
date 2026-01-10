@@ -72,9 +72,14 @@ def create_app(config_name='default'):
                     if '/data/' not in uri and not uri.startswith('sqlite:///'):
                         app.logger.warning('Production sqlite database path does not contain /data/: %s', uri)
 
-                if not existing_tables:
-                    app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
-                    raise RuntimeError('Production database empty; initialize manually with migrations')
+                    # Allow migrations to run: if we're executing Flask-Migrate commands
+                    # (e.g., `flask db upgrade`) permit empty DB so alembic can create schema.
+                    import sys
+                    cli_args = ' '.join(sys.argv).lower()
+                    running_migration = ('db' in sys.argv) or ('upgrade' in sys.argv) or ('alembic' in cli_args)
+                    if not existing_tables and not running_migration:
+                        app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
+                        raise RuntimeError('Production database empty; initialize manually with migrations')
 
                 app.logger.info('Production database verified with %d existing tables', len(existing_tables))
             else:
