@@ -11,6 +11,11 @@
     </header>
 
     <section class="filters">
+        <div class="filters-toolbar">
+            <button type="button" class="btn btn-outline filters-toggle" aria-expanded="false" aria-controls="filterPanel">Filter</button>
+            <p class="filters-toolbar__hint muted">Refine by typology, bedrooms, area, or budget</p>
+        </div>
+        <div id="filterPanel" class="filters-panel">
         <form class="filter-form" method="get" action="{{ url_for('main.packs') }}" data-plan-browser>
             <input type="hidden" name="narrative" value="{{ active_narrative }}" data-narrative-input>
             <label>
@@ -150,10 +155,11 @@
 
     <section class="plan-related plan-related--listing" aria-labelledby="listing-recently" data-recently-section hidden>
         <div class="section-heading">
-            <div>
-                <p class="eyebrow">Resume browsing</p>
-                <h2 id="listing-recently">Recently viewed plans</h2>
-                <p class="muted" data-recently-empty>Open any plan to start a personal trail.</p>
+            </div>
+            </div>
+        </section>
+
+        <div class="catalog-results" data-plan-results>
             </div>
         </div>
         <div class="plan-grid plan-grid--scroll plan-related__grid" data-recently-grid data-recently-limit="5"></div>
