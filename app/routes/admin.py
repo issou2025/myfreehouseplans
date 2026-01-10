@@ -619,6 +619,10 @@ def add_plan():
                 for category, message in diagnostics_to_flash_messages(diagnostics):
                     flash(message, category)
 
+            # If the admin clicked "Save Draft", ensure the plan remains unpublished
+            if getattr(form, 'save_draft', None) and form.save_draft.data:
+                plan.is_published = False
+
             db.session.add(plan)
             db.session.commit()
         except ValueError as upload_error:
@@ -629,10 +633,18 @@ def add_plan():
             current_app.logger.exception('Failed to add plan "%s": %s', form.title.data, exc)
             flash('Unable to save the plan. No data was written.', 'danger')
         else:
-            flash(f'House plan "{plan.title}" has been added successfully!', 'success')
-            current_app.logger.info('Session after POST: user_id=%s, username=%s, role=%s, permanent=%s', 
-                                   session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
-            return redirect(url_for('admin.plans'))
+            # Provide specific feedback and redirect depending on whether this
+            # was an explicit "Save Draft" action or a full publish/save.
+            if getattr(form, 'save_draft', None) and form.save_draft.data:
+                flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
+                current_app.logger.info('Session after POST (draft save): user_id=%s, username=%s, role=%s, permanent=%s',
+                                        session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
+                return redirect(url_for('admin.edit_plan', id=plan.id))
+            else:
+                flash(f'House plan "{plan.title}" has been added successfully!', 'success')
+                current_app.logger.info('Session after POST: user_id=%s, username=%s, role=%s, permanent=%s', 
+                                       session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
+                return redirect(url_for('admin.plans'))
     
     return render_template('admin/add_plan.html', form=form)
 
@@ -731,7 +743,11 @@ def edit_plan(id):
                     flash(message, category)
             
             plan.updated_at = datetime.utcnow()
-            
+
+            # If the admin clicked "Save Draft", ensure the plan remains unpublished
+            if getattr(form, 'save_draft', None) and form.save_draft.data:
+                plan.is_published = False
+
             db.session.commit()
         except ValueError as upload_error:
             db.session.rollback()
@@ -741,6 +757,9 @@ def edit_plan(id):
             current_app.logger.exception('Failed to update plan %s: %s', plan.id, exc)
             flash('Unable to update the plan. Your changes were not saved.', 'danger')
         else:
+            if getattr(form, 'save_draft', None) and form.save_draft.data:
+                flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
+                return redirect(url_for('admin.edit_plan', id=plan.id))
             flash(f'House plan "{plan.title}" has been updated successfully!', 'success')
             return redirect(url_for('admin.plans'))
     

@@ -344,7 +344,13 @@
                 </label>
             </div>
             <div class="form-submit">
-                {{ form.submit(class="btn-submit") }}
+                <div class="form-submit__row">
+                    {{ form.save_draft(class="btn btn-outline", name='save_draft') }}
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+                <div class="form-status">
+                    <span class="status-indicator">Status: <strong>Draft</strong></span>
+                </div>
             </div>
         </div>
     </form>

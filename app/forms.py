@@ -244,6 +244,7 @@ class HousePlanForm(FlaskForm):
     is_published = BooleanField('Published')
     
     submit = SubmitField('Save Plan')
+    save_draft = SubmitField('Save Draft')
 
     def validate_category_ids(self, category_ids):
         if not category_ids.data or len(category_ids.data) < 1:
