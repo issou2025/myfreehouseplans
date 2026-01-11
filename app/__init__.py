@@ -117,6 +117,18 @@ def create_app(config_name='default'):
                             )
 
                 app.logger.info('Production database verified with %d existing tables', len(existing_tables))
+            # Ensure messaging table exists so inbound messages are never lost.
+            # Create only the `messages` table if it's missing; do not perform
+            # broad schema changes here. Failures are logged but do not abort
+            # startup to preserve availability.
+            try:
+                if 'messages' not in (inspect(db.engine).get_table_names() or []):
+                    from app.models import ContactMessage
+                    ContactMessage.__table__.create(bind=db.engine, checkfirst=True)
+                    app.logger.info('Created messages table during startup')
+            except Exception as ex:
+                # Log but do not raise: admin can run full migrations via CI/Render.
+                app.logger.exception('Failed to ensure messages table exists at startup: %s', ex)
             else:
                 # Non-production: create tables if missing, but do NOT drop existing data
                 if not existing_tables:

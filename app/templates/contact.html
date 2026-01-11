@@ -24,7 +24,7 @@
         {% endif %}
     </div>
     <div class="contact-form-card">
-        <form method="post" enctype="multipart/form-data" class="contact-form" novalidate>
+        <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
             {{ form.hidden_tag() }}
             <div class="form-grid form-grid--2">
                 <label>
@@ -86,4 +86,27 @@
         </form>
     </div>
 </section>
+<style>
+    /* Ensure input text is visible on mobile */
+    .contact-form .form-input, .contact-form .form-textarea { color: #111; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const form = document.getElementById('contact-form');
+    if(!form) return;
+    const submit = form.querySelector('button[type="submit"], input[type="submit"]');
+    form.addEventListener('submit', function(){
+        if(submit){
+            try{
+                submit.disabled = true;
+                if(submit.tagName.toLowerCase() === 'input'){
+                    submit.value = 'Sending...';
+                } else {
+                    submit.innerText = 'Sending...';
+                }
+            }catch(e){/* ignore */}
+        }
+    });
+});
+</script>
 {% endblock %}

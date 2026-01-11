@@ -887,7 +887,8 @@ def contact():
                 attachment_absolute = os.path.join(protected_base, saved_attachment)
                 attachment_mime, _ = mimetypes.guess_type(attachment_absolute)
             except ValueError as upload_err:
-                flash(str(upload_err), 'danger')
+                current_app.logger.warning('Upload failed while handling contact attachment: %s', upload_err)
+                flash("We couldn't upload that file. Please ensure it's a supported file type and under 16 MB, then try again.", 'danger')
                 return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
         message_record = ContactMessage(
