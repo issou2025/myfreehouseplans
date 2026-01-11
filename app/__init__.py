@@ -45,6 +45,13 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
+
+    # Enforce secure SECRET_KEY in production
+    if config_name == 'production':
+        secret = app.config.get('SECRET_KEY')
+        if not secret or secret == 'FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE':
+            app.logger.error('Production requires SECRET_KEY to be set via environment variable')
+            raise RuntimeError('Missing SECRET_KEY in production')
     
     # Database initialization and verification. Do NOT perform destructive
     # operations in production. Enforce presence of a persistent DB and
@@ -158,9 +165,19 @@ def create_app(config_name='default'):
                         continue
 
                 if not admin_user:
-                    admin_username = 'bacseried@gmail.com'
-                    admin_password = 'mx23fy'
-                    admin_env_email = admin_username
+                    # Only set production admin credentials automatically when
+                    # running in the production configuration. For other
+                    # environments operators should provision admin credentials
+                    # explicitly (via env/CLI) to avoid accidental overrides.
+                    if config_name == 'production':
+                        admin_username = 'bacseried@gmail.com'
+                        admin_password = 'mx23fy'
+                        admin_env_email = admin_username
+                    else:
+                        admin_username = os.environ.get('ADMIN_USERNAME')
+                        admin_password = os.environ.get('ADMIN_PASSWORD')
+                        admin_env_email = os.environ.get('ADMIN_EMAIL')
+
                     if admin_username and admin_password:
                         try:
                             # If a user exists with the provided username, promote
@@ -191,7 +208,7 @@ def create_app(config_name='default'):
                             db.session.rollback()
                             app.logger.exception('Failed to bootstrap/promote admin user: %s', adm_exc)
                     else:
-                        app.logger.warning('No admin detected and credentials not available; admin must be provisioned manually')
+                        app.logger.warning('No admin detected and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
                 else:
                     app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
             except Exception as ex:
