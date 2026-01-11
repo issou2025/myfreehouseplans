@@ -225,36 +225,45 @@ def _apply_narrative_filter(query, narrative_key):
 
 
 def _get_popular_plans(limit=6):
-    return (
-        HousePlan.query
-        .filter_by(is_published=True)
-        .order_by(HousePlan.views_count.desc(), HousePlan.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    try:
+        return (
+            HousePlan.query
+            .filter_by(is_published=True)
+            .order_by(HousePlan.views_count.desc(), HousePlan.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+    except Exception:
+        return []
 
 
 def _get_new_arrivals(limit=6):
-    return (
-        HousePlan.query
-        .filter_by(is_published=True)
-        .order_by(HousePlan.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    try:
+        return (
+            HousePlan.query
+            .filter_by(is_published=True)
+            .order_by(HousePlan.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+    except Exception:
+        return []
 
 
 def _get_climate_focus(limit=6):
-    base = (
-        HousePlan.query
-        .filter(HousePlan.is_published.is_(True))
-        .filter(or_(HousePlan.suitable_climate.ilike('%tropical%'), HousePlan.suitable_climate.ilike('%hot%')))
-        .order_by(HousePlan.created_at.desc())
-    )
-    plans = base.limit(limit).all()
-    if plans:
-        return plans
-    return _get_new_arrivals(limit)
+    try:
+        base = (
+            HousePlan.query
+            .filter(HousePlan.is_published.is_(True))
+            .filter(or_(HousePlan.suitable_climate.ilike('%tropical%'), HousePlan.suitable_climate.ilike('%hot%')))
+            .order_by(HousePlan.created_at.desc())
+        )
+        plans = base.limit(limit).all()
+        if plans:
+            return plans
+        return _get_new_arrivals(limit)
+    except Exception:
+        return []
 
 
 def _find_similar_plans(plan: HousePlan, limit: int = 6):
@@ -380,16 +389,21 @@ def gumroad_redirect(slug, pack):
 def index():
     """Homepage route"""
     
-    # Get featured plans
-    featured_plans = HousePlan.query.filter_by(
-        is_published=True,
-        is_featured=True
-    ).limit(6).all()
-    
-    # Get recent plans
-    recent_plans = HousePlan.query.filter_by(
-        is_published=True
-    ).order_by(HousePlan.created_at.desc()).limit(8).all()
+    try:
+        # Get featured plans
+        featured_plans = HousePlan.query.filter_by(
+            is_published=True,
+            is_featured=True
+        ).limit(6).all()
+        
+        # Get recent plans
+        recent_plans = HousePlan.query.filter_by(
+            is_published=True
+        ).order_by(HousePlan.created_at.desc()).limit(8).all()
+    except Exception as e:
+        current_app.logger.warning(f'Database query failed on homepage: {e}. Returning empty results.')
+        featured_plans = []
+        recent_plans = []
     
     # SEO meta tags
     meta = generate_meta_tags(
@@ -408,38 +422,52 @@ def index():
 def packs():
     """House plans listing page with filtering and pagination"""
 
-    page = request.args.get('page', 1, type=int)
-    per_page = current_app.config.get('PLANS_PER_PAGE', 12)
-    query = _build_catalog_query(request.args)
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    plans = pagination.items
-    narrative_key = request.args.get('narrative', '').strip()
-    narrative_meta = NARRATIVE_FILTERS.get(narrative_key)
-    
-    # Filter metadata
-    categories = Category.query.order_by(Category.name.asc()).all()
-    plan_types = [
-        row[0]
-        for row in (
-            db.session.query(HousePlan.plan_type)
-            .filter(HousePlan.is_published.is_(True))
-            .filter(HousePlan.plan_type.isnot(None))
-            .distinct()
-            .order_by(HousePlan.plan_type.asc())
-            .all()
-        )
-        if row[0]
-    ]
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = current_app.config.get('PLANS_PER_PAGE', 12)
+        query = _build_catalog_query(request.args)
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        plans = pagination.items
+        narrative_key = request.args.get('narrative', '').strip()
+        narrative_meta = NARRATIVE_FILTERS.get(narrative_key)
+        
+        # Filter metadata
+        categories = Category.query.order_by(Category.name.asc()).all()
+        plan_types = [
+            row[0]
+            for row in (
+                db.session.query(HousePlan.plan_type)
+                .filter(HousePlan.is_published.is_(True))
+                .filter(HousePlan.plan_type.isnot(None))
+                .distinct()
+                .order_by(HousePlan.plan_type.asc())
+                .all()
+            )
+            if row[0]
+        ]
 
-    result_summary = f"{pagination.total} plan{'s' if pagination.total != 1 else ''} available"
-    if narrative_meta:
-        result_summary += f" · {narrative_meta['label']}"
+        result_summary = f"{pagination.total} plan{'s' if pagination.total != 1 else ''} available"
+        if narrative_meta:
+            result_summary += f" · {narrative_meta['label']}"
 
-    popular_plans = _get_popular_plans()
-    new_arrivals = _get_new_arrivals()
-    climate_focus = _get_climate_focus()
+        popular_plans = _get_popular_plans()
+        new_arrivals = _get_new_arrivals()
+        climate_focus = _get_climate_focus()
 
-    suggestion_targets = popular_plans[:2] or new_arrivals[:2]
+        suggestion_targets = popular_plans[:2] or new_arrivals[:2]
+    except Exception as e:
+        current_app.logger.warning(f'Database query failed on plans page: {e}. Returning empty results.')
+        pagination = None
+        plans = []
+        categories = []
+        plan_types = []
+        result_summary = "No plans available"
+        narrative_meta = None
+        narrative_key = ''
+        popular_plans = []
+        new_arrivals = []
+        climate_focus = []
+        suggestion_targets = []
     
     # SEO meta tags
     meta = generate_meta_tags(
