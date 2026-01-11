@@ -912,7 +912,7 @@ def contact():
         except Exception as exc:
             db.session.rollback()
             current_app.logger.exception('Failed to store contact message: %s', exc)
-            flash('We could not save your message. Please email entreprise2rc@gmail.com directly.', 'danger')
+            flash("We're sorry — we couldn't save your message right now. Please try again shortly or email entreprise2rc@gmail.com and we'll assist you.", 'danger')
             return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
         # Guaranteed user confirmation: always show success immediately after DB commit.
