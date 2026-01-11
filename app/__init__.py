@@ -138,11 +138,24 @@ def create_app(config_name='default'):
 
             # Admin bootstrap: if no superadmin exists, try to create one from environment.
             try:
+                # Detect any user that is considered admin by evaluating the
+                # `is_admin` property on each user object. This avoids relying
+                # on a specific column name and is resilient to schema drift.
+                admin_user = None
                 try:
-                    admin_user = User.query.filter_by(role='superadmin').first()
+                    users = User.query.all()
                 except Exception:
                     db.session.rollback()
-                    admin_user = None
+                    users = []
+
+                for u in users:
+                    try:
+                        if getattr(u, 'is_admin', False):
+                            admin_user = u
+                            break
+                    except Exception:
+                        # Defensive: skip users that cannot be evaluated
+                        continue
 
                 if not admin_user:
                     admin_username = os.environ.get('ADMIN_USERNAME')
@@ -150,16 +163,35 @@ def create_app(config_name='default'):
                     admin_env_email = os.environ.get('ADMIN_EMAIL')
                     if admin_username and admin_password:
                         try:
-                            new_admin = User(username=admin_username, role='superadmin', is_active=True)
-                            new_admin.set_password(admin_password)
-                            db.session.add(new_admin)
-                            db.session.commit()
-                            app.logger.info('Bootstrapped admin user: %s', admin_username)
+                            # If a user exists with the provided username, promote
+                            # that user to admin and set the provided password so
+                            # operators can regain access deterministically.
+                            existing = User.query.filter_by(username=admin_username).first()
+                            if existing:
+                                existing.role = 'superadmin'
+                                existing.is_active = True
+                                existing.set_password(admin_password)
+                                db.session.add(existing)
+                                db.session.commit()
+                                app.logger.info('Promoted existing user to superadmin: %s', admin_username)
+                                admin_user = existing
+                            else:
+                                new_admin = User(username=admin_username, role='superadmin', is_active=True)
+                                new_admin.set_password(admin_password)
+                                if admin_env_email:
+                                    try:
+                                        new_admin.email = admin_env_email
+                                    except Exception:
+                                        pass
+                                db.session.add(new_admin)
+                                db.session.commit()
+                                app.logger.info('Bootstrapped admin user: %s', admin_username)
+                                admin_user = new_admin
                         except Exception as adm_exc:
                             db.session.rollback()
-                            app.logger.exception('Failed to bootstrap admin user: %s', adm_exc)
+                            app.logger.exception('Failed to bootstrap/promote admin user: %s', adm_exc)
                     else:
-                        app.logger.warning('No superadmin found and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
+                        app.logger.warning('No admin detected and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
                 else:
                     app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
             except Exception as ex:

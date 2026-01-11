@@ -50,31 +50,17 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Verify password against stored hash.
 
-        Backwards-compatible: if password appears to be stored in plaintext,
-        verify and upgrade to a hashed password on successful match.
+        Strict verification: only accept hashed passwords and use
+        :func:`werkzeug.security.check_password_hash`. Do NOT perform
+        plaintext comparisons. This ensures consistent, auditable
+        authentication behavior across environments.
         """
         if not self.password:
             return False
         try:
-            # Prefer verifying with check_password_hash for all hashed values.
-            try:
-                if check_password_hash(self.password, password):
-                    return True
-            except Exception:
-                # Not a valid hash or verification failed; fallthrough to plaintext check
-                pass
-
-            # Legacy plaintext fallback: verify then upgrade hash
-            if self.password == password:
-                try:
-                    self.set_password(password)
-                    db.session.add(self)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                return True
-            return False
+            return check_password_hash(self.password, password)
         except Exception:
+            # Any unexpected verification error should fail safely.
             return False
     
     @property
