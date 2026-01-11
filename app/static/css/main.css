@@ -1,29 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-	/* Modern vibrant design tokens (mapped to existing variable names) */
-	--color-bg: #F9FAFB; /* background main */
-	--color-surface: #FFFFFF; /* card surface */
-	--color-surface-alt: #FFFFFF; /* keep surfaces clean */
-	--color-border: #D1D5DB; /* neutral border */
-	--color-border-strong: #9CA3AF;
-	--color-text: #111827; /* primary text */
-	--color-muted: #6B7280; /* muted text */
-	--color-soft: #94A3B8;
-	--color-primary: #2563EB; /* vivid blue (primary) */
-	--color-secondary: #22C55E; /* vibrant green (success/highlight) */
-	--color-accent: #F59E0B; /* warm amber (accent) */
-	--color-danger: #EF4444; /* clean red */
+	/* Natural, premium design tokens */
+	--color-bg: #FEFCF8; /* warm off-white/sand */
+	--color-surface: #FFFFFF; /* clean white */
+	--color-surface-alt: #F9F7F3; /* soft sand */
+	--color-border: #E8E3DD; /* subtle border */
+	--color-border-strong: #D4CCC3;
+	--color-text: #2D2A26; /* charcoal */
+	--color-muted: #6B665E; /* muted charcoal */
+	--color-soft: #9B948A;
+	--color-primary: #3A5F3A; /* forest green */
+	--color-secondary: #8B7355; /* soft terracotta */
+	--color-accent: #D4A574; /* warm accent */
+	--color-danger: #A05252; /* muted red */
 	--font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 	--font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-	--radius-sm: 8px;
-	--radius-md: 14px;
+	--radius-sm: 12px;
+	--radius-md: 16px;
 	--radius-lg: 24px;
-	--shadow-sm: 0 10px 25px rgba(0,0,0,0.06);
-	--shadow-md: 0 18px 40px rgba(0,0,0,0.10);
-	--shadow-ring: 0 6px 18px rgba(37,99,235,0.12);
-	--shadow-elevated: 0 18px 40px rgba(0,0,0,0.10);
-	--focus-ring: 0 0 0 4px rgba(147,197,253,0.35);
+	--shadow-sm: 0 4px 12px rgba(45,42,38,0.08);
+	--shadow-md: 0 8px 24px rgba(45,42,38,0.12);
+	--shadow-ring: 0 0 0 3px rgba(58,95,58,0.15);
+	--shadow-elevated: 0 12px 32px rgba(45,42,38,0.15);
+	--focus-ring: 0 0 0 3px rgba(212,167,116,0.3);
+	--gradient-ink: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
 }
 
 html, body {
@@ -32,6 +33,7 @@ html, body {
 	background: var(--color-bg);
 	line-height: 1.6;
 	letter-spacing: -0.01em;
+	scroll-behavior: smooth;
 }
 
 /* Enforce consistent box-sizing to avoid layout calculation issues */
@@ -42,14 +44,16 @@ html, body {
 body {
 	margin: 0;
 	min-height: 100%;
-	background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(241,243,247,0.96));
+	background: var(--color-bg);
 }
 
 h1, h2, h3, h4, h5, h6 {
 	font-family: var(--font-display);
-	color: #0b1225;
+	color: var(--color-text);
 	letter-spacing: -0.02em;
 	font-weight: 700;
+	line-height: 1.2;
+	font-size: clamp(1.5rem, 4vw, 2.5rem);
 }
 
 p {
@@ -1108,8 +1112,8 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 
 .btn-primary:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 16px 44px rgba(11, 18, 37, 0.38);
-	background: linear-gradient(135deg, #0b142b 0%, #1b2b4a 45%, #0f1a33 100%);
+	box-shadow: var(--shadow-elevated);
+	background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
 }
 
 .btn-primary:hover::before {
@@ -1957,8 +1961,8 @@ input[type="text"], input[type="number"], input[type="email"], input[type="passw
 	border: 1px solid var(--color-border);
 	font-family: inherit;
 	font-size: 1rem;
-	color: #111;
-	background: #fff;
+	color: var(--color-text);
+	background: var(--color-surface);
 	transition: border-color 0.2s ease;
 	appearance: none;
 	-webkit-appearance: none;
@@ -1970,13 +1974,13 @@ input[type="email"]::placeholder,
 input[type="password"]::placeholder,
 input[type="url"]::placeholder,
 textarea::placeholder {
-	color: rgba(17,17,17,0.55);
+	color: var(--color-muted);
 }
 
 input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="url"]:focus, select:focus, textarea:focus {
 	outline: none;
 	border-color: var(--color-primary);
-	box-shadow: 0 0 0 3px rgba(17,29,74,0.1);
+	box-shadow: var(--shadow-ring);
 }
 
 @media (min-width: 768px) {

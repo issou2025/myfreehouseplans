@@ -54,7 +54,7 @@
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
-                        <img src="{{ url_for('static', filename=card_image) }}" alt="{{ plan.title }}" itemprop="image">
+                        <img src="{{ url_for('static', filename=card_image) }}" alt="{{ plan.title }}" itemprop="image" loading="lazy">
                     {% else %}
                         <div class="plan-card__placeholder">Rendering in progress</div>
                     {% endif %}
