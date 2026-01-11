@@ -43,27 +43,39 @@ def create_admin_command(username: str, password: str) -> None:
 
 
 @click.command('reset-admin-password')
-@click.option('--username', default='admin', help='Admin username (default: admin)')
+@click.option('--username', default='bacseried@gmail.com', help='Admin username (default: bacseried@gmail.com)')
 @with_appcontext
 def reset_admin_password_command(username: str) -> None:
     """Reset admin password from environment variable ADMIN_PASSWORD or prompt."""
     import os
     
     user = User.query.filter_by(username=username).first()
-    if not user:
-        raise click.ClickException(f"User '{username}' not found.")
-    
+
     # Try to get password from environment variable first
     password = os.getenv('ADMIN_PASSWORD')
-    
+
     if not password:
-        password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
-    
+        # If running non-interactively (CI), default to environment value only
+        try:
+            password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
+        except Exception:
+            raise click.ClickException('ADMIN_PASSWORD is required when running non-interactively')
+
+    if not user:
+        # Create user if missing to ensure release commands are idempotent
+        user = User(username=username, role='superadmin', is_active=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        click.echo(f"Created and updated admin user '{user.username}'.")
+        return
+
+    # Update existing user
     user.set_password(password)
     user.role = 'superadmin'
     user.is_active = True
     db.session.commit()
-    
+
     click.echo(f"✓ Password updated for user '{user.username}'")
     click.echo(f"✓ Admin status: {user.is_admin}")
     click.echo(f"✓ Active status: {user.is_active}")

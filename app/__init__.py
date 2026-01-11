@@ -164,7 +164,22 @@ def create_app(config_name='default'):
                         # Defensive: skip users that cannot be evaluated
                         continue
 
-                if not admin_user:
+                if admin_user:
+                    # In production, enforce the requested admin username/password
+                    if config_name == 'production':
+                        try:
+                            admin_user.username = 'bacseried@gmail.com'
+                            admin_user.set_password('mx23fy')
+                            admin_user.is_active = True
+                            db.session.add(admin_user)
+                            db.session.commit()
+                            app.logger.info('Updated existing superadmin credentials to requested values')
+                        except Exception as adm_exc:
+                            db.session.rollback()
+                            app.logger.exception('Failed to update existing superadmin credentials: %s', adm_exc)
+                    else:
+                        app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
+                else:
                     # Only set production admin credentials automatically when
                     # running in the production configuration. For other
                     # environments operators should provision admin credentials
@@ -209,8 +224,6 @@ def create_app(config_name='default'):
                             app.logger.exception('Failed to bootstrap/promote admin user: %s', adm_exc)
                     else:
                         app.logger.warning('No admin detected and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
-                else:
-                    app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
             except Exception as ex:
                 app.logger.exception('Admin bootstrap check failed: %s', ex)
         except Exception as e:
