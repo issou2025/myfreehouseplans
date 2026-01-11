@@ -666,6 +666,41 @@ def pack_detail(slug):
     
     # Structured data for product
     product_schema = generate_product_schema(plan)
+
+    # FAQs: prefer custom FAQs attached to the plan; if none, use defaults
+    try:
+        from app.models import PlanFAQ
+        faqs = []
+        if getattr(plan, 'faqs', None):
+            # plan.faqs may be a list of PlanFAQ objects
+            faqs = list(plan.faqs) if plan.faqs else []
+        if not faqs:
+            # return default FAQ dicts
+            faqs = plan.default_faqs() if hasattr(plan, 'default_faqs') else []
+        # Build structured FAQ schema
+        faq_schema = {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            'mainEntity': []
+        }
+        for item in faqs:
+            if hasattr(item, 'question'):
+                q = item.question
+                a = item.answer
+            else:
+                q = item.get('question')
+                a = item.get('answer')
+            faq_schema['mainEntity'].append({
+                '@type': 'Question',
+                'name': q,
+                'acceptedAnswer': {
+                    '@type': 'Answer',
+                    'text': a
+                }
+            })
+    except Exception:
+        faqs = []
+        faq_schema = None
     
     # Breadcrumb schema
     breadcrumbs = [
@@ -677,6 +712,8 @@ def pack_detail(slug):
     
     return render_template('pack_detail.html',
                          plan=plan,
+                         faqs=faqs,
+                         faq_schema=faq_schema,
                          similar_plans=similar_plans,
                          meta=meta,
                          product_schema=product_schema,

@@ -14,6 +14,7 @@ from functools import wraps
 import os
 from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor
 from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm
+from app.forms import PlanFAQForm
 from app.extensions import db
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, func
@@ -23,6 +24,7 @@ from app.utils.uploads import save_uploaded_file
 from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
 from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
+from app.models import PlanFAQ
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -80,6 +82,16 @@ def ensure_admin_exists():
         db.session.rollback()
         current_app.logger.error('Admin bootstrap attempt failed: %s', exc)
         return None
+ 
+def admin_required(f):
+    """Decorator to require admin privileges"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'superadmin':
+            flash('Administrator login required.', 'warning')
+            return redirect(url_for('admin.admin_login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
@@ -139,6 +151,7 @@ def admin_login():
             session.permanent = True
             user.last_login = datetime.utcnow()
             db.session.commit()
+
         except Exception as exc:
             current_app.logger.exception('Failed to persist admin login for %s: %s', user.username, exc)
             db.session.rollback()
@@ -151,20 +164,80 @@ def admin_login():
         flash(f'Welcome back, {user.username}.', 'success')
         return redirect(next_page)
 
-    return render_template('admin/login.html', form=form)
+
+@admin_bp.route('/plans/<int:plan_id>/faqs')
+@login_required
+@admin_required
+def manage_plan_faqs(plan_id):
+    """Manage FAQs for a specific plan"""
+    plan = HousePlan.query.get_or_404(plan_id)
+    faqs = PlanFAQ.query.filter_by(plan_id=plan.id).order_by(PlanFAQ.id.asc()).all()
+    return render_template('admin/faqs_list.html', plan=plan, faqs=faqs)
 
 
-def admin_required(f):
-    """Decorator to require admin privileges"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'superadmin':
-            flash('Administrator login required.', 'warning')
-            return redirect(url_for('admin.admin_login', next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
+@admin_bp.route('/plans/<int:plan_id>/faqs/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_plan_faq(plan_id):
+    plan = HousePlan.query.get_or_404(plan_id)
+    form = PlanFAQForm()
+    if form.validate_on_submit():
+        try:
+            faq = PlanFAQ(
+                plan_id=plan.id,
+                reference_code=plan.reference_code,
+                question=form.question.data.strip(),
+                answer=form.answer.data.strip(),
+                pack_context=(form.pack_context.data or '').strip() or None,
+            )
+            db.session.add(faq)
+            db.session.commit()
+            flash('FAQ added successfully.', 'success')
+            return redirect(url_for('admin.manage_plan_faqs', plan_id=plan.id))
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception('Failed to add FAQ for plan %s: %s', plan.id, exc)
+            flash('Unable to save FAQ. Please try again.', 'danger')
+    return render_template('admin/faqs_form.html', form=form, plan=plan)
 
 
+@admin_bp.route('/faqs/<int:faq_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_plan_faq(faq_id):
+    faq = PlanFAQ.query.get_or_404(faq_id)
+    plan = faq.plan
+    form = PlanFAQForm(obj=faq)
+    if form.validate_on_submit():
+        try:
+            faq.question = form.question.data.strip()
+            faq.answer = form.answer.data.strip()
+            faq.pack_context = (form.pack_context.data or '').strip() or None
+            db.session.commit()
+            flash('FAQ updated successfully.', 'success')
+            return redirect(url_for('admin.manage_plan_faqs', plan_id=plan.id))
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception('Failed to update FAQ %s: %s', faq_id, exc)
+            flash('Unable to update FAQ. Please try again.', 'danger')
+    return render_template('admin/faqs_form.html', form=form, plan=plan, faq=faq)
+
+
+@admin_bp.route('/faqs/<int:faq_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_plan_faq(faq_id):
+    faq = PlanFAQ.query.get_or_404(faq_id)
+    plan_id = faq.plan_id
+    try:
+        db.session.delete(faq)
+        db.session.commit()
+        flash('FAQ deleted.', 'info')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('Failed to delete FAQ %s: %s', faq_id, exc)
+        flash('Unable to delete FAQ. Please try again.', 'danger')
+    return redirect(url_for('admin.manage_plan_faqs', plan_id=plan_id))
 
 @admin_bp.route('/dashboard')
 @login_required

@@ -199,6 +199,7 @@ class HousePlan(db.Model):
     
     orders = db.relationship('Order', backref='plan', lazy='dynamic')
     messages = db.relationship('ContactMessage', backref='plan', lazy='dynamic')
+    faqs = db.relationship('PlanFAQ', backref='plan', lazy='selectin', cascade='all, delete-orphan')
     
     def __init__(self, **kwargs):
         super(HousePlan, self).__init__(**kwargs)
@@ -335,6 +336,57 @@ class HousePlan(db.Model):
                 normalized.append(price)
         return min(normalized) if normalized else None
 
+    def default_faqs(self):
+        """Return a default set of FAQ items for this plan when none are provided.
+
+        Each item is a dict with keys: question, answer, pack_context.
+        Answers reference the plan's reference code when helpful.
+        """
+        ref = self.reference_code or (self.ensure_reference_code() if hasattr(self, 'ensure_reference_code') else '')
+        base = [
+            {
+                'question': 'Can I modify this house plan?',
+                'answer': f'Yes. The plan with reference {ref} can be adapted by a local architect or engineer to meet local codes and site conditions. We recommend working with a licensed professional for permit-ready changes.',
+                'pack_context': ''
+            },
+            {
+                'question': 'What files are included in each package?',
+                'answer': 'Free Pack: PDF sampler. Pro Pack: full PDF set. Ultimate Pack: editable CAD/BIM files where available (DWG, IFC). See the pack comparison above for exact contents.',
+                'pack_context': ''
+            },
+            {
+                'question': 'Is this plan suitable for my country or climate?',
+                'answer': 'Plans are designed with flexible details; suitability depends on local codes, climate, and site. Reference the plan code when consulting a local engineer: ' + ref,
+                'pack_context': ''
+            },
+            {
+                'question': 'Can an architect or engineer adapt this plan?',
+                'answer': 'Absolutely. Provide them with the plan files (reference ' + ref + ') and they can prepare permit-ready drawings and calculations as required locally.',
+                'pack_context': ''
+            },
+            {
+                'question': 'How do I receive the files after purchase?',
+                'answer': 'Files are delivered as downloads immediately after purchase and remain available in your account. We also email a download link for convenience.',
+                'pack_context': ''
+            },
+            {
+                'question': 'What is the difference between Pack Free, Pro, and Ultimate?',
+                'answer': 'Free: preview PDF. Pro: complete PDF documentation. Ultimate: editable CAD/BIM datasets for contractors and consultants. Choose the pack matching your stage and local team needs.',
+                'pack_context': ''
+            },
+            {
+                'question': 'Can I use this plan for construction immediately?',
+                'answer': 'The plan is a strong starting point, but you must verify local codes, obtain permits, and possibly adapt details; consult a local architect/engineer before construction.',
+                'pack_context': ''
+            },
+            {
+                'question': 'Can I request customization for this plan?',
+                'answer': 'Yes — we offer customization services. Quote requests should reference ' + ref + ' so we can estimate time and cost accurately.',
+                'pack_context': ''
+            },
+        ]
+        return base
+
     @staticmethod
     def _sqft_from_m2(m2_value):
         try:
@@ -359,6 +411,34 @@ class HousePlan(db.Model):
         if self.total_area_m2:
             return self._sqft_from_m2(self.total_area_m2)
         return None
+
+
+class PlanFAQ(db.Model):
+    """FAQ entries associated with a specific HousePlan."""
+
+    __tablename__ = 'plan_faqs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('house_plans.id', ondelete='CASCADE'), nullable=True, index=True)
+    reference_code = db.Column(db.String(80), nullable=True, index=True)
+    question = db.Column(db.String(500), nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    pack_context = db.Column(db.String(20), nullable=True)  # 'free', 'pro', 'ultimate' or empty
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def as_structured(self):
+        return {
+            '@type': 'Question',
+            'name': self.question,
+            'acceptedAnswer': {
+                '@type': 'Answer',
+                'text': self.answer
+            }
+        }
+
+    def __repr__(self):
+        return f'<PlanFAQ {self.id} for plan={self.plan_id or self.reference_code}>'
 
     @property
     def area_m2(self):

@@ -375,6 +375,50 @@ form { overflow: visible; }
 	margin-top: 12px;
 }
 
+/* FAQ component */
+.faq-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.faq-item {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+	padding: 8px;
+	box-shadow: var(--shadow-sm);
+	overflow: hidden;
+}
+.faq-question {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	background: transparent;
+	border: none;
+	padding: 12px;
+	font-weight: 600;
+	font-size: 1rem;
+	cursor: pointer;
+}
+.faq-question__chev { opacity: 0.7; margin-left: 8px; }
+.faq-answer {
+	padding: 0 12px 14px 12px;
+	transition: max-height 260ms ease, opacity 200ms ease;
+	max-height: 0;
+	opacity: 0;
+}
+.faq-item[aria-expanded="true"] .faq-answer,
+.faq-question[aria-expanded="true"] + .faq-answer {
+	max-height: 1000px;
+	opacity: 1;
+}
+
+@media (max-width: 640px) {
+	.faq-question { padding: 16px; font-size: 1.02rem; }
+	.faq-answer { padding: 12px 14px; }
+}
+
 /* Favorites -------------------------------------------------- */
 .favorite-toggle {
 	position: absolute;

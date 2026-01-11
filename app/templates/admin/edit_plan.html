@@ -18,6 +18,10 @@
             <p class="muted">Share this code with prospects so the support inbox can locate the plan instantly.</p>
         </div>
     </section>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+        <a class="btn btn-secondary" href="{{ url_for('admin.manage_plan_faqs', plan_id=plan.id) }}">Manage FAQs</a>
+        <a class="btn" href="{{ url_for('admin.plans') }}">Back to plans</a>
+    </div>
     {% endif %}
 
     {% if form.errors %}

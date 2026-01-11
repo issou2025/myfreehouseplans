@@ -169,6 +169,37 @@
             </div>
         </section>
 
+        <!-- Frequently Asked Questions -->
+        <section class="plan-faqs" aria-labelledby="faq-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Questions</p>
+                    <h2 id="faq-heading">Frequently asked questions about this plan</h2>
+                    <p class="muted">Answers tailored to this plan to help you move forward with confidence.</p>
+                </div>
+            </div>
+            <div class="faq-list" id="faq-list">
+                {% for item in faqs %}
+                    {% if item.question %}
+                    <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                        <button class="faq-question" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')=='true' ? 'false' : 'true')">
+                            <span class="faq-question__text" itemprop="name">{{ item.question }}</span>
+                            <span class="faq-question__chev">▾</span>
+                        </button>
+                        <div class="faq-answer" hidden itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
+                            <div itemprop="text">{{ item.answer }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">{{ item['question'] }}</button>
+                        <div class="faq-answer" hidden>{{ item['answer'] }}</div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+
         {# 1) Plan use cases (human, quick scan) #}
         {% set use_cases = [] %}
         {% if plan.plan_type == 'family' %}

@@ -98,6 +98,33 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 });
 
+// FAQ accordion progressive enhancement
+document.addEventListener('DOMContentLoaded', function () {
+	try {
+		const list = document.getElementById('faq-list');
+		if (!list) return;
+		list.querySelectorAll('.faq-item').forEach(function (item) {
+			const btn = item.querySelector('.faq-question');
+			const answer = item.querySelector('.faq-answer');
+			if (!btn || !answer) return;
+			// Initialize accessibility attributes
+			btn.setAttribute('aria-expanded', 'false');
+			answer.hidden = true;
+			btn.addEventListener('click', function () {
+				const expanded = btn.getAttribute('aria-expanded') === 'true';
+				btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+				if (expanded) {
+					answer.hidden = true;
+				} else {
+					answer.hidden = false;
+				}
+			});
+		});
+	} catch (e) {
+		console.warn('FAQ enhancement failed', e);
+	}
+});
+
 // Catalog filters + real-time search ------------------------------------
 (function () {
 	const form = document.querySelector('[data-plan-browser]');

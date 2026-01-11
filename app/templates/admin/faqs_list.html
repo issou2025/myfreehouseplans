@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div>
+            <p class="admin-eyebrow">FAQs · {{ plan.reference_code }}</p>
+            <h1 class="admin-title">Manage FAQs for {{ plan.title }}</h1>
+            <p class="admin-subtitle">Add helpful Q&A entries that appear on the public plan page.</p>
+        </div>
+        <div>
+            <a class="btn btn-primary" href="{{ url_for('admin.add_plan_faq', plan_id=plan.id) }}">Add FAQ</a>
+        </div>
+    </header>
+
+    <div class="card-list" style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
+        {% if faqs %}
+            {% for f in faqs %}
+            <div class="package-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                    <div>
+                        <h3 style="margin:0">{{ f.question }}</h3>
+                        <p class="muted" style="margin:6px 0 0">Context: {{ f.pack_context or 'All packs' }}</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <a class="btn" href="{{ url_for('admin.edit_plan_faq', faq_id=f.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('admin.delete_plan_faq', faq_id=f.id) }}" style="display:inline">
+                            <button type="submit" class="btn btn-secondary">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                <div style="margin-top:12px">{{ f.answer }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="form-alert">
+                <p class="muted">No FAQs defined for this plan. The public page will show a helpful default FAQ set.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

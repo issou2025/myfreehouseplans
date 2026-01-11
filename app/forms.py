@@ -10,6 +10,7 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, TextAreaField, DecimalField, IntegerField, FloatField, SelectField, SelectMultipleField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, NumberRange, URL
 from app.models import User, Category, ContactMessage
+from app.models import PlanFAQ
 
 
 class LoginForm(FlaskForm):
@@ -264,6 +265,21 @@ class CategoryForm(FlaskForm):
     def __init__(self, *args, category_id=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._category_id = category_id
+
+
+class PlanFAQForm(FlaskForm):
+    """Form for creating and editing plan-specific FAQ items."""
+
+    question = StringField('Question', validators=[
+        DataRequired(message='Question is required'),
+        Length(max=500)
+    ])
+    answer = TextAreaField('Answer', validators=[
+        DataRequired(message='Answer is required'),
+        Length(max=8000)
+    ])
+    pack_context = SelectField('Pack context', choices=[('', 'All packs'), ('free', 'Free Pack'), ('pro', 'Pro Pack'), ('ultimate', 'Ultimate Pack')], validators=[Optional()])
+    submit = SubmitField('Save FAQ')
 
     def validate_name(self, name):
         normalized = (name.data or '').strip()

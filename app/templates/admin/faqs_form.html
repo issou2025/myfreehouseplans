@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header admin-header--form">
+        <div>
+            <p class="admin-eyebrow">FAQs · {{ plan.reference_code }}</p>
+            <h1 class="admin-title">{% if faq %}Edit FAQ{% else %}Add FAQ{% endif %}</h1>
+            <p class="admin-subtitle">Write clear, helpful answers that reduce hesitation and support conversions.</p>
+        </div>
+    </header>
+
+    <form class="admin-form" method="post">
+        {{ form.hidden_tag() }}
+        <div class="form-card">
+            <div class="form-group">
+                {{ form.question.label(class="form-label") }}
+                {{ form.question(class="form-input") }}
+            </div>
+            <div class="form-group">
+                {{ form.answer.label(class="form-label") }}
+                {{ form.answer(class="form-textarea", rows=6) }}
+            </div>
+            <div class="form-group">
+                {{ form.pack_context.label(class="form-label") }}
+                {{ form.pack_context(class="form-select") }}
+                <p class="form-help">Optionally, target this FAQ to a specific pack.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+                {{ form.submit(class="btn btn-primary") }}
+                <a class="btn" href="{{ url_for('admin.manage_plan_faqs', plan_id=plan.id) }}">Cancel</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
