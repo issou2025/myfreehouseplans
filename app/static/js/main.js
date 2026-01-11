@@ -63,6 +63,41 @@
 	});
 })();
 
+// Image skeleton handling: hide skeleton overlay when images load (prevents CLS)
+document.addEventListener('DOMContentLoaded', function () {
+	function bindImage(img) {
+		try {
+			const parent = img.closest('.plan-card__media');
+			if (!parent) return;
+			if (img.complete && img.naturalWidth > 0) {
+				parent.classList.add('is-loaded');
+				return;
+			}
+			img.addEventListener('load', function () { parent.classList.add('is-loaded'); });
+			img.addEventListener('error', function () { parent.classList.add('is-loaded'); });
+		} catch (e) {
+			// Defensive: never throw in UI enhancement
+			console.warn('bindImage error', e);
+		}
+	}
+
+	document.querySelectorAll('img.js-lazy-img').forEach(bindImage);
+
+	// Handle images added via fetch (infinite scroll / load more)
+	const grid = document.getElementById('planGrid');
+	if (grid && window.MutationObserver) {
+		const mo = new MutationObserver(function (mutations) {
+			mutations.forEach(function (m) {
+				m.addedNodes.forEach(function (n) {
+					if (!(n instanceof HTMLElement)) return;
+					n.querySelectorAll && n.querySelectorAll('img.js-lazy-img').forEach(bindImage);
+				});
+			});
+		});
+		mo.observe(grid, { childList: true, subtree: true });
+	}
+});
+
 // Catalog filters + real-time search ------------------------------------
 (function () {
 	const form = document.querySelector('[data-plan-browser]');

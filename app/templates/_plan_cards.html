@@ -3,7 +3,8 @@
     <div class="plan-card__media" aria-hidden="true">
         {% set card_image = plan.cover_image or plan.main_image %}
         {% if card_image %}
-            {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy') }}
+            <div class="skeleton"></div>
+            {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy', css_class='plan-card__img js-lazy-img') }}
         {% else %}
             <div class="plan-card__placeholder">Visual coming soon</div>
         {% endif %}
