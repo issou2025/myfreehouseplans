@@ -60,7 +60,7 @@ def reset_admin_password_command(username: str) -> None:
         password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
     
     user.set_password(password)
-    user.is_admin = True
+    user.role = 'superadmin'
     user.is_active = True
     db.session.commit()
     
