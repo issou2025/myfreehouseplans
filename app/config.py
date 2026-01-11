@@ -15,7 +15,7 @@ class Config:
     """Base configuration with common settings"""
     
     # Secret key for session management and CSRF protection
-    SECRET_KEY = "FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE"
+    SECRET_KEY = os.environ.get('SECRET_KEY', "FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE")
     
     # Database configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -103,8 +103,8 @@ class ProductionConfig(Config):
     SQLALCHEMY_ECHO = False
     
     # Production security
-    SESSION_COOKIE_SECURE = False
-    REMEMBER_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):

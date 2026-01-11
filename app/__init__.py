@@ -129,11 +129,41 @@ def create_app(config_name='default'):
             except Exception as ex:
                 # Log but do not raise: admin can run full migrations via CI/Render.
                 app.logger.exception('Failed to ensure messages table exists at startup: %s', ex)
-            else:
-                # Non-production: create tables if missing, but do NOT drop existing data
-                if not existing_tables:
-                    db.create_all()
-                    app.logger.info('Created database tables for non-production environment')
+            # Ensure tables exist: create missing tables safely in all environments.
+            try:
+                db.create_all()
+                app.logger.info('Ensured database tables exist (db.create_all executed)')
+            except Exception as create_exc:
+                app.logger.exception('db.create_all() failed: %s', create_exc)
+
+            # Admin bootstrap: if no superadmin exists, try to create one from environment.
+            try:
+                try:
+                    admin_user = User.query.filter_by(role='superadmin').first()
+                except Exception:
+                    db.session.rollback()
+                    admin_user = None
+
+                if not admin_user:
+                    admin_username = os.environ.get('ADMIN_USERNAME')
+                    admin_password = os.environ.get('ADMIN_PASSWORD')
+                    admin_env_email = os.environ.get('ADMIN_EMAIL')
+                    if admin_username and admin_password:
+                        try:
+                            new_admin = User(username=admin_username, role='superadmin', is_active=True)
+                            new_admin.set_password(admin_password)
+                            db.session.add(new_admin)
+                            db.session.commit()
+                            app.logger.info('Bootstrapped admin user: %s', admin_username)
+                        except Exception as adm_exc:
+                            db.session.rollback()
+                            app.logger.exception('Failed to bootstrap admin user: %s', adm_exc)
+                    else:
+                        app.logger.warning('No superadmin found and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
+                else:
+                    app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
+            except Exception as ex:
+                app.logger.exception('Admin bootstrap check failed: %s', ex)
         except Exception as e:
             app.logger.error('Database initialization/verification failed: %s', e)
             # Fail fast in production to avoid accidental data loss
