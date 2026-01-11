@@ -91,8 +91,13 @@ def admin_login():
     # Ensure an admin account exists before processing authentication.
     bootstrap_admin = ensure_admin_exists()
     if bootstrap_admin is None:
-        flash('Admin is initializing. Please retry in a moment.', 'warning')
-        return render_template('admin/login.html', form=form)
+        # In production we should not block the login page when an admin account
+        # is not yet present. Log a non-blocking warning so operators can act
+        # (run `flask create-admin` or apply provisioning via CI), but allow the
+        # login page to render. This prevents confusing UX while keeping
+        # auto-seeding disabled for safety.
+        current_app.logger.warning('No admin account detected during login attempt; admin provisioning required.')
+        # continue to render login form; credential validation will behave normally
 
     # If a logged-in user is not admin, force logout to enforce policy.
     if current_user.is_authenticated and current_user.role != 'superadmin':
