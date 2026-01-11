@@ -915,70 +915,145 @@ def contact():
             flash('We could not save your message. Please email entreprise2rc@gmail.com directly.', 'danger')
             return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
+        # Guaranteed user confirmation: always show success immediately after DB commit.
+        success_message = 'Thank you! Your message has been sent. We will get back to you shortly.'
+        # For XHR/JSON clients, return JSON success response.
+        if request.headers.get('X-Requested-With') == 'fetch' or request.accept_mimetypes.accept_json:
+            # Attempt background-safe email operations but do not block response.
+            try:
+                # Send admin notification (best-effort)
+                admin_email_sent = False
+                email_error_text = None
+                try:
+                    msg = MailMessage(
+                        subject=f"Contact Form: {form.subject.data}",
+                        recipients=[current_app.config.get('ADMIN_EMAIL')],
+                        reply_to=form.email.data
+                    )
+                    msg.body = (
+                        f"New contact form submission (Message #{message_record.id}):\n\n"
+                        f"Name: {form.name.data}\n"
+                        f"Email: {form.email.data}\n"
+                        f"Phone: {form.phone.data or 'Not provided'}\n"
+                        f"Subject: {form.subject.data}\n"
+                        f"Inquiry type: {form.inquiry_type.data}\n"
+                        f"Plan interest: {plan_label or 'Not provided'}\n"
+                        f"Reference code provided: {form.reference_code.data or 'Not provided'}\n"
+                        f"Opt-in to updates: {'Yes' if form.subscribe.data else 'No'}\n"
+                        f"Attachment path: {saved_attachment or 'None'}\n\n"
+                        f"Message:\n{form.message.data}\n"
+                    )
+                    if attachment_absolute and os.path.exists(attachment_absolute):
+                        with open(attachment_absolute, 'rb') as handle:
+                            msg.attach(
+                                os.path.basename(attachment_absolute),
+                                attachment_mime or 'application/octet-stream',
+                                handle.read()
+                            )
+                    mail.send(msg)
+                    admin_email_sent = True
+                except Exception as exc:
+                    email_error_text = str(exc)
+                    current_app.logger.error('Failed to send contact email for message %s: %s', message_record.id, exc)
+
+                message_record.email_status = ContactMessage.EMAIL_SENT if admin_email_sent else ContactMessage.EMAIL_FAILED
+                message_record.email_error = None if admin_email_sent else (email_error_text or 'Delivery failed')
+                message_record.status_updated_at = datetime.utcnow()
+                try:
+                    db.session.commit()
+                except Exception as exc:
+                    db.session.rollback()
+                    current_app.logger.exception('Failed to update contact message %s delivery status: %s', message_record.id, exc)
+
+                # Send acknowledgment to the user (best-effort)
+                try:
+                    ack = MailMessage(
+                        subject='We received your message',
+                        recipients=[message_record.email],
+                    )
+                    ack.body = (
+                        f"Hi {message_record.name},\n\n"
+                        "Thanks for contacting MyFreeHousePlans. We've logged your request with our studio inbox. "
+                        "Someone will respond within two business days."
+                        f"\n\nReference: Message #{message_record.id}\n"
+                        "If you need immediate assistance, reply to this email or reach out at entreprise2rc@gmail.com."
+                        "\n\n— Studio Support"
+                    )
+                    mail.send(ack)
+                except Exception as exc:
+                    current_app.logger.warning('Failed to send acknowledgment for message %s: %s', message_record.id, exc)
+            except Exception:
+                # Ensure no exceptions escape to the client for XHR flows.
+                current_app.logger.exception('Unexpected error in post-save email flow for message %s', message_record.id)
+            return jsonify({'ok': True, 'message': success_message})
+
+        # Non-XHR flow: show guaranteed confirmation and continue to best-effort delivery.
+        flash(success_message, 'success')
+
+        # Best-effort admin notification: log failures, do NOT block user flow.
         admin_email_sent = False
         email_error_text = None
         try:
-            msg = MailMessage(
-                subject=f"Contact Form: {form.subject.data}",
-                recipients=[current_app.config['ADMIN_EMAIL']],
-                reply_to=form.email.data
-            )
-            msg.body = (
-                f"New contact form submission (Message #{message_record.id}):\n\n"
-                f"Name: {form.name.data}\n"
-                f"Email: {form.email.data}\n"
-                f"Phone: {form.phone.data or 'Not provided'}\n"
-                f"Subject: {form.subject.data}\n"
-                f"Inquiry type: {form.inquiry_type.data}\n"
-                f"Plan interest: {plan_label or 'Not provided'}\n"
-                f"Reference code provided: {form.reference_code.data or 'Not provided'}\n"
-                f"Opt-in to updates: {'Yes' if form.subscribe.data else 'No'}\n"
-                f"Attachment path: {saved_attachment or 'None'}\n\n"
-                f"Message:\n{form.message.data}\n"
-            )
-            if attachment_absolute and os.path.exists(attachment_absolute):
-                with open(attachment_absolute, 'rb') as handle:
-                    msg.attach(
-                        os.path.basename(attachment_absolute),
-                        attachment_mime or 'application/octet-stream',
-                        handle.read()
-                    )
-            mail.send(msg)
-            admin_email_sent = True
-        except Exception as exc:
-            email_error_text = str(exc)
-            current_app.logger.error('Failed to send contact email for message %s: %s', message_record.id, exc)
+            try:
+                msg = MailMessage(
+                    subject=f"Contact Form: {form.subject.data}",
+                    recipients=[current_app.config.get('ADMIN_EMAIL')],
+                    reply_to=form.email.data
+                )
+                msg.body = (
+                    f"New contact form submission (Message #{message_record.id}):\n\n"
+                    f"Name: {form.name.data}\n"
+                    f"Email: {form.email.data}\n"
+                    f"Phone: {form.phone.data or 'Not provided'}\n"
+                    f"Subject: {form.subject.data}\n"
+                    f"Inquiry type: {form.inquiry_type.data}\n"
+                    f"Plan interest: {plan_label or 'Not provided'}\n"
+                    f"Reference code provided: {form.reference_code.data or 'Not provided'}\n"
+                    f"Opt-in to updates: {'Yes' if form.subscribe.data else 'No'}\n"
+                    f"Attachment path: {saved_attachment or 'None'}\n\n"
+                    f"Message:\n{form.message.data}\n"
+                )
+                if attachment_absolute and os.path.exists(attachment_absolute):
+                    with open(attachment_absolute, 'rb') as handle:
+                        msg.attach(
+                            os.path.basename(attachment_absolute),
+                            attachment_mime or 'application/octet-stream',
+                            handle.read()
+                        )
+                mail.send(msg)
+                admin_email_sent = True
+            except Exception as exc:
+                email_error_text = str(exc)
+                current_app.logger.error('Failed to send contact email for message %s: %s', message_record.id, exc)
 
-        message_record.email_status = ContactMessage.EMAIL_SENT if admin_email_sent else ContactMessage.EMAIL_FAILED
-        message_record.email_error = None if admin_email_sent else (email_error_text or 'Delivery failed')
-        message_record.status_updated_at = datetime.utcnow()
-        try:
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            current_app.logger.exception('Failed to update contact message %s delivery status: %s', message_record.id, exc)
+            message_record.email_status = ContactMessage.EMAIL_SENT if admin_email_sent else ContactMessage.EMAIL_FAILED
+            message_record.email_error = None if admin_email_sent else (email_error_text or 'Delivery failed')
+            message_record.status_updated_at = datetime.utcnow()
+            try:
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                current_app.logger.exception('Failed to update contact message %s delivery status: %s', message_record.id, exc)
 
-        try:
-            ack = MailMessage(
-                subject='We received your message',
-                recipients=[message_record.email],
-            )
-            ack.body = (
-                f"Hi {message_record.name},\n\n"
-                "Thanks for contacting MyFreeHousePlans. We've logged your request with our studio inbox. "
-                "Someone will respond within two business days."
-                f"\n\nReference: Message #{message_record.id}\n"
-                "If you need immediate assistance, reply to this email or reach out at entreprise2rc@gmail.com."
-                "\n\n— Studio Support"
-            )
-            mail.send(ack)
-        except Exception as exc:
-            current_app.logger.warning('Failed to send acknowledgment for message %s: %s', message_record.id, exc)
+            try:
+                ack = MailMessage(
+                    subject='We received your message',
+                    recipients=[message_record.email],
+                )
+                ack.body = (
+                    f"Hi {message_record.name},\n\n"
+                    "Thanks for contacting MyFreeHousePlans. We've logged your request with our studio inbox. "
+                    "Someone will respond within two business days."
+                    f"\n\nReference: Message #{message_record.id}\n"
+                    "If you need immediate assistance, reply to this email or reach out at entreprise2rc@gmail.com."
+                    "\n\n— Studio Support"
+                )
+                mail.send(ack)
+            except Exception as exc:
+                current_app.logger.warning('Failed to send acknowledgment for message %s: %s', message_record.id, exc)
 
-        if admin_email_sent:
-            flash('Thanks! We logged your message and notified the studio. Expect a reply within two business days.', 'success')
-        else:
-            flash('We saved your message but could not reach the studio mailbox automatically. Our team will review it shortly.', 'warning')
+        except Exception:
+            current_app.logger.exception('Unexpected error in post-save email flow for message %s', message_record.id)
 
         tag_visit_identity(name=message_record.name, email=message_record.email)
         return redirect(url_for('main.contact'))
