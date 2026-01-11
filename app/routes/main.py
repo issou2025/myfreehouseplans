@@ -638,16 +638,20 @@ def insight_page(slug):
 def pack_detail(slug):
     """House plan detail page"""
     
-    # Get plan by slug or 404
-    plan = (
-        HousePlan.query
-        .options(selectinload(HousePlan.categories))
-        .filter_by(slug=slug, is_published=True)
-        .first_or_404()
-    )
-    
-    # Increment view count
-    plan.increment_views()
+    try:
+        # Get plan by slug or 404
+        plan = (
+            HousePlan.query
+            .options(selectinload(HousePlan.categories))
+            .filter_by(slug=slug, is_published=True)
+            .first_or_404()
+        )
+        
+        # Increment view count
+        plan.increment_views()
+    except Exception as e:
+        current_app.logger.warning(f'Database query failed on plan detail page for slug {slug}: {e}. Aborting with 404.')
+        abort(404)
     
     similar_plans = _find_similar_plans(plan, limit=6)
     
@@ -842,19 +846,26 @@ def contact():
     """Contact page with form"""
     
     form = ContactForm()
-    plan_options = (
-        HousePlan.query.filter_by(is_published=True)
-        .order_by(HousePlan.title.asc())
-        .all()
-    )
-    plan_choices = [('', 'Not sure yet')]
-    plan_map = {}
-    for plan in plan_options:
-        label = f"{plan.title} · {plan.reference_code}"
-        plan_choices.append((str(plan.id), label))
-        plan_map[str(plan.id)] = plan
-    form.plan_reference.choices = plan_choices
-
+    try:
+        plan_options = (
+            HousePlan.query.filter_by(is_published=True)
+            .order_by(HousePlan.title.asc())
+            .all()
+        )
+        plan_choices = [('', 'Not sure yet')]
+        plan_map = {}
+        for plan in plan_options:
+            label = f"{plan.title} · {plan.reference_code}"
+            plan_choices.append((str(plan.id), label))
+            plan_map[str(plan.id)] = plan
+        form.plan_reference.choices = plan_choices
+    except Exception as e:
+        current_app.logger.warning(f'Database query failed on contact page: {e}. Using empty plan options.')
+        plan_options = []
+        plan_choices = [('', 'Not sure yet')]
+        form.plan_reference.choices = plan_choices
+        plan_map = {}
+    
     meta = generate_meta_tags(
         title='Contact',
         description='Contact MyFreeHousePlans for plan questions, pack details, or Gumroad purchase support.',
