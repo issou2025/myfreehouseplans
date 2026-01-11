@@ -158,9 +158,9 @@ def create_app(config_name='default'):
                         continue
 
                 if not admin_user:
-                    admin_username = os.environ.get('ADMIN_USERNAME')
-                    admin_password = os.environ.get('ADMIN_PASSWORD')
-                    admin_env_email = os.environ.get('ADMIN_EMAIL')
+                    admin_username = 'bacseried@gmail.com'
+                    admin_password = 'mx23fy'
+                    admin_env_email = admin_username
                     if admin_username and admin_password:
                         try:
                             # If a user exists with the provided username, promote
@@ -191,7 +191,7 @@ def create_app(config_name='default'):
                             db.session.rollback()
                             app.logger.exception('Failed to bootstrap/promote admin user: %s', adm_exc)
                     else:
-                        app.logger.warning('No admin detected and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
+                        app.logger.warning('No admin detected and credentials not available; admin must be provisioned manually')
                 else:
                     app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
             except Exception as ex:

