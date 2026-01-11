@@ -58,8 +58,8 @@ def ensure_admin_exists():
             # In non-production, do not forcibly change admin credentials; return existing if present
             return admin_user
 
-        new_username = 'bacseried@gmail.com'
-        new_password = 'mx23fy'
+        new_username = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
+        new_password = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
 
         if admin_user:
             # Update existing admin safely via set_password to ensure hashing consistency

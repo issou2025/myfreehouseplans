@@ -168,8 +168,11 @@ def create_app(config_name='default'):
                     # In production, enforce the requested admin username/password
                     if config_name == 'production':
                         try:
-                            admin_user.username = 'bacseried@gmail.com'
-                            admin_user.set_password('mx23fy')
+                            # Use environment override when available to avoid hardcoding secrets
+                            admin_username_override = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
+                            admin_password_override = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
+                            admin_user.username = admin_username_override
+                            admin_user.set_password(admin_password_override)
                             admin_user.is_active = True
                             db.session.add(admin_user)
                             db.session.commit()
