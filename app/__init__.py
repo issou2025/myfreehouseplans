@@ -106,8 +106,15 @@ def create_app(config_name='default'):
                                 app.logger.exception('Automatic migration attempt failed: %s', ex)
                                 raise
                         else:
-                            app.logger.error('Production database appears empty; aborting startup to avoid accidental initialization.')
-                            raise RuntimeError('Production database empty; initialize manually with migrations')
+                            # In production we must NOT perform automatic schema creation.
+                            # Allow the application to start so that operators can run
+                            # migrations (`flask db upgrade`) from CI/CD or the deploy
+                            # platform (Render). Log a warning so the situation is visible
+                            # in logs but do not abort process startup.
+                            app.logger.warning(
+                                'Production database appears empty; continuing startup. '
+                                'Do NOT use db.create_all() in production. Apply migrations with Alembic/Flask-Migrate.'
+                            )
 
                 app.logger.info('Production database verified with %d existing tables', len(existing_tables))
             else:
