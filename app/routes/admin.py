@@ -163,6 +163,8 @@ def admin_login():
             next_page = url_for('admin.dashboard')
         flash(f'Welcome back, {user.username}.', 'success')
         return redirect(next_page)
+    # Render the login form for GET or non-submitting requests
+    return render_template('admin/login.html', form=form)
 
 
 @admin_bp.route('/plans/<int:plan_id>/faqs')
