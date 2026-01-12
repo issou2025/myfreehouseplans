@@ -10,16 +10,9 @@ from app.config import config
 from app.extensions import db, migrate, login_manager, mail
 from datetime import datetime
 import os
-import sys
-from sqlalchemy import inspect
-
-
 # NOTE: Removed destructive bootstrap behavior. Admin seeding and any
 # DROP/CREATE operations are intentionally disabled in the factory.
 # Use explicit CLI commands (app.cli) to seed data in controlled environments.
-
-
-MIGRATION_KEYWORDS = {'db', 'upgrade', 'downgrade', 'stamp', 'revision', 'migrate', 'history'}
 
 
 def create_app(config_name='default'):
@@ -38,6 +31,22 @@ def create_app(config_name='default'):
     
     # Load configuration
     app.config.from_object(config[config_name])
+
+    # Enforce secure production configuration as early as possible (before
+    # extensions initialize and potentially import DB drivers).
+    if config_name == 'production':
+        secret = app.config.get('SECRET_KEY')
+        if not secret:
+            app.logger.error('Production requires SECRET_KEY to be set via environment variable')
+            raise RuntimeError('Missing SECRET_KEY in production')
+
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
+        if not db_uri:
+            app.logger.error('Production requires DATABASE_URL (SQLALCHEMY_DATABASE_URI) to be set')
+            raise RuntimeError('Missing DATABASE_URL in production')
+        if db_uri.strip().startswith('sqlite:'):
+            app.logger.error('Production requires PostgreSQL (DATABASE_URL must not be sqlite): %s', db_uri)
+            raise RuntimeError('SQLite not allowed in production')
     
     # Ensure upload folder exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -49,209 +58,6 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
-
-    # Enforce secure SECRET_KEY in production
-    if config_name == 'production':
-        secret = app.config.get('SECRET_KEY')
-        if not secret or secret == 'FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE':
-            app.logger.error('Production requires SECRET_KEY to be set via environment variable')
-            raise RuntimeError('Missing SECRET_KEY in production')
-    
-    # Database initialization and verification. Do NOT perform destructive
-    # operations in production. Enforce presence of a persistent DB and
-    # abort startup if the production DB appears missing or ephemeral.
-    cli_argv = {arg.lower() for arg in sys.argv}
-    running_cli = (
-        os.environ.get('FLASK_APP_RUN_FROM_CLI') == 'True'
-        or os.environ.get('FLASK_RUN_FROM_CLI', '').lower() == 'true'
-        or 'flask' in cli_argv
-    )
-    running_migration = bool(MIGRATION_KEYWORDS.intersection(cli_argv))
-    skip_bootstrap = os.environ.get('SKIP_STARTUP_DB_TASKS', '').lower() in ('1', 'true', 'yes')
-    if running_cli and running_migration:
-        skip_bootstrap = True
-
-    with app.app_context():
-        if skip_bootstrap:
-            app.logger.info('Skipping startup DB bootstrap tasks (migration or SKIP_STARTUP_DB_TASKS active)')
-            register_blueprints(app)
-            register_error_handlers(app)
-            register_template_processors(app)
-            register_shell_context(app)
-            register_cli_commands(app)
-            register_request_hooks(app)
-            return app
-        try:
-            # Import all models to ensure they're registered with SQLAlchemy
-            from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
-
-            inspector = inspect(db.engine)
-            existing_tables = inspector.get_table_names() or []
-
-            if config_name == 'production':
-                uri = app.config.get('SQLALCHEMY_DATABASE_URI')
-                if not uri:
-                    app.logger.error('Production requires SQLALCHEMY_DATABASE_URI to be set to a persistent database.')
-                    raise RuntimeError('Missing SQLALCHEMY_DATABASE_URI in production')
-                if uri.strip().startswith('sqlite:///:memory:'):
-                    app.logger.error('In-memory SQLite is forbidden in production.')
-                    raise RuntimeError('In-memory DB not allowed in production')
-
-                # Prefer absolute /data mount for sqlite in production containers
-                if uri.startswith('sqlite:'):
-                    # Accept both sqlite:////data/... and sqlite:///data/...
-                    if '/data/' not in uri and not uri.startswith('sqlite:///'):
-                        app.logger.warning('Production sqlite database path does not contain /data/: %s', uri)
-
-                    # Allow migrations to run: if we're executing Flask-Migrate commands
-                    # (e.g., `flask db upgrade`) permit empty DB so alembic can create schema.
-                    cli_args = ' '.join(sys.argv).lower()
-                    running_migration = ('db' in sys.argv) or ('upgrade' in sys.argv) or ('alembic' in cli_args)
-                    if not existing_tables and not running_migration:
-                        # Opt-in automatic initialization when explicitly allowed via env var
-                        allow_init = os.environ.get('ALLOW_INIT_ON_STARTUP', '').lower() in ('1', 'true', 'yes')
-                        if allow_init:
-                            try:
-                                from alembic.config import Config as AlembicConfig
-                                from alembic import command as alembic_command
-
-                                # Try locating alembic.ini in project
-                                migrations_ini = os.path.abspath(os.path.join(os.getcwd(), 'migrations', 'alembic.ini'))
-                                if not os.path.exists(migrations_ini):
-                                    # fallback: package-relative
-                                    migrations_ini = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'migrations', 'alembic.ini'))
-
-                                if os.path.exists(migrations_ini):
-                                    alembic_cfg = AlembicConfig(migrations_ini)
-                                    alembic_cfg.set_main_option('sqlalchemy.url', app.config['SQLALCHEMY_DATABASE_URI'])
-                                    app.logger.info('Applying alembic migrations from %s', migrations_ini)
-                                    alembic_command.upgrade(alembic_cfg, 'head')
-                                    app.logger.info('Migrations applied successfully during startup')
-                                    inspector = inspect(db.engine)
-                                    existing_tables = inspector.get_table_names() or []
-                                else:
-                                    app.logger.error('alembic.ini not found; cannot run migrations automatically: %s', migrations_ini)
-                                    raise RuntimeError('Missing alembic.ini for automatic migrations')
-                            except Exception as ex:
-                                app.logger.exception('Automatic migration attempt failed: %s', ex)
-                                raise
-                        else:
-                            # In production we must NOT perform automatic schema creation.
-                            # Allow the application to start so that operators can run
-                            # migrations (`flask db upgrade`) from CI/CD or the deploy
-                            # platform (Render). Log a warning so the situation is visible
-                            # in logs but do not abort process startup.
-                            app.logger.warning(
-                                'Production database appears empty; continuing startup. '
-                                'Do NOT use db.create_all() in production. Apply migrations with Alembic/Flask-Migrate.'
-                            )
-
-                app.logger.info('Production database verified with %d existing tables', len(existing_tables))
-            # Ensure messaging table exists so inbound messages are never lost.
-            # Create only the `messages` table if it's missing; do not perform
-            # broad schema changes here. Failures are logged but do not abort
-            # startup to preserve availability.
-            try:
-                if 'messages' not in (inspect(db.engine).get_table_names() or []):
-                    from app.models import ContactMessage
-                    ContactMessage.__table__.create(bind=db.engine, checkfirst=True)
-                    app.logger.info('Created messages table during startup')
-            except Exception as ex:
-                # Log but do not raise: admin can run full migrations via CI/Render.
-                app.logger.exception('Failed to ensure messages table exists at startup: %s', ex)
-            # Ensure tables exist: create missing tables safely in all environments.
-            try:
-                db.create_all()
-                app.logger.info('Ensured database tables exist (db.create_all executed)')
-            except Exception as create_exc:
-                app.logger.exception('db.create_all() failed: %s', create_exc)
-
-            # Admin bootstrap/update: ensure exactly one admin user is present/updated
-            try:
-                # Enforce production DB usage: require DATABASE_URL in production
-                if config_name == 'production':
-                    prod_db = os.environ.get('DATABASE_URL') or app.config.get('SQLALCHEMY_DATABASE_URI')
-                    if not prod_db:
-                        app.logger.error('Production requires DATABASE_URL to be set to a persistent database.')
-                        raise RuntimeError('Missing DATABASE_URL in production')
-                    # Disallow implicit sqlite fallback in production
-                    if prod_db.startswith('sqlite:'):
-                        app.logger.error('SQLite is not allowed as the production database: %s', prod_db)
-                        raise RuntimeError('SQLite not allowed in production')
-
-                new_username = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
-                new_password = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
-
-                # Find all current superadmin users (by role)
-                try:
-                    admins = User.query.filter_by(role='superadmin').order_by(User.id.asc()).all()
-                except Exception:
-                    db.session.rollback()
-                    admins = []
-
-                # Also check if a user already exists with the target username
-                existing_target = None
-                try:
-                    existing_target = User.query.filter_by(username=new_username).first()
-                except Exception:
-                    db.session.rollback()
-                    existing_target = None
-
-                # Helper to set password consistently (uses model.set_password)
-                def _apply_credentials(u):
-                    try:
-                        u.username = new_username
-                        u.set_password(new_password)
-                        u.role = 'superadmin'
-                        u.is_active = True
-                        db.session.add(u)
-                        db.session.commit()
-                        app.logger.info('Applied admin credentials to user id=%s username=%s', getattr(u, 'id', '<unknown>'), u.username)
-                        return True
-                    except Exception as exc:
-                        db.session.rollback()
-                        app.logger.exception('Failed to apply admin credentials to user %s: %s', getattr(u, 'id', '<unknown>'), exc)
-                        return False
-
-                if len(admins) == 0:
-                    # No admin exists: if target username exists (non-admin), promote it;
-                    # otherwise create exactly one admin user.
-                    if existing_target:
-                        _apply_credentials(existing_target)
-                    else:
-                        try:
-                            new_admin = User(username=new_username, role='superadmin', is_active=True)
-                            new_admin.set_password(new_password)
-                            db.session.add(new_admin)
-                            db.session.commit()
-                            app.logger.info('Created new superadmin: %s', new_username)
-                        except Exception as exc:
-                            db.session.rollback()
-                            app.logger.exception('Failed to create new superadmin: %s', exc)
-                else:
-                    # At least one admin exists: update the first (deterministic) admin
-                    primary = admins[0]
-                    if existing_target and existing_target.id != primary.id:
-                        # If existing target is a different user, prefer promoting the target
-                        # to avoid username collisions; otherwise update the primary admin.
-                        _apply_credentials(existing_target)
-                        if len(admins) > 1:
-                            app.logger.warning('Multiple superadmin accounts detected; left additional admins unchanged. Primary updated: %s', existing_target.username)
-                    else:
-                        _apply_credentials(primary)
-                        if len(admins) > 1:
-                            app.logger.warning('Multiple superadmin accounts detected; primary user id=%s updated, others left unchanged.', getattr(primary, 'id', '<unknown>'))
-
-            except Exception as ex:
-                # Ensure admin bootstrap errors do not crash startup; log and continue
-                db.session.rollback()
-                app.logger.exception('Admin bootstrap/update failed: %s', ex)
-            except Exception as ex:
-                app.logger.exception('Admin bootstrap check failed: %s', ex)
-        except Exception as e:
-            app.logger.error('Database initialization/verification failed: %s', e)
-            # Fail fast in production to avoid accidental data loss
-            raise
     
     # Register blueprints
     register_blueprints(app)

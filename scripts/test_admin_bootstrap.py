@@ -1,10 +1,11 @@
 import os
+import secrets
 from app import create_app
 from app.extensions import db
 
 # Ensure env vars for admin
 os.environ['ADMIN_USERNAME'] = os.environ.get('ADMIN_USERNAME', 'bootstrap_admin')
-os.environ['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD', 'ChangeMe123!')
+os.environ['ADMIN_PASSWORD'] = os.environ.get('ADMIN_PASSWORD') or secrets.token_urlsafe(16)
 
 app = create_app('testing')
 

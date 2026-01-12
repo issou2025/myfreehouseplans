@@ -1,5 +1,6 @@
 from app import create_app
 from app.extensions import db
+import secrets
 
 
 def run():
@@ -19,15 +20,16 @@ def run():
         db.session.commit()
 
         # Create admin user
+        test_password = secrets.token_urlsafe(16)
         admin = User(username='admin', role='superadmin', is_active=True)
-        admin.set_password('AdminChangeMe!2026')
+        admin.set_password(test_password)
         db.session.add(admin)
         db.session.commit()
 
         client = app.test_client()
 
         # Login
-        rv = client.post('/admin/login', data={'username': 'admin', 'password': 'AdminChangeMe!2026'}, follow_redirects=True)
+        rv = client.post('/admin/login', data={'username': 'admin', 'password': test_password}, follow_redirects=True)
         print('Login status:', rv.status_code)
         if b'Welcome back' not in rv.data:
             print('Login did not report welcome; response snippet:', rv.data[:300])

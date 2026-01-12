@@ -14,8 +14,11 @@ from datetime import timedelta
 class Config:
     """Base configuration with common settings"""
     
-    # Secret key for session management and CSRF protection
-    SECRET_KEY = os.environ.get('SECRET_KEY', "FORCED_STATIC_SECRET_KEY_DO_NOT_CHANGE")
+    # Secret key for session management and CSRF protection.
+    # DO NOT provide an insecure default here.
+    # - In development, we load from .env (see wsgi.py) or you can set it explicitly.
+    # - In production, the app factory enforces presence.
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Database configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -89,10 +92,9 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Production database: prefer environment-provided URL; fallback to a
-    # persistent path mounted at /data inside the container. Use four slashes
-    # for absolute paths (sqlite:////absolute/path).
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:////data/myfreehouseplans.db'
+    # Production database must be provided by the hosting platform via DATABASE_URL.
+    # Do not fall back to SQLite in production.
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     
     # If using Render/Heroku, they provide DATABASE_URL with postgres://
     # but SQLAlchemy 1.4+ requires postgresql://

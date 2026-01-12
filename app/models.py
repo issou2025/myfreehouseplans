@@ -11,6 +11,7 @@ from flask import current_app
 from flask_login import UserMixin
 from datetime import datetime
 from slugify import slugify
+from sqlalchemy.orm import synonym
 
 
 house_plan_categories = db.Table(
@@ -36,7 +37,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(255), unique=True, index=True)
-    password = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column('password_hash', db.String(255), nullable=False)
+    password = synonym('password_hash')
     role = db.Column(db.String(50), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -47,7 +49,7 @@ class User(UserMixin, db.Model):
     
     def set_password(self, password):
         """Hash and set user password."""
-        self.password = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
         """Verify password against stored hash.
@@ -57,10 +59,10 @@ class User(UserMixin, db.Model):
         plaintext comparisons. This ensures consistent, auditable
         authentication behavior across environments.
         """
-        if not self.password:
+        if not self.password_hash:
             return False
         try:
-            return check_password_hash(self.password, password)
+            return check_password_hash(self.password_hash, password)
         except Exception:
             # Any unexpected verification error should fail safely.
             return False

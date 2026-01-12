@@ -32,62 +32,21 @@ admin_bp = Blueprint('admin', __name__)
 
 
 def ensure_admin_exists():
-    """Bootstrap or update admin account with secure credentials."""
+    """Return the current admin user if one exists.
+
+    Production-safe behavior: do NOT create/update admin accounts automatically.
+    Use explicit CLI commands (e.g., `flask reset-admin-password`) during deploy.
+    """
 
     try:
-        # Query safely for existing admin
-        admin_user = None
-        try:
-            admin_user = User.query.filter_by(role='superadmin').first()
-        except (OperationalError, IntegrityError) as db_exc:
-            current_app.logger.error('Database error when checking for existing admin: %s', db_exc)
-            db.session.rollback()
-            return None
-
-        # Only modify admin credentials automatically in production-like environments
-        if current_app.config.get('DEBUG') or current_app.config.get('TESTING'):
-            # In non-production, do not forcibly change admin credentials; return existing if present
-            return admin_user
-
-        new_username = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
-        new_password = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
-        new_email = os.environ.get('NEW_ADMIN_EMAIL') or current_app.config.get('ADMIN_EMAIL')
-
-        if admin_user:
-            # Update existing admin safely via set_password to ensure hashing consistency
-            admin_user.username = new_username
-            if new_email:
-                admin_user.email = new_email
-            admin_user.set_password(new_password)
-            try:
-                db.session.commit()
-                current_app.logger.info('Admin credentials updated for %s', new_username)
-            except Exception:
-                db.session.rollback()
-            return admin_user
-        else:
-            # Create new admin with hashed password
-            seeded_admin = User(
-                username=new_username,
-                email=new_email,
-                role='superadmin',
-                is_active=True,
-            )
-            seeded_admin.set_password(new_password)
-            db.session.add(seeded_admin)
-            try:
-                db.session.commit()
-                current_app.logger.info('Admin bootstrap completed for %s', seeded_admin.username)
-            except Exception:
-                db.session.rollback()
-            return seeded_admin
+        return User.query.filter_by(role='superadmin').first()
     except (OperationalError, IntegrityError) as exc:
+        current_app.logger.error('Database error when checking for existing admin: %s', exc)
         db.session.rollback()
-        current_app.logger.error('Admin bootstrap DB error: %s', exc)
         return None
     except Exception as exc:
         db.session.rollback()
-        current_app.logger.error('Admin bootstrap attempt failed: %s', exc)
+        current_app.logger.error('Admin lookup failed: %s', exc)
         return None
  
 def admin_required(f):

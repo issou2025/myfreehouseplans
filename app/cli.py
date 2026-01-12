@@ -17,6 +17,8 @@ from app.models import User, Category, HousePlan
 @with_appcontext
 def create_admin_command(username: str, password: str) -> None:
     """Create (or update) an admin user."""
+    import os
+
     username = (username or '').strip()
 
     if not username:
@@ -24,9 +26,11 @@ def create_admin_command(username: str, password: str) -> None:
 
     existing_by_username = User.query.filter_by(username=username).first()
 
+    admin_email = (os.getenv('ADMIN_EMAIL') or username).strip()
+
     user = existing_by_username
     if user is None:
-        user = User(username=username, role='superadmin', is_active=True)
+        user = User(username=username, email=admin_email, role='superadmin', is_active=True)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -35,6 +39,7 @@ def create_admin_command(username: str, password: str) -> None:
 
     # Update path
     user.username = username
+    user.email = admin_email
     user.role = 'superadmin'
     user.is_active = True
     user.set_password(password)
@@ -43,11 +48,14 @@ def create_admin_command(username: str, password: str) -> None:
 
 
 @click.command('reset-admin-password')
-@click.option('--username', default='bacseried@gmail.com', help='Admin username (default: bacseried@gmail.com)')
+@click.option('--username', default=None, help='Admin username (defaults to ADMIN_USERNAME env var)')
 @with_appcontext
 def reset_admin_password_command(username: str) -> None:
     """Reset admin password from environment variable ADMIN_PASSWORD or prompt."""
     import os
+
+    username = (username or os.getenv('ADMIN_USERNAME') or 'bacseried@gmail.com').strip()
+    admin_email = (os.getenv('ADMIN_EMAIL') or username).strip()
     
     user = User.query.filter_by(username=username).first()
 
@@ -63,7 +71,7 @@ def reset_admin_password_command(username: str) -> None:
 
     if not user:
         # Create user if missing to ensure release commands are idempotent
-        user = User(username=username, role='superadmin', is_active=True)
+        user = User(username=username, email=admin_email, role='superadmin', is_active=True)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -72,6 +80,7 @@ def reset_admin_password_command(username: str) -> None:
 
     # Update existing user
     user.set_password(password)
+    user.email = admin_email
     user.role = 'superadmin'
     user.is_active = True
     db.session.commit()

@@ -4,9 +4,9 @@
 If you can't log in to the admin dashboard with the expected credentials, the admin password may not match the environment variable.
 
 ## Production Credentials
-- **Username**: admin
-- **Email**: admin@myfreehouseplans.com
-- **Password**: MyFreeHouse2026!
+- **Username**: from `ADMIN_USERNAME`
+- **Email**: from `ADMIN_EMAIL`
+- **Password**: from `ADMIN_PASSWORD` (managed in Render dashboard)
 
 ## Automatic Reset on Deploy
 The admin password is automatically reset during deployment thanks to the `releaseCommand` in `render.yaml`:
@@ -56,7 +56,7 @@ flask create-admin --username newadmin --email admin@example.com
 The following environment variables are used:
 - `ADMIN_USERNAME` (default: admin)
 - `ADMIN_EMAIL` (default: admin@myfreehouseplans.com)  
-- `ADMIN_PASSWORD` (default: changeme123 locally, MyFreeHouse2026! on Render)
+- `ADMIN_PASSWORD` (no default in production; must be set in Render)
 
 ## Verification
 After resetting, the command will show:
