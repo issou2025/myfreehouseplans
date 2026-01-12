@@ -8,6 +8,7 @@ This module defines configuration classes for different environments:
 """
 
 import os
+from pathlib import Path
 from datetime import timedelta
 
 
@@ -82,8 +83,16 @@ class DevelopmentConfig(Config):
     TESTING = False
     
     # SQLite for development
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'myfreehouseplan.db')
+    # IMPORTANT (Windows): SQLAlchemy sqlite URLs must use forward slashes.
+    # Using os.path.join will introduce backslashes which can break DB opening.
+    _project_root = Path(__file__).resolve().parent.parent
+    _default_db_path = (_project_root / 'myfreehouseplan.db').resolve()
+
+    _env_db_url = os.environ.get('DATABASE_URL')
+    if _env_db_url and _env_db_url.strip().startswith('sqlite:'):
+        _env_db_url = _env_db_url.replace('\\', '/')
+
+    SQLALCHEMY_DATABASE_URI = _env_db_url or f"sqlite:///{_default_db_path.as_posix()}"
     
     # Disable secure cookies for local development
     SESSION_COOKIE_SECURE = False
