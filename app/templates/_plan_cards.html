@@ -1,10 +1,12 @@
 {% for plan in plans %}
-<a class="plan-card plan-card--lux plan-card--tap" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" aria-label="View plan {{ plan.title }}" itemscope itemtype="https://schema.org/Product" itemprop="url">
+<article class="plan-card plan-card--lux" itemscope itemtype="https://schema.org/Product">
     <div class="plan-card__media" aria-hidden="true">
         {% set card_image = plan.cover_image or plan.main_image %}
         {% if card_image %}
             <div class="skeleton"></div>
-            {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy', css_class='plan-card__img js-lazy-img') }}
+            <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}" title="Open {{ plan.title }}" itemprop="url">
+                {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy', css_class='plan-card__img js-lazy-img') }}
+            </a>
         {% else %}
             <div class="plan-card__placeholder">Visual coming soon</div>
         {% endif %}
@@ -29,8 +31,17 @@
     </div>
     <div class="plan-card__body">
         <div class="plan-card__top">
-            <h3 class="plan-card__title" itemprop="name">{{ plan.title }}</h3>
-            <div class="plan-card__ref" aria-label="Reference code">{{ plan.reference_code }}</div>
+            <p class="plan-card__eyebrow">
+                {% if plan.categories %}
+                    {% for c in plan.categories %}
+                        <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
+                    {% endfor %}
+                {% else %}
+                    Thoughtful living
+                {% endif %}
+            </p>
+            <h3 class="plan-card__title" itemprop="name"><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
+            <div class="plan-card__ref" aria-label="Reference code">Ref {{ plan.reference_code }}</div>
         </div>
 
         <div class="plan-card__facts" aria-label="Key facts">
@@ -48,6 +59,7 @@
             <meta itemprop="priceCurrency" content="USD">
         </div>
         <div class="plan-card__actions">
+            <a class="btn btn-ghost" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">See plan details</a>
             <button
                 class="compare-toggle"
                 type="button"
@@ -71,6 +83,7 @@
                 <span class="compare-toggle__label">Add to compare</span>
             </button>
         </div>
+        <p class="microcopy">Not sure yet? Save the plan or message us—guidance is always free.</p>
     </div>
-</a>
+</article>
 {% endfor %}

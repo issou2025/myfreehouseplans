@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable, Optional
 
 from flask import current_app
@@ -86,3 +87,34 @@ def save_uploaded_file(
     file.save(absolute_path)
 
     return os.path.join('uploads', folder, safe_name).replace('\\', '/')
+
+
+def resolve_protected_upload(relative_path: str) -> Path:
+    """Return a normalized absolute Path inside the protected upload root.
+
+    Accepts historical values that may start with ``uploads/`` and prevents
+    directory traversal by ensuring the final path remains within the
+    configured protected folder.
+    """
+
+    if not relative_path:
+        raise ValueError('No file path was provided.')
+
+    base_dir = current_app.config.get('PROTECTED_UPLOAD_FOLDER') or current_app.config['UPLOAD_FOLDER']
+    base_path = Path(base_dir).resolve()
+
+    clean_relative = str(relative_path).strip().lstrip('/\\')
+    if not clean_relative:
+        raise ValueError('Empty file path received.')
+
+    parts = [part for part in Path(clean_relative).parts if part not in ('', '.', '..')]
+    if parts and parts[0].lower() == 'uploads':
+        parts = parts[1:]
+    if not parts:
+        raise ValueError('Unable to resolve file path inside protected uploads.')
+
+    candidate = base_path.joinpath(*parts).resolve()
+    if os.path.commonpath([str(base_path), str(candidate)]) != str(base_path):
+        raise ValueError('File path escapes protected upload directory.')
+
+    return candidate

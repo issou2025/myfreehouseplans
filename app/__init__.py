@@ -10,12 +10,16 @@ from app.config import config
 from app.extensions import db, migrate, login_manager, mail
 from datetime import datetime
 import os
+import sys
 from sqlalchemy import inspect
 
 
 # NOTE: Removed destructive bootstrap behavior. Admin seeding and any
 # DROP/CREATE operations are intentionally disabled in the factory.
 # Use explicit CLI commands (app.cli) to seed data in controlled environments.
+
+
+MIGRATION_KEYWORDS = {'db', 'upgrade', 'downgrade', 'stamp', 'revision', 'migrate', 'history'}
 
 
 def create_app(config_name='default'):
@@ -56,7 +60,27 @@ def create_app(config_name='default'):
     # Database initialization and verification. Do NOT perform destructive
     # operations in production. Enforce presence of a persistent DB and
     # abort startup if the production DB appears missing or ephemeral.
+    cli_argv = {arg.lower() for arg in sys.argv}
+    running_cli = (
+        os.environ.get('FLASK_APP_RUN_FROM_CLI') == 'True'
+        or os.environ.get('FLASK_RUN_FROM_CLI', '').lower() == 'true'
+        or 'flask' in cli_argv
+    )
+    running_migration = bool(MIGRATION_KEYWORDS.intersection(cli_argv))
+    skip_bootstrap = os.environ.get('SKIP_STARTUP_DB_TASKS', '').lower() in ('1', 'true', 'yes')
+    if running_cli and running_migration:
+        skip_bootstrap = True
+
     with app.app_context():
+        if skip_bootstrap:
+            app.logger.info('Skipping startup DB bootstrap tasks (migration or SKIP_STARTUP_DB_TASKS active)')
+            register_blueprints(app)
+            register_error_handlers(app)
+            register_template_processors(app)
+            register_shell_context(app)
+            register_cli_commands(app)
+            register_request_hooks(app)
+            return app
         try:
             # Import all models to ensure they're registered with SQLAlchemy
             from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
@@ -81,7 +105,6 @@ def create_app(config_name='default'):
 
                     # Allow migrations to run: if we're executing Flask-Migrate commands
                     # (e.g., `flask db upgrade`) permit empty DB so alembic can create schema.
-                    import sys
                     cli_args = ' '.join(sys.argv).lower()
                     running_migration = ('db' in sys.argv) or ('upgrade' in sys.argv) or ('alembic' in cli_args)
                     if not existing_tables and not running_migration:
@@ -143,90 +166,86 @@ def create_app(config_name='default'):
             except Exception as create_exc:
                 app.logger.exception('db.create_all() failed: %s', create_exc)
 
-            # Admin bootstrap: if no superadmin exists, try to create one from environment.
+            # Admin bootstrap/update: ensure exactly one admin user is present/updated
             try:
-                # Detect any user that is considered admin by evaluating the
-                # `is_admin` property on each user object. This avoids relying
-                # on a specific column name and is resilient to schema drift.
-                admin_user = None
+                # Enforce production DB usage: require DATABASE_URL in production
+                if config_name == 'production':
+                    prod_db = os.environ.get('DATABASE_URL') or app.config.get('SQLALCHEMY_DATABASE_URI')
+                    if not prod_db:
+                        app.logger.error('Production requires DATABASE_URL to be set to a persistent database.')
+                        raise RuntimeError('Missing DATABASE_URL in production')
+                    # Disallow implicit sqlite fallback in production
+                    if prod_db.startswith('sqlite:'):
+                        app.logger.error('SQLite is not allowed as the production database: %s', prod_db)
+                        raise RuntimeError('SQLite not allowed in production')
+
+                new_username = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
+                new_password = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
+
+                # Find all current superadmin users (by role)
                 try:
-                    users = User.query.all()
+                    admins = User.query.filter_by(role='superadmin').order_by(User.id.asc()).all()
                 except Exception:
                     db.session.rollback()
-                    users = []
+                    admins = []
 
-                for u in users:
+                # Also check if a user already exists with the target username
+                existing_target = None
+                try:
+                    existing_target = User.query.filter_by(username=new_username).first()
+                except Exception:
+                    db.session.rollback()
+                    existing_target = None
+
+                # Helper to set password consistently (uses model.set_password)
+                def _apply_credentials(u):
                     try:
-                        if getattr(u, 'is_admin', False):
-                            admin_user = u
-                            break
-                    except Exception:
-                        # Defensive: skip users that cannot be evaluated
-                        continue
+                        u.username = new_username
+                        u.set_password(new_password)
+                        u.role = 'superadmin'
+                        u.is_active = True
+                        db.session.add(u)
+                        db.session.commit()
+                        app.logger.info('Applied admin credentials to user id=%s username=%s', getattr(u, 'id', '<unknown>'), u.username)
+                        return True
+                    except Exception as exc:
+                        db.session.rollback()
+                        app.logger.exception('Failed to apply admin credentials to user %s: %s', getattr(u, 'id', '<unknown>'), exc)
+                        return False
 
-                if admin_user:
-                    # In production, enforce the requested admin username/password
-                    if config_name == 'production':
+                if len(admins) == 0:
+                    # No admin exists: if target username exists (non-admin), promote it;
+                    # otherwise create exactly one admin user.
+                    if existing_target:
+                        _apply_credentials(existing_target)
+                    else:
                         try:
-                            # Use environment override when available to avoid hardcoding secrets
-                            admin_username_override = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
-                            admin_password_override = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
-                            admin_user.username = admin_username_override
-                            admin_user.set_password(admin_password_override)
-                            admin_user.is_active = True
-                            db.session.add(admin_user)
+                            new_admin = User(username=new_username, role='superadmin', is_active=True)
+                            new_admin.set_password(new_password)
+                            db.session.add(new_admin)
                             db.session.commit()
-                            app.logger.info('Updated existing superadmin credentials to requested values')
-                        except Exception as adm_exc:
+                            app.logger.info('Created new superadmin: %s', new_username)
+                        except Exception as exc:
                             db.session.rollback()
-                            app.logger.exception('Failed to update existing superadmin credentials: %s', adm_exc)
-                    else:
-                        app.logger.debug('Superadmin user already exists: %s', getattr(admin_user, 'username', '<redacted>'))
+                            app.logger.exception('Failed to create new superadmin: %s', exc)
                 else:
-                    # Only set production admin credentials automatically when
-                    # running in the production configuration. For other
-                    # environments operators should provision admin credentials
-                    # explicitly (via env/CLI) to avoid accidental overrides.
-                    if config_name == 'production':
-                        admin_username = 'bacseried@gmail.com'
-                        admin_password = 'mx23fy'
-                        admin_env_email = admin_username
+                    # At least one admin exists: update the first (deterministic) admin
+                    primary = admins[0]
+                    if existing_target and existing_target.id != primary.id:
+                        # If existing target is a different user, prefer promoting the target
+                        # to avoid username collisions; otherwise update the primary admin.
+                        _apply_credentials(existing_target)
+                        if len(admins) > 1:
+                            app.logger.warning('Multiple superadmin accounts detected; left additional admins unchanged. Primary updated: %s', existing_target.username)
                     else:
-                        admin_username = os.environ.get('ADMIN_USERNAME')
-                        admin_password = os.environ.get('ADMIN_PASSWORD')
-                        admin_env_email = os.environ.get('ADMIN_EMAIL')
+                        _apply_credentials(primary)
+                        if len(admins) > 1:
+                            app.logger.warning('Multiple superadmin accounts detected; primary user id=%s updated, others left unchanged.', getattr(primary, 'id', '<unknown>'))
 
-                    if admin_username and admin_password:
-                        try:
-                            # If a user exists with the provided username, promote
-                            # that user to admin and set the provided password so
-                            # operators can regain access deterministically.
-                            existing = User.query.filter_by(username=admin_username).first()
-                            if existing:
-                                existing.role = 'superadmin'
-                                existing.is_active = True
-                                existing.set_password(admin_password)
-                                db.session.add(existing)
-                                db.session.commit()
-                                app.logger.info('Promoted existing user to superadmin: %s', admin_username)
-                                admin_user = existing
-                            else:
-                                new_admin = User(username=admin_username, role='superadmin', is_active=True)
-                                new_admin.set_password(admin_password)
-                                if admin_env_email:
-                                    try:
-                                        new_admin.email = admin_env_email
-                                    except Exception:
-                                        pass
-                                db.session.add(new_admin)
-                                db.session.commit()
-                                app.logger.info('Bootstrapped admin user: %s', admin_username)
-                                admin_user = new_admin
-                        except Exception as adm_exc:
-                            db.session.rollback()
-                            app.logger.exception('Failed to bootstrap/promote admin user: %s', adm_exc)
-                    else:
-                        app.logger.warning('No admin detected and ADMIN_USERNAME/ADMIN_PASSWORD not set; admin must be provisioned manually')
+            except Exception as ex:
+                # Ensure admin bootstrap errors do not crash startup; log and continue
+                db.session.rollback()
+                app.logger.exception('Admin bootstrap/update failed: %s', ex)
             except Exception as ex:
                 app.logger.exception('Admin bootstrap check failed: %s', ex)
         except Exception as e:

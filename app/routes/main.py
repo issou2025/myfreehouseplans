@@ -22,7 +22,7 @@ from sqlalchemy.types import Float
 import os
 import mimetypes
 from urllib.parse import urlparse
-from app.utils.uploads import save_uploaded_file
+from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.utils.media import is_absolute_url, upload_url
 from app.utils.visitor_tracking import tag_visit_identity
 
@@ -327,14 +327,6 @@ def _serialize_plan_summary(plan: HousePlan):
     }
 
 
-def _protected_filepath(relative_path):
-    """Return absolute path to a file stored in the protected uploads folder."""
-    if not relative_path:
-        return None
-    base = current_app.config.get('PROTECTED_UPLOAD_FOLDER')
-    return os.path.join(base, relative_path)
-
-
 @main_bp.route('/download/free/<int:plan_id>')
 def download_free(plan_id):
     """Serve free PDF for a plan without login, but from protected storage."""
@@ -345,11 +337,16 @@ def download_free(plan_id):
     if is_absolute_url(plan.free_pdf_file):
         return redirect(plan.free_pdf_file)
 
-    path = _protected_filepath(plan.free_pdf_file)
-    if not path or not os.path.exists(path):
+    try:
+        protected_path = resolve_protected_upload(plan.free_pdf_file)
+    except ValueError as exc:
+        current_app.logger.warning('Invalid protected file path for plan %s: %s', plan.id, exc)
+        abort(400)
+
+    if not protected_path.exists():
         abort(404)
-    mimetype, _ = mimetypes.guess_type(path)
-    return send_file(path, as_attachment=True, download_name=os.path.basename(path), mimetype=mimetype or 'application/octet-stream')
+    mimetype, _ = mimetypes.guess_type(str(protected_path))
+    return send_file(protected_path, as_attachment=True, download_name=protected_path.name, mimetype=mimetype or 'application/octet-stream')
 
 
 def _is_allowed_gumroad_url(raw_url: str) -> bool:
@@ -920,12 +917,15 @@ def contact():
         if attachment_obj and getattr(attachment_obj, 'filename', ''):
             try:
                 saved_attachment = save_uploaded_file(attachment_obj, 'support')
-                protected_base = current_app.config.get('PROTECTED_UPLOAD_FOLDER')
-                attachment_absolute = os.path.join(protected_base, saved_attachment)
-                attachment_mime, _ = mimetypes.guess_type(attachment_absolute)
+                attachment_absolute = resolve_protected_upload(saved_attachment)
+                attachment_mime, _ = mimetypes.guess_type(str(attachment_absolute))
             except ValueError as upload_err:
                 current_app.logger.warning('Upload failed while handling contact attachment: %s', upload_err)
                 flash("We couldn't upload that file. Please ensure it's a supported file type and under 16 MB, then try again.", 'danger')
+                return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
+            except Exception as exc:
+                current_app.logger.exception('Unexpected error resolving protected upload: %s', exc)
+                flash('We could not store that attachment. Please try again with a different file.', 'danger')
                 return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
         message_record = ContactMessage(
@@ -981,10 +981,10 @@ def contact():
                         f"Attachment path: {saved_attachment or 'None'}\n\n"
                         f"Message:\n{form.message.data}\n"
                     )
-                    if attachment_absolute and os.path.exists(attachment_absolute):
-                        with open(attachment_absolute, 'rb') as handle:
+                    if attachment_absolute and attachment_absolute.exists():
+                        with attachment_absolute.open('rb') as handle:
                             msg.attach(
-                                os.path.basename(attachment_absolute),
+                                attachment_absolute.name,
                                 attachment_mime or 'application/octet-stream',
                                 handle.read()
                             )
@@ -1051,10 +1051,10 @@ def contact():
                     f"Attachment path: {saved_attachment or 'None'}\n\n"
                     f"Message:\n{form.message.data}\n"
                 )
-                if attachment_absolute and os.path.exists(attachment_absolute):
-                    with open(attachment_absolute, 'rb') as handle:
+                if attachment_absolute and attachment_absolute.exists():
+                    with attachment_absolute.open('rb') as handle:
                         msg.attach(
-                            os.path.basename(attachment_absolute),
+                            attachment_absolute.name,
                             attachment_mime or 'application/octet-stream',
                             handle.read()
                         )

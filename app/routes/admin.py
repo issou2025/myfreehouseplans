@@ -20,7 +20,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import or_, func
 from slugify import slugify
 from urllib.parse import urlparse
-from app.utils.uploads import save_uploaded_file
+from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
 from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
@@ -29,15 +29,6 @@ from werkzeug.security import generate_password_hash
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
-
-
-def _protected_attachment_path(relative_path):
-    if not relative_path:
-        return None
-    base = current_app.config.get('PROTECTED_UPLOAD_FOLDER') or current_app.config.get('UPLOAD_FOLDER')
-    if not base:
-        return None
-    return os.path.join(base, relative_path)
 
 
 def ensure_admin_exists():
@@ -60,10 +51,13 @@ def ensure_admin_exists():
 
         new_username = os.environ.get('NEW_ADMIN_USERNAME', 'bacseried@gmail.com')
         new_password = os.environ.get('NEW_ADMIN_PASSWORD', 'mx23fy')
+        new_email = os.environ.get('NEW_ADMIN_EMAIL') or current_app.config.get('ADMIN_EMAIL')
 
         if admin_user:
             # Update existing admin safely via set_password to ensure hashing consistency
             admin_user.username = new_username
+            if new_email:
+                admin_user.email = new_email
             admin_user.set_password(new_password)
             try:
                 db.session.commit()
@@ -75,6 +69,7 @@ def ensure_admin_exists():
             # Create new admin with hashed password
             seeded_admin = User(
                 username=new_username,
+                email=new_email,
                 role='superadmin',
                 is_active=True,
             )
@@ -611,11 +606,15 @@ def message_attachment(message_id):
     if is_absolute_url(message.attachment_path):
         return redirect(message.attachment_path)
 
-    absolute_path = _protected_attachment_path(message.attachment_path)
-    if not absolute_path or not os.path.exists(absolute_path):
+    try:
+        absolute_path = resolve_protected_upload(message.attachment_path)
+    except ValueError:
+        abort(400)
+
+    if not absolute_path.exists():
         abort(404)
 
-    download_name = message.attachment_name or os.path.basename(absolute_path)
+    download_name = message.attachment_name or absolute_path.name
     return send_file(absolute_path, as_attachment=True, download_name=download_name)
 
 
