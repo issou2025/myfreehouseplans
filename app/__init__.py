@@ -32,14 +32,23 @@ def create_app(config_name='default'):
     # Load configuration
     app.config.from_object(config[config_name])
 
-    # Enforce secure production configuration as early as possible (before
-    # extensions initialize and potentially import DB drivers).
+    # Ensure SECRET_KEY exists for any environment that uses sessions/CSRF.
+    # - Production: enforced via environment variable (fail fast).
+    # - Development/default: generate an ephemeral key if missing to avoid 500s
+    #   on pages that render CSRF-protected forms.
     if config_name == 'production':
         secret = app.config.get('SECRET_KEY')
         if not secret:
             app.logger.error('Production requires SECRET_KEY to be set via environment variable')
             raise RuntimeError('Missing SECRET_KEY in production')
+    else:
+        if not app.config.get('SECRET_KEY'):
+            app.config['SECRET_KEY'] = os.urandom(32)
+            app.logger.warning('SECRET_KEY was missing; generated an ephemeral key for this process.')
 
+    # Enforce secure production configuration as early as possible (before
+    # extensions initialize and potentially import DB drivers).
+    if config_name == 'production':
         db_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
         if not db_uri:
             app.logger.error('Production requires DATABASE_URL (SQLALCHEMY_DATABASE_URI) to be set')
