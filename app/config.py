@@ -23,6 +23,13 @@ class Config:
     # Database configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
+
+    # Make database connections more resilient in production (stale connections,
+    # temporary network blips). Safe defaults for all environments.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
     
     # Pagination
     PLANS_PER_PAGE = 12
@@ -100,6 +107,13 @@ class ProductionConfig(Config):
     # but SQLAlchemy 1.4+ requires postgresql://
     if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+
+    # Many managed Postgres providers require SSL. If the connection string
+    # doesn't specify sslmode, default to require.
+    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
+        if 'sslmode=' not in SQLALCHEMY_DATABASE_URI:
+            joiner = '&' if '?' in SQLALCHEMY_DATABASE_URI else '?'
+            SQLALCHEMY_DATABASE_URI = f"{SQLALCHEMY_DATABASE_URI}{joiner}sslmode=require"
     
     # Disable SQL query logging in production
     SQLALCHEMY_ECHO = False

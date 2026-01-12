@@ -91,10 +91,21 @@ def admin_login():
         try:
             user = User.query.filter_by(username=username).first()
         except (OperationalError, IntegrityError) as e:
-            current_app.logger.error('Admin login DB error: %s', e)
+            # Common on managed Postgres: transient disconnects / stale pooled connections.
+            # Retry once after disposing the engine pool.
+            current_app.logger.warning('Admin login DB error (first attempt). Retrying once: %s', e)
             db.session.rollback()
-            flash('Database temporarily unavailable. Please try again shortly.', 'danger')
-            return render_template('admin/login.html', form=form)
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
+            try:
+                user = User.query.filter_by(username=username).first()
+            except (OperationalError, IntegrityError) as e2:
+                current_app.logger.error('Admin login DB error (second attempt): %s', e2)
+                db.session.rollback()
+                flash('Database temporarily unavailable. Please try again shortly.', 'danger')
+                return render_template('admin/login.html', form=form)
         except Exception as e:
             current_app.logger.exception('Unexpected error during admin login query: %s', e)
             db.session.rollback()
