@@ -11,8 +11,8 @@ services:
     branch: main
     autodeploy: true
     buildCommand: pip install -r requirements.txt
-    releaseCommand: flask db upgrade && flask reset-admin-password
-    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT
+    releaseCommand: flask db upgrade
+    startCommand: flask db upgrade && gunicorn wsgi:app --bind 0.0.0.0:$PORT
     envVars:
       - key: FLASK_APP
         value: wsgi:app
