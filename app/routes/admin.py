@@ -89,7 +89,8 @@ def admin_login():
         username = (form.username.data or '').strip()
         user = None
         try:
-            user = User.query.filter_by(username=username).first()
+            # Accept either username or email for convenience.
+            user = User.query.filter(or_(User.username == username, User.email == username)).first()
         except (OperationalError, IntegrityError) as e:
             # Common on managed Postgres: transient disconnects / stale pooled connections.
             # Retry once after disposing the engine pool.
@@ -100,7 +101,7 @@ def admin_login():
             except Exception:
                 pass
             try:
-                user = User.query.filter_by(username=username).first()
+                user = User.query.filter(or_(User.username == username, User.email == username)).first()
             except (OperationalError, IntegrityError) as e2:
                 current_app.logger.error('Admin login DB error (second attempt): %s', e2)
                 db.session.rollback()

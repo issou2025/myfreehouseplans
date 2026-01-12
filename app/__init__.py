@@ -8,6 +8,7 @@ Flask application instances with different configurations.
 from flask import Flask, render_template
 from app.config import config
 from app.extensions import db, migrate, login_manager, mail
+from app.bootstrap import ensure_database_ready
 from datetime import datetime
 import os
 # NOTE: Removed destructive bootstrap behavior. Admin seeding and any
@@ -67,6 +68,8 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
+
+    ensure_database_ready(app)
     
     # Register blueprints
     register_blueprints(app)

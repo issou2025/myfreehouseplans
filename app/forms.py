@@ -16,9 +16,9 @@ from app.models import PlanFAQ
 class LoginForm(FlaskForm):
     """User login form"""
     
-    username = StringField('Username', validators=[
-        DataRequired(message='Username is required'),
-        Length(max=80, message='Must be 80 characters or less')
+    username = StringField('Username or email', validators=[
+        DataRequired(message='Username or email is required'),
+        Length(max=255, message='Must be 255 characters or less')
     ])
     password = PasswordField('Password', validators=[
         DataRequired(message='Password is required')

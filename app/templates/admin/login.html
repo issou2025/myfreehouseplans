@@ -13,7 +13,7 @@
             {{ form.hidden_tag() }}
             <div class="form-group">
                 {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-input", placeholder="Username") }}
+                {{ form.username(class="form-input", placeholder="Username or email") }}
                 {% for err in form.username.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </div>
             <div class="form-group">
