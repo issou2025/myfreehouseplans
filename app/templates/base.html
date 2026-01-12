@@ -51,34 +51,36 @@
     <header class="site-header site-header--sticky" role="banner">
         <div class="shell site-header__inner">
             <a class="site-brand" href="{{ url_for('main.index') }}" aria-label="Return to homepage">
-                <span class="site-brand__logo">{{ site_name }}</span>
-                <span class="site-brand__tagline">Plans crafted for families, builders, and dreamers</span>
+                <span class="site-brand__logo">🏠 {{ site_name }}</span>
+                <span class="site-brand__tagline">Beautiful homes, thoughtful design</span>
             </a>
-            <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">☰</button>
+            <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">
+                <span class="nav-toggle__icon"></span>
+            </button>
             {% set current_endpoint = request.endpoint or '' %}
             <nav id="primary-navigation" class="nav" aria-label="Primary">
-                <a class="{% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
-                <a class="{% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">Plans</a>
-                <a class="{% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Guides</a>
-                <a class="{% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">Favorites</a>
-                <a class="{% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">Compare</a>
-                <a class="{% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">About</a>
-                <a class="{% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
+                <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
+                <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">Plans</a>
+                <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Guides</a>
+                <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">Favorites</a>
+                <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">Compare</a>
+                <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">About</a>
+                <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
                 {% if current_user.is_authenticated and current_user.is_admin %}
-                    <a class="{% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin</a>
-                    <a class="{% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">Account</a>
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link--muted">Logout</a>
+                    <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin</a>
+                    <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">Account</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Logout</a>
                 {% elif current_user.is_authenticated %}
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link--muted">Logout</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Logout</a>
                 {% endif %}
             </nav>
             <div class="site-header__cta" aria-label="Quick actions">
-                <p class="site-header__note">Here for you · Mon–Fri</p>
+                <p class="site-header__note">📞 Here for you · Mon–Fri</p>
                 <div class="site-header__cta-buttons">
                     <a class="btn btn-ghost" href="{{ url_for('main.packs') }}">Explore plans</a>
-                    <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Chat with our team</a>
+                    <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Get in touch</a>
                 </div>
-                <p class="site-header__help">Need help right away? <a href="{{ url_for('main.contact') }}">Send us a note</a>.</p>
+                <p class="site-header__help">Need help? <a href="{{ url_for('main.contact') }}">Send us a message</a></p>
             </div>
         </div>
     </header>
@@ -112,38 +114,47 @@
     <footer class="site-footer">
         <div class="shell">
             <div class="footer-grid">
-                <div>
-                    <h3 class="site-brand__logo">{{ site_name }}</h3>
-                    <p>We curate architectural plans that translate smoothly from PDF to construction. Every set is reviewed by architects before being published.</p>
+                <div class="footer-brand">
+                    <h3 class="site-brand__logo">🏠 {{ site_name }}</h3>
+                    <p>We curate architectural plans that translate smoothly from PDF to construction. Every set is reviewed by architects and tested in real builds.</p>
+                    <div class="footer-social">
+                        <a href="https://wa.me/22796380877" target="_blank" rel="noopener" class="social-link" aria-label="WhatsApp">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                            WhatsApp
+                        </a>
+                        <a href="mailto:entreprise2rc@gmail.com" class="social-link" aria-label="Email">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            Email Us
+                        </a>
+                    </div>
                 </div>
                 <div>
-                    <h4>Studio</h4>
+                    <h4>Explore</h4>
                     <ul>
-                        <li><a href="{{ url_for('main.about') }}">About the practice</a></li>
-                        <li><a href="{{ url_for('main.contact') }}">Studio contact</a></li>
                         <li><a href="{{ url_for('main.packs') }}">Plan catalog</a></li>
-                        <li><a href="{{ url_for('main.compare') }}">Compare plans</a></li>
                         <li><a href="{{ url_for('main.favorites') }}">My favorites</a></li>
+                        <li><a href="{{ url_for('main.compare') }}">Compare plans</a></li>
+                        <li><a href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Design guides</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4>Need-to-know</h4>
+                    <h4>Company</h4>
                     <ul>
+                        <li><a href="{{ url_for('main.about') }}">About us</a></li>
+                        <li><a href="{{ url_for('main.contact') }}">Contact & support</a></li>
                         <li><a href="{{ url_for('main.privacy') }}">Privacy policy</a></li>
-                        <li><a href="{{ url_for('main.terms') }}">Terms & conditions</a></li>
-                        <li><a href="{{ url_for('main.contact') }}">Support & aftercare</a></li>
+                        <li><a href="{{ url_for('main.terms') }}">Terms of service</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4>Contact</h4>
-                    <p>Email: <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></p>
-                    <p>Phone: +22796380877</p>
-                    <p>WhatsApp: <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Chat with us</a></p>
-                    <p>Based in Portland · Working worldwide</p>
+                    <h4>Get in Touch</h4>
+                    <p><strong>Email:</strong> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></p>
+                    <p><strong>Phone:</strong> <a href="tel:+22796380877">+227 96 38 08 77</a></p>
+                    <p><strong>Location:</strong> Serving builders worldwide</p>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; {{ now.year if now else '2026' }} {{ site_name }} · Built for Render deployments.</p>
+                <p>&copy; {{ now.year if now else '2026' }} {{ site_name }}. All rights reserved. Built with care for builders everywhere.</p>
             </div>
         </div>
     </footer>

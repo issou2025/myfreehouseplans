@@ -4,35 +4,35 @@
 <section class="hero hero--architect" aria-labelledby="hero-heading">
     <div class="shell hero__grid">
         <div class="hero__content">
-            <p class="eyebrow">Independent architecture studio</p>
-            <h1 id="hero-heading">Friendly house plans for families, builders, and big dreams</h1>
-            <p class="lead">{{ site_description }} We listen first, then share plans that include clear annotations, pricing pathways, and supportive notes so you always know the next step.</p>
+            <p class="eyebrow">✨ Professional architectural plans</p>
+            <h1 id="hero-heading">Beautiful house plans for families who dream big</h1>
+            <p class="lead">{{ site_description }} We listen first, then share plans with clear annotations, flexible pricing, and supportive guidance so you always know your next step.</p>
             <div class="hero__actions">
-                <a href="{{ url_for('main.packs') }}" class="btn btn-primary">Find my plan</a>
-                <a href="{{ url_for('main.contact') }}" class="btn btn-outline">Talk with a human</a>
+                <a href="{{ url_for('main.packs') }}" class="btn btn-primary">🏡 Find my perfect plan</a>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-outline">💬 Talk with our team</a>
             </div>
             <div class="hero__metrics" aria-label="Studio metrics">
                 <div>
                     {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
-                    <span class="metric-value">{{ stats.total_plans if stats else total_showcase }}</span>
+                    <span class="metric-value">{{ stats.total_plans if stats else total_showcase }}+</span>
                     <span class="metric-label">Ready-to-build plans</span>
                 </div>
                 <div>
-                    <span class="metric-value">72h</span>
-                    <span class="metric-label">Friendly support replies</span>
+                    <span class="metric-value">48h</span>
+                    <span class="metric-label">Average support response</span>
                 </div>
                 <div>
-                    <span class="metric-value">12+</span>
-                    <span class="metric-label">Architectural typologies</span>
+                    <span class="metric-value">15+</span>
+                    <span class="metric-label">Architectural styles</span>
                 </div>
             </div>
         </div>
         <div class="hero__preview" aria-hidden="true">
             <div class="hero__visual">
                 <div class="hero__visual-frame"></div>
-                <div class="hero__tag">Downloadable sets</div>
-                <div class="hero__tag hero__tag--soft">Metric &amp; Imperial</div>
-                <div class="hero__tag hero__tag--outline">CAD deliverables</div>
+                <div class="hero__tag">📦 Downloadable sets</div>
+                <div class="hero__tag hero__tag--soft">📏 Metric & Imperial</div>
+                <div class="hero__tag hero__tag--outline">🎨 CAD deliverables</div>
             </div>
         </div>
     </div>
@@ -189,22 +189,25 @@
     <div class="shell">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">Studio advantages</p>
-                <h2 id="features-heading">Architecture expertise packaged for developers</h2>
+                <p class="eyebrow">⭐ Why choose us</p>
+                <h2 id="features-heading">Architecture expertise, packaged for builders</h2>
             </div>
         </div>
         <div class="value-grid value-grid--three">
-            <article>
+            <article class="value-card">
+                <div class="value-card__icon">📐</div>
                 <h3>Professional documentation</h3>
-                <p>Full drawing sets authored by licensed architects with precise dimensions, sections, and schedules.</p>
+                <p>Full drawing sets authored by licensed architects with precise dimensions, detailed sections, and complete schedules.</p>
             </article>
-            <article>
-                <h3>Tailored deliverables</h3>
-                <p>Start with the free PDF, then upgrade to Gumroad packs with metric, imperial, and CAD formats.</p>
+            <article class="value-card">
+                <div class="value-card__icon">🎁</div>
+                <h3>Flexible deliverables</h3>
+                <p>Start with the free PDF, then upgrade to premium packs with metric, imperial, and editable CAD formats when ready.</p>
             </article>
-            <article>
-                <h3>Advisory support</h3>
-                <p>Our team guides you through code compliance, climate adaptation, and structural coordination.</p>
+            <article class="value-card">
+                <div class="value-card__icon">🤝</div>
+                <h3>Expert support</h3>
+                <p>Our team guides you through code compliance, climate adaptation, and structural coordination every step of the way.</p>
             </article>
         </div>
     </div>
@@ -213,13 +216,13 @@
 <section class="section section--cta" aria-labelledby="cta-heading">
     <div class="shell section-cta">
         <div>
-            <p class="eyebrow">Need guidance?</p>
-            <h2 id="cta-heading">Let’s align on your next build</h2>
-            <p>Share your site, climate, and program—our architects will help match the right plan or craft a bespoke approach.</p>
+            <p class="eyebrow">💡 Need guidance?</p>
+            <h2 id="cta-heading">Let's find the perfect plan for your project</h2>
+            <p>Share your site, climate, and vision—our architects will help match the right plan or craft a custom approach tailored to you.</p>
         </div>
         <div class="section-cta__actions">
             <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Start a conversation</a>
-            <a class="btn btn-soft" href="{{ url_for('main.about') }}">Meet the studio</a>
+            <a class="btn btn-soft" href="{{ url_for('main.about') }}">Meet our team</a>
         </div>
     </div>
 </section>

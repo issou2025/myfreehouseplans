@@ -1,22 +1,40 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main class="container" aria-labelledby="about-heading">
-    <article>
-        <h1 id="about-heading">About Us</h1>
-        <p>MyFreeHousePlans is built for homeowners and builders who want clear, buildable plans without the noise. We focus on practical layouts, consistent documentation, and a buying experience that feels straightforward from the first click.</p>
+<section class="about-page" aria-labelledby="about-heading">
+    <div class="shell">
+        <div class="about-hero">
+            <p class="eyebrow">✨ Our story</p>
+            <h1 id="about-heading">We make house plans that work in the real world</h1>
+            <p class="lead">MyFreeHousePlans is built for homeowners and builders who want clear, buildable plans without the noise. We focus on practical layouts, consistent documentation, and a buying experience that feels straightforward from the first click.</p>
+        </div>
 
-        <h2>What you’ll find here</h2>
-        <ul>
-            <li><strong>Curated plan catalog</strong> with clean previews and fast navigation.</li>
-            <li><strong>Multiple pack options</strong> so you can start free, then upgrade when you’re ready.</li>
-            <li><strong>Support that respects your time</strong>—quick answers, no runaround.</li>
-        </ul>
+        <div class="about-features">
+            <article class="feature-card">
+                <div class="feature-card__icon">📐</div>
+                <h2>Curated plan catalog</h2>
+                <p>Clean previews, intuitive filters, and fast navigation. Every plan is vetted by architects before publishing.</p>
+            </article>
+            <article class="feature-card">
+                <div class="feature-card__icon">🎁</div>
+                <h2>Flexible pack options</h2>
+                <p>Start free, then upgrade when ready. Multiple format options including metric, imperial, and editable CAD files.</p>
+            </article>
+            <article class="feature-card">
+                <div class="feature-card__icon">🤝</div>
+                <h2>Support that respects your time</h2>
+                <p>Quick answers, no runaround. Our team is here to help with code questions, site adaptation, and material guidance.</p>
+            </article>
+        </div>
 
-        <h2>How packs work</h2>
-        <p>Each plan offers a Free Pack for a quick look and two paid packs delivered via Gumroad. That keeps checkout secure and delivery reliable.</p>
-
-        <p class="muted">Have a question before purchasing? Visit our <a href="{{ url_for('main.contact') }}">Contact</a> page—we’re happy to help.</p>
-    </article>
-</main>
+        <div class="about-cta">
+            <h2>How packs work</h2>
+            <p>Each plan offers a <strong>Free Pack</strong> for a quick look and <strong>two paid packs</strong> delivered via Gumroad. That keeps checkout secure and delivery reliable.</p>
+            <div class="about-cta__actions">
+                <a href="{{ url_for('main.packs') }}" class="btn btn-primary">Browse all plans</a>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-outline">Get support</a>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}
