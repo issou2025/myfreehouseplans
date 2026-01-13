@@ -706,13 +706,34 @@ def add_plan():
 @admin_required
 def edit_plan(id):
     """Edit existing house plan"""
-    
-    plan = HousePlan.query.get_or_404(id)
+
+    try:
+        plan = HousePlan.query.get(id)
+    except Exception:
+        current_app.logger.exception('Failed to load plan id=%s for edit (DB/query error)', id)
+        flash('Unable to load this plan right now (database error). Please try again.', 'danger')
+        return redirect(url_for('admin.plans'))
+
+    if plan is None:
+        flash('House plan not found.', 'warning')
+        return redirect(url_for('admin.plans'))
+
     form = HousePlanForm(obj=plan)
-    categories = Category.query.order_by(Category.name).all()
+
+    try:
+        categories = Category.query.order_by(Category.name).all()
+    except Exception:
+        current_app.logger.exception('Failed to load categories while editing plan id=%s', id)
+        categories = []
+        flash('Categories could not be loaded (database error). You can still edit other fields.', 'warning')
+
     form.category_ids.choices = [(c.id, c.name) for c in categories]
     if request.method == 'GET':
-        form.category_ids.data = [c.id for c in plan.categories]
+        try:
+            form.category_ids.data = [c.id for c in (plan.categories or [])]
+        except Exception:
+            current_app.logger.exception('Failed to prefill category_ids for plan id=%s', id)
+            form.category_ids.data = []
     
     if form.validate_on_submit():
         try:
@@ -738,7 +759,16 @@ def edit_plan(id):
                 plan.price_pack_3 = None
             if plan.price_pack_1 is None:
                 plan.price_pack_1 = 0
-            selected_categories = Category.query.filter(Category.id.in_(form.category_ids.data)).all()
+            category_ids = form.category_ids.data or []
+            if category_ids:
+                try:
+                    selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
+                except Exception:
+                    current_app.logger.exception('Failed to load selected categories for plan id=%s; category_ids=%s', plan.id, category_ids)
+                    selected_categories = []
+                    flash('Selected categories could not be saved (database error).', 'warning')
+            else:
+                selected_categories = []
             plan.categories = selected_categories
             plan.is_featured = form.is_featured.data
             plan.is_published = form.is_published.data
