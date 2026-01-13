@@ -53,9 +53,9 @@
                     {% endif %}
                 </p>
                 <h1 itemprop="name">{{ plan.title }}</h1>
-                <p class="plan-hero__lead" itemprop="description">{{ plan.architectural_summary }}</p>
+                <p class="plan-hero__lead" itemprop="description">{{ plan.architectural_summary if plan.architectural_summary else 'A thoughtfully designed house plan.' }}</p>
                 <div class="plan-meta-bar">
-                    <span class="badge badge--ghost">Ref {{ plan.reference_code }}</span>
+                    <span class="badge badge--ghost">Ref {{ plan.reference_code if plan.reference_code else plan.id }}</span>
                     {% if plan.has_free_download %}
                         <span class="badge badge--soft">Free pack ready</span>
                     {% else %}
@@ -179,6 +179,7 @@
                 </div>
             </div>
             <div class="faq-list" id="faq-list">
+                {% if faqs %}
                 {% for item in faqs %}
                     {% if item.question %}
                     <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
@@ -187,16 +188,22 @@
                             <span class="faq-question__chev">▾</span>
                         </button>
                         <div class="faq-answer" hidden itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer">
-                            <div itemprop="text">{{ item.answer }}</div>
+                            <div itemprop="text">{{ item.answer if item.answer else 'No answer provided yet.' }}</div>
                         </div>
                     </div>
-                    {% else %}
+                    {% elif item.get('question') %}
                     <div class="faq-item">
-                        <button class="faq-question" aria-expanded="false">{{ item['question'] }}</button>
-                        <div class="faq-answer" hidden>{{ item['answer'] }}</div>
+                        <button class="faq-question" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')=='true' ? 'false' : 'true')">
+                            <span class="faq-question__text">{{ item['question'] }}</span>
+                            <span class="faq-question__chev">▾</span>
+                        </button>
+                        <div class="faq-answer" hidden>{{ item.get('answer', 'No answer provided yet.') }}</div>
                     </div>
                     {% endif %}
                 {% endfor %}
+                {% else %}
+                <p class="muted">No FAQs available for this plan yet. Contact us if you have questions.</p>
+                {% endif %}
             </div>
         </section>
 
@@ -295,7 +302,7 @@
                             <p class="eyebrow">Pack 0{{ tier.pack }}</p>
                             <h3>{{ meta.name }}</h3>
                             <p class="package-price">
-                                {% if tier.price and tier.price > 0 %}
+                                {% if tier.price is not none and tier.price > 0 %}
                                     ${{ tier.price|round(0)|int }} USD
                                 {% elif tier.pack == 1 %}
                                     Free
