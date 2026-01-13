@@ -40,6 +40,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     {% block extra_css %}{% endblock %}
     
@@ -51,36 +52,80 @@
     <header class="site-header site-header--sticky" role="banner">
         <div class="shell site-header__inner">
             <a class="site-brand" href="{{ url_for('main.index') }}" aria-label="Return to homepage">
-                <span class="site-brand__logo">🏠 {{ site_name }}</span>
-                <span class="site-brand__tagline">Beautiful homes, thoughtful design</span>
+                <span class="site-brand__logo">
+                    <span class="site-brand__mark" aria-hidden="true"><i class="fa-solid fa-house-chimney"></i></span>
+                    <span class="site-brand__name">{{ site_name }}</span>
+                </span>
+                <span class="site-brand__tagline">Architecture-ready plans · Modern & practical</span>
             </a>
             <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">
                 <span class="nav-toggle__icon"></span>
             </button>
             {% set current_endpoint = request.endpoint or '' %}
             <nav id="primary-navigation" class="nav" aria-label="Primary">
-                <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
-                <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">Plans</a>
-                <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Guides</a>
-                <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">Favorites</a>
-                <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">Compare</a>
-                <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">About</a>
-                <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
+                <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    <span>Home</span>
+                </a>
+                <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">
+                    <i class="fa-solid fa-compass" aria-hidden="true"></i>
+                    <span>Plans</span>
+                </a>
+                <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">
+                    <i class="fa-solid fa-book" aria-hidden="true"></i>
+                    <span>Guides</span>
+                </a>
+                <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">
+                    <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                    <span>Favorites</span>
+                </a>
+                <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">
+                    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                    <span>Compare</span>
+                </a>
+                <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <span>About</span>
+                </a>
+                <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">
+                    <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                    <span>Contact</span>
+                </a>
                 {% if current_user.is_authenticated and current_user.is_admin %}
-                    <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">Admin</a>
-                    <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">Account</a>
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Logout</a>
+                    <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                        <i class="fa-solid fa-shield" aria-hidden="true"></i>
+                        <span>Admin</span>
+                    </a>
+                    <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">
+                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                        <span>Account</span>
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">
+                        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </a>
                 {% elif current_user.is_authenticated %}
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Logout</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">
+                        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </a>
                 {% endif %}
             </nav>
-            <div class="site-header__cta" aria-label="Quick actions">
-                <p class="site-header__note">📞 Here for you · Mon–Fri</p>
-                <div class="site-header__cta-buttons">
-                    <a class="btn btn-ghost" href="{{ url_for('main.packs') }}">Explore plans</a>
-                    <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Get in touch</a>
-                </div>
-                <p class="site-header__help">Need help? <a href="{{ url_for('main.contact') }}">Send us a message</a></p>
+            <div class="site-header__actions" aria-label="Quick actions">
+                <a class="icon-btn" href="{{ url_for('main.packs') }}" aria-label="Search plans">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                </a>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a class="btn btn-primary btn-cta" href="{{ url_for('admin.add_plan') }}">
+                        <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                        Upload plan
+                    </a>
+                {% else %}
+                    <a class="btn btn-primary btn-cta" href="{{ url_for('auth.login') }}">
+                        <i class="fa-solid fa-crown" aria-hidden="true"></i>
+                        Premium Login
+                    </a>
+                {% endif %}
             </div>
         </div>
     </header>
@@ -115,46 +160,58 @@
         <div class="shell">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <h3 class="site-brand__logo">🏠 {{ site_name }}</h3>
-                    <p>We curate architectural plans that translate smoothly from PDF to construction. Every set is reviewed by architects and tested in real builds.</p>
-                    <div class="footer-social">
-                        <a href="https://wa.me/22796380877" target="_blank" rel="noopener" class="social-link" aria-label="WhatsApp">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                            WhatsApp
-                        </a>
-                        <a href="mailto:entreprise2rc@gmail.com" class="social-link" aria-label="Email">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                            Email Us
-                        </a>
+                    <div class="footer-brand__logo">
+                        <span class="footer-brand__mark" aria-hidden="true"><i class="fa-solid fa-house-chimney"></i></span>
+                        <span class="footer-brand__name">{{ site_name }}</span>
+                    </div>
+                    <p class="footer-brand__about">Professional house plans, optimized for builders and architects. Clear PDFs, smarter details, faster decisions.</p>
+                    <div class="footer-social" aria-label="Social links">
+                        <a href="https://wa.me/22796380877" target="_blank" rel="noopener" class="social-icon" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+                        <a href="mailto:entreprise2rc@gmail.com" class="social-icon" aria-label="Email"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a>
                     </div>
                 </div>
-                <div>
-                    <h4>Explore</h4>
+
+                <div class="footer-col">
+                    <h4>Quick links</h4>
                     <ul>
-                        <li><a href="{{ url_for('main.packs') }}">Plan catalog</a></li>
-                        <li><a href="{{ url_for('main.favorites') }}">My favorites</a></li>
-                        <li><a href="{{ url_for('main.compare') }}">Compare plans</a></li>
-                        <li><a href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">Design guides</a></li>
+                        <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                        <li><a href="{{ url_for('main.packs') }}">Plans</a></li>
+                        <li><a href="{{ url_for('main.about') }}">About</a></li>
+                        <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
                     </ul>
                 </div>
-                <div>
-                    <h4>Company</h4>
+
+                <div class="footer-col">
+                    <h4>Categories</h4>
                     <ul>
-                        <li><a href="{{ url_for('main.about') }}">About us</a></li>
-                        <li><a href="{{ url_for('main.contact') }}">Contact & support</a></li>
-                        <li><a href="{{ url_for('main.privacy') }}">Privacy policy</a></li>
-                        <li><a href="{{ url_for('main.terms') }}">Terms of service</a></li>
+                        <li><a href="{{ url_for('main.packs', category='modern') }}">Modern</a></li>
+                        <li><a href="{{ url_for('main.packs', narrative='hot_climate') }}">Tropical</a></li>
+                        <li><a href="{{ url_for('main.packs', narrative='compact_affordable') }}">Small Houses</a></li>
+                        <li><a href="{{ url_for('main.packs', category='luxury') }}">Luxury</a></li>
                     </ul>
                 </div>
-                <div>
-                    <h4>Get in Touch</h4>
-                    <p><strong>Email:</strong> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></p>
-                    <p><strong>Phone:</strong> <a href="tel:+22796380877">+227 96 38 08 77</a></p>
-                    <p><strong>Location:</strong> Serving builders worldwide</p>
+
+                <div class="footer-col">
+                    <h4>Newsletter</h4>
+                    <p>Get notified when new plans drop. No spam.</p>
+                    <form class="newsletter" action="{{ url_for('main.newsletter_signup') }}" method="post">
+                        <label class="sr-only" for="newsletterEmail">Email</label>
+                        <div class="newsletter__row">
+                            <input id="newsletterEmail" name="email" type="email" placeholder="you@email.com" autocomplete="email" required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                                Sign up
+                            </button>
+                        </div>
+                    </form>
+                    <div class="footer-mini" aria-label="Contact info">
+                        <div><i class="fa-solid fa-phone" aria-hidden="true"></i> <a href="tel:+22796380877">+227 96 38 08 77</a></div>
+                        <div><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Serving builders worldwide</div>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; {{ now.year if now else '2026' }} {{ site_name }}. All rights reserved. Built with care for builders everywhere.</p>
+                <p>&copy; {{ now.year if now else '2026' }} {{ site_name }}. All rights reserved.</p>
             </div>
         </div>
     </footer>
