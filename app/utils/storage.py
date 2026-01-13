@@ -19,8 +19,12 @@ from flask import current_app
 from werkzeug.datastructures import FileStorage
 
 
-def _cloudinary_enabled() -> bool:
-    return bool(os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL"))
+class CloudStorageConfigurationError(RuntimeError):
+    """Raised when persistent storage credentials are missing."""
+
+
+def _cloudinary_url() -> Optional[str]:
+    return os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL")
 
 
 def upload_to_cloud(file: FileStorage, folder: str) -> Optional[str]:
@@ -29,26 +33,37 @@ def upload_to_cloud(file: FileStorage, folder: str) -> Optional[str]:
     if not file or not getattr(file, "filename", ""):
         return None
 
-    if _cloudinary_enabled():
-        import cloudinary
-        import cloudinary.uploader
-
-        cloudinary_url = os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL")
-        if cloudinary_url:
-            cloudinary.config(cloudinary_url=cloudinary_url)
-
-        filename = (file.filename or "upload").strip()
-        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        resource_type = "image" if ext in {"png", "jpg", "jpeg", "gif", "webp", "avif"} else "raw"
-
-        result = cloudinary.uploader.upload(
-            file,
-            folder=f"myfreehouseplans/{folder}",
-            resource_type=resource_type,
-            use_filename=True,
-            unique_filename=True,
-            overwrite=False,
+    cloudinary_url = _cloudinary_url()
+    if not cloudinary_url:
+        raise CloudStorageConfigurationError(
+            "CLOUDINARY_URL is not configured. Persistent uploads are disabled."
         )
-        return result.get("secure_url") or result.get("url")
 
-    return None
+    import cloudinary
+    import cloudinary.uploader
+
+    cloudinary.config(cloudinary_url=cloudinary_url)
+
+    # Ensure stream is at the beginning before handing off to the SDK.
+    try:
+        file.stream.seek(0)
+    except Exception:
+        pass
+
+    filename = (file.filename or "upload").strip()
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    resource_type = "image" if ext in {"png", "jpg", "jpeg", "gif", "webp", "avif"} else "raw"
+
+    result = cloudinary.uploader.upload(
+        file,
+        folder=f"myfreehouseplans/{folder}",
+        resource_type=resource_type,
+        use_filename=True,
+        unique_filename=True,
+        overwrite=False,
+    )
+
+    secure_url = result.get("secure_url") or result.get("url")
+    if not secure_url:
+        raise RuntimeError("Cloudinary upload did not return a public URL.")
+    return secure_url

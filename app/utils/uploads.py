@@ -12,7 +12,7 @@ from flask import current_app
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-from app.utils.storage import upload_to_cloud
+from app.utils.storage import CloudStorageConfigurationError, upload_to_cloud
 
 
 # MIME type whitelist for security (extension spoofing prevention)
@@ -157,32 +157,24 @@ def save_uploaded_file(
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     safe_name = f"{timestamp}_{filename}"
 
-    cloud_url = None
+    try:
+        file.stream.seek(0)
+    except Exception:
+        pass
+
     try:
         cloud_url = upload_to_cloud(file, folder)
-    except Exception as exc:
-        try:
-            current_app.logger.warning('Cloud upload failed; falling back to local storage: %s', exc)
-        except Exception:
-            pass
-        cloud_url = None
+    except CloudStorageConfigurationError as exc:
+        raise RuntimeError(
+            'Cloudinary is not configured. Please set CLOUDINARY_URL so uploads persist across deploys.'
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive logging
+        current_app.logger.exception('Cloud upload failed')
+        raise RuntimeError('Uploading file to persistent storage failed.') from exc
 
-    if cloud_url:
-        return cloud_url
-
-    protected_folders = current_app.config.get('PROTECTED_FOLDERS', {'pdfs'})
-    if folder in protected_folders:
-        base_upload = current_app.config.get('PROTECTED_UPLOAD_FOLDER')
-    else:
-        base_upload = current_app.config['UPLOAD_FOLDER']
-
-    upload_path = os.path.join(base_upload, folder)
-    os.makedirs(upload_path, exist_ok=True)
-
-    absolute_path = os.path.join(upload_path, safe_name)
-    file.save(absolute_path)
-
-    return os.path.join('uploads', folder, safe_name).replace('\\', '/')
+    if not cloud_url:
+        raise RuntimeError('Upload failed: cloud provider did not return a URL.')
+    return cloud_url
 
 
 def resolve_protected_upload(relative_path: str) -> Path:

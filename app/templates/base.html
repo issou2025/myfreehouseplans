@@ -60,44 +60,81 @@
             </a>
             {% set current_endpoint = request.endpoint or '' %}
             <nav id="primary-navigation" class="nav" aria-label="Primary">
-                <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">
-                    <i class="fa-solid fa-house" aria-hidden="true"></i>
-                    <span>Home</span>
-                </a>
-                <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">
-                    <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                    <span>Plans</span>
-                </a>
-                <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">
-                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-                    <span>Guides</span>
-                </a>
-                <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">
-                    <i class="fa-solid fa-heart" aria-hidden="true"></i>
-                    <span>Favorites</span>
-                </a>
-                <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">
-                    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-                    <span>Compare</span>
-                </a>
-                <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">
-                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                    <span>About</span>
-                </a>
-                <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">
-                    <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
-                    <span>Contact</span>
-                </a>
+                <div class="nav__group" aria-label="Browse">
+                    <p class="nav__heading">Browse</p>
+                    <div class="nav__stack">
+                        <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">
+                            <i class="fa-solid fa-house" aria-hidden="true"></i>
+                            <span>Home</span>
+                        </a>
+                        <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">
+                            <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+                            <span>Plans</span>
+                        </a>
+                        <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">
+                            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                            <span>Guides</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav__group" aria-label="Tools">
+                    <p class="nav__heading">Tools</p>
+                    <div class="nav__stack">
+                        <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">
+                            <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                            <span>Favorites</span>
+                        </a>
+                        <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                            <span>Compare</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="nav__group" aria-label="Company">
+                    <p class="nav__heading">Company</p>
+                    <div class="nav__stack">
+                        <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                            <span>About</span>
+                        </a>
+                        <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">
+                            <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
+                            <span>Contact</span>
+                        </a>
+                    </div>
+                </div>
                 {% if current_user.is_authenticated and current_user.is_admin %}
-                    <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">
-                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                        <span>Admin</span>
-                    </a>
-                    <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">
-                        <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
-                        <span>Account</span>
-                    </a>
+                    <div class="nav__group" aria-label="Admin tools">
+                        <p class="nav__heading">Admin</p>
+                        <div class="nav__stack">
+                            <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                                <span>Admin</span>
+                            </a>
+                            <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">
+                                <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+                                <span>Account</span>
+                            </a>
+                        </div>
+                    </div>
                 {% endif %}
+                <div class="nav__cta" aria-label="Navigation quick actions">
+                    {% if current_user.is_authenticated %}
+                        <a class="btn btn-primary" href="{{ url_for('auth.logout') }}">
+                            <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                            Logout
+                        </a>
+                    {% else %}
+                        <a class="btn btn-primary" href="{{ url_for('auth.login') }}">
+                            <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+                            Premium Access
+                        </a>
+                    {% endif %}
+                    <a class="nav__contact" href="tel:+22796380877">
+                        <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                        <span>Need help? +227 96 38 08 77</span>
+                    </a>
+                </div>
             </nav>
             <div class="site-header__actions" aria-label="Quick actions">
                 <a class="icon-btn" href="{{ url_for('main.packs') }}" aria-label="Search plans">

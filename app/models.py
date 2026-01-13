@@ -156,7 +156,7 @@ class HousePlan(db.Model):
     
     # Delivery
     # Pack 1 (Free): Admin uploads a PDF. Stored server-side.
-    free_pdf_file = db.Column(db.String(300))
+    free_pdf_file = db.Column(db.String(600))
     price_pack_1 = db.Column(db.Numeric(10, 2), nullable=False, default=0)
 
     # Pack 2/3 (Paid): Admin provides Gumroad purchase links.
@@ -165,11 +165,11 @@ class HousePlan(db.Model):
 
     price_pack_2 = db.Column(db.Numeric(10, 2))
     price_pack_3 = db.Column(db.Numeric(10, 2))
-    zip_pack_2 = db.Column(db.String(300))
-    zip_pack_3 = db.Column(db.String(300))
+    zip_pack_2 = db.Column(db.String(600))
+    zip_pack_3 = db.Column(db.String(600))
 
     # Media
-    cover_image = db.Column(db.String(300))
+    cover_image = db.Column(db.String(600))
     
     # Plan specifications
     bedrooms = db.Column(db.Integer)
@@ -184,9 +184,9 @@ class HousePlan(db.Model):
     sale_price = db.Column(db.Numeric(10, 2))  # Optional sale price
     
     # Media
-    main_image = db.Column(db.String(300))
-    floor_plan_image = db.Column(db.String(300))
-    pdf_file = db.Column(db.String(300))  # PDF plans file
+    main_image = db.Column(db.String(600))
+    floor_plan_image = db.Column(db.String(600))
+    pdf_file = db.Column(db.String(600))  # PDF plans file
     
     # SEO and metadata
     seo_title = db.Column(db.String(200))
