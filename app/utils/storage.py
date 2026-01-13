@@ -13,10 +13,13 @@ The upload functions return a public URL.
 from __future__ import annotations
 
 import os
+import traceback
 from typing import Optional
 
 from flask import current_app
 from werkzeug.datastructures import FileStorage
+
+from app.extensions import db
 
 
 class CloudStorageConfigurationError(RuntimeError):
@@ -25,6 +28,13 @@ class CloudStorageConfigurationError(RuntimeError):
 
 def _cloudinary_url() -> Optional[str]:
     return os.environ.get("CLOUDINARY_URL") or current_app.config.get("CLOUDINARY_URL")
+
+
+def _is_valid_cloudinary_url(url: str) -> bool:
+    if not isinstance(url, str):
+        return False
+    trimmed = url.strip()
+    return trimmed.startswith("cloudinary://")
 
 
 def upload_to_cloud(file: FileStorage, folder: str) -> Optional[str]:
@@ -38,6 +48,23 @@ def upload_to_cloud(file: FileStorage, folder: str) -> Optional[str]:
         raise CloudStorageConfigurationError(
             "CLOUDINARY_URL is not configured. Persistent uploads are disabled."
         )
+
+    if not _is_valid_cloudinary_url(cloudinary_url):
+        message = (
+            "Invalid CLOUDINARY_URL format. Expected it to start with 'cloudinary://'."
+        )
+        current_app.logger.error(message)
+        try:
+            db.session.rollback()
+        except Exception as rollback_exc:
+            print(traceback.format_exc())
+            current_app.logger.error(
+                "Rollback after invalid CLOUDINARY_URL failed: %s",
+                rollback_exc,
+                exc_info=True,
+            )
+        raise CloudStorageConfigurationError(message)
+    cloudinary_url = cloudinary_url.strip()
 
     import cloudinary
     import cloudinary.uploader
