@@ -635,126 +635,133 @@ def insight_page(slug):
 def pack_detail(slug):
     """House plan detail page - bulletproofed with comprehensive error handling"""
     
-    plan = None
     try:
-        # Get plan by slug or 404
-        plan = (
-            HousePlan.query
-            .options(selectinload(HousePlan.categories))
-            .filter_by(slug=slug, is_published=True)
-            .first()
-        )
-        
-        if plan is None:
-            current_app.logger.warning('Plan not found for slug=%s (or not published)', slug)
-            flash('The plan you requested could not be found or is not available.', 'warning')
-            return redirect(url_for('main.packs'))
-        
-        # Verify critical plan data integrity before rendering
-        if not plan.title or not plan.description:
-            current_app.logger.error('Plan id=%s missing critical fields (title or description)', plan.id)
-            flash('This plan has incomplete data. Please contact support.', 'danger')
-            return redirect(url_for('main.packs'))
-        
-        # Increment view count (non-fatal if this fails)
+        plan = None
         try:
-            plan.increment_views()
-        except Exception as view_exc:
-            current_app.logger.warning('Failed to increment view count for plan id=%s: %s', plan.id, view_exc)
+            # Get plan by slug or 404
+            plan = (
+                HousePlan.query
+                .options(selectinload(HousePlan.categories))
+                .filter_by(slug=slug, is_published=True)
+                .first()
+            )
+            
+            if plan is None:
+                current_app.logger.warning('Plan not found for slug=%s (or not published)', slug)
+                flash('The plan you requested could not be found or is not available.', 'warning')
+                return redirect(url_for('main.packs'))
+            
+            # Verify critical plan data integrity before rendering
+            if not plan.title or not plan.description:
+                current_app.logger.error('Plan id=%s missing critical fields (title or description)', plan.id)
+                flash('This plan has incomplete data. Please contact support.', 'danger')
+                return redirect(url_for('main.packs'))
+            
+            # Increment view count (non-fatal if this fails)
+            try:
+                plan.increment_views()
+            except Exception as view_exc:
+                current_app.logger.warning('Failed to increment view count for plan id=%s: %s', plan.id, view_exc)
+            
+        except Exception as query_exc:
+            current_app.logger.exception('Database query failed on plan detail page for slug=%s', slug)
+            flash('Unable to load plan details right now. Please try again later.', 'danger')
+            return redirect(url_for('main.packs'))
         
-    except Exception as query_exc:
-        current_app.logger.exception('Database query failed on plan detail page for slug=%s', slug)
-        flash('Unable to load plan details right now. Please try again later.', 'danger')
-        return redirect(url_for('main.packs'))
-    
-    # Find similar plans (non-fatal if this fails)
-    similar_plans = []
-    try:
-        similar_plans = _find_similar_plans(plan, limit=6)
-    except Exception as similar_exc:
-        current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', plan.id, similar_exc)
-    
-    # SEO meta tags (use safe fallbacks)
-    try:
-        meta = generate_meta_tags(
-            title=getattr(plan, 'meta_title', None) or plan.title,
-            description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
-            keywords=getattr(plan, 'meta_keywords', None),
-            url=url_for('main.pack_detail', slug=plan.slug, _external=True),
-            type='product'
-        )
-    except Exception as meta_exc:
-        current_app.logger.warning('Failed to generate meta tags for plan id=%s: %s', plan.id, meta_exc)
-        meta = {'title': plan.title, 'description': ''}
-    
-    # Structured data for product (non-fatal)
-    product_schema = None
-    try:
-        product_schema = generate_product_schema(plan)
-    except Exception as schema_exc:
-        current_app.logger.warning('Failed to generate product schema for plan id=%s: %s', plan.id, schema_exc)
+        # Find similar plans (non-fatal if this fails)
+        similar_plans = []
+        try:
+            similar_plans = _find_similar_plans(plan, limit=6)
+        except Exception as similar_exc:
+            current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', plan.id, similar_exc)
+        
+        # SEO meta tags (use safe fallbacks)
+        try:
+            meta = generate_meta_tags(
+                title=getattr(plan, 'meta_title', None) or plan.title,
+                description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
+                keywords=getattr(plan, 'meta_keywords', None),
+                url=url_for('main.pack_detail', slug=plan.slug, _external=True),
+                type='product'
+            )
+        except Exception as meta_exc:
+            current_app.logger.warning('Failed to generate meta tags for plan id=%s: %s', plan.id, meta_exc)
+            meta = {'title': plan.title, 'description': ''}
+        
+        # Structured data for product (non-fatal)
+        product_schema = None
+        try:
+            product_schema = generate_product_schema(plan)
+        except Exception as schema_exc:
+            current_app.logger.warning('Failed to generate product schema for plan id=%s: %s', plan.id, schema_exc)
 
-    # FAQs: prefer custom FAQs attached to the plan; if none, use defaults
-    faqs = []
-    faq_schema = None
-    try:
-        from app.models import PlanFAQ
-        if getattr(plan, 'faqs', None):
-            faqs = list(plan.faqs) if plan.faqs else []
-        if not faqs and hasattr(plan, 'default_faqs'):
-            faqs = plan.default_faqs()
-        
-        # Build structured FAQ schema
-        if faqs:
-            faq_schema = {
-                '@context': 'https://schema.org',
-                '@type': 'FAQPage',
-                'mainEntity': []
-            }
-            for item in faqs:
-                try:
-                    if hasattr(item, 'question'):
-                        q = item.question
-                        a = item.answer
-                    else:
-                        q = item.get('question')
-                        a = item.get('answer')
-                    if q and a:
-                        faq_schema['mainEntity'].append({
-                            '@type': 'Question',
-                            'name': q,
-                            'acceptedAnswer': {
-                                '@type': 'Answer',
-                                'text': a
-                            }
-                        })
-                except Exception:
-                    continue
-    except Exception as faq_exc:
-        current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', plan.id, faq_exc)
+        # FAQs: prefer custom FAQs attached to the plan; if none, use defaults
         faqs = []
         faq_schema = None
+        try:
+            from app.models import PlanFAQ
+            if getattr(plan, 'faqs', None):
+                faqs = list(plan.faqs) if plan.faqs else []
+            if not faqs and hasattr(plan, 'default_faqs'):
+                faqs = plan.default_faqs()
+            
+            # Build structured FAQ schema
+            if faqs:
+                faq_schema = {
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    'mainEntity': []
+                }
+                for item in faqs:
+                    try:
+                        if hasattr(item, 'question'):
+                            q = item.question
+                            a = item.answer
+                        else:
+                            q = item.get('question')
+                            a = item.get('answer')
+                        if q and a:
+                            faq_schema['mainEntity'].append({
+                                '@type': 'Question',
+                                'name': q,
+                                'acceptedAnswer': {
+                                    '@type': 'Answer',
+                                    'text': a
+                                }
+                            })
+                    except Exception:
+                        continue
+        except Exception as faq_exc:
+            current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', plan.id, faq_exc)
+            faqs = []
+            faq_schema = None
+        
+        # Breadcrumb schema (non-fatal)
+        breadcrumb_schema = None
+        try:
+            breadcrumbs = [
+                ('Home', url_for('main.index')),
+                ('Plans', url_for('main.packs')),
+                (plan.title, url_for('main.pack_detail', slug=plan.slug))
+            ]
+            breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
+        except Exception as breadcrumb_exc:
+            current_app.logger.warning('Failed to generate breadcrumb schema for plan id=%s: %s', plan.id, breadcrumb_exc)
+        
+        return render_template('pack_detail.html',
+                             plan=plan,
+                             faqs=faqs,
+                             faq_schema=faq_schema,
+                             similar_plans=similar_plans,
+                             meta=meta,
+                             product_schema=product_schema,
+                             breadcrumb_schema=breadcrumb_schema)
     
-    # Breadcrumb schema (non-fatal)
-    breadcrumb_schema = None
-    try:
-        breadcrumbs = [
-            ('Home', url_for('main.index')),
-            ('Plans', url_for('main.packs')),
-            (plan.title, url_for('main.pack_detail', slug=plan.slug))
-        ]
-        breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
-    except Exception as breadcrumb_exc:
-        current_app.logger.warning('Failed to generate breadcrumb schema for plan id=%s: %s', plan.id, breadcrumb_exc)
-    
-    return render_template('pack_detail.html',
-                         plan=plan,
-                         faqs=faqs,
-                         faq_schema=faq_schema,
-                         similar_plans=similar_plans,
-                         meta=meta,
-                         product_schema=product_schema,
-                         breadcrumb_schema=breadcrumb_schema)
+    except Exception as fatal_exc:
+        # Catch-all for template rendering errors or any other unexpected failures
+        current_app.logger.exception('Fatal error in pack_detail route for slug=%s', slug)
+        flash('Unable to display this plan right now. Please try again later or contact support.', 'danger')
+        return redirect(url_for('main.packs'))
 
 
 @main_bp.route('/favorites')
