@@ -69,7 +69,12 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
 
-    ensure_database_ready(app)
+    # REMOVED: ensure_database_ready(app) - moved to health check endpoint
+    # Bootstrap tasks should be handled by:
+    # 1. Migrations (flask db upgrade) for schema
+    # 2. CLI commands (flask create-admin) for admin seeding
+    # 3. Release commands in render.yaml for pre-deployment tasks
+
     
     # Register blueprints
     register_blueprints(app)
@@ -98,10 +103,12 @@ def register_blueprints(app):
     from app.routes.main import main_bp
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
+    from app.routes.health import health_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(health_bp)  # No prefix - accessible at /health
 
 
 def register_error_handlers(app):
@@ -234,10 +241,15 @@ def register_request_hooks(app):
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
+            # Analytics failures should not break the request, but we must log them
+            # Use print() as fallback if logger itself is broken
             try:
-                app.logger.warning('Visitor logging failed: %s', exc)
-            except Exception:
-                pass
+                app.logger.warning('Visitor logging failed: %s', exc, exc_info=True)
+            except Exception as log_exc:
+                # Last resort: write to stderr if logger is completely broken
+                import sys
+                print(f"CRITICAL: Logger failure in visitor tracking: {log_exc}", file=sys.stderr)
+                print(f"Original error: {exc}", file=sys.stderr)
         finally:
             g.visit_track = None
         return response

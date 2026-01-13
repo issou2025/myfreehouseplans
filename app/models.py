@@ -497,8 +497,17 @@ class PlanFAQ(db.Model):
             try:
                 b = float(self.bathrooms_count)
                 parts.append(f"{b:g}-bath")
-            except Exception:
-                pass
+            except (ValueError, TypeError) as exc:
+                # Log data quality issues for monitoring
+                try:
+                    from flask import current_app
+                    current_app.logger.warning(
+                        'Invalid bathrooms_count for plan %s: %s (value: %r)',
+                        self.id, exc, self.bathrooms_count
+                    )
+                except (RuntimeError, Exception):
+                    # Outside application context or logger broken - skip logging
+                    pass
         if self.roof_type:
             parts.append(f"{self.roof_type.strip().lower()} roof")
         if parts:

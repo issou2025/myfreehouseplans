@@ -108,21 +108,30 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Production database must be provided by the hosting platform via DATABASE_URL.
-    # Do not fall back to SQLite in production.
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    
-    # If using Render/Heroku, they provide DATABASE_URL with postgres://
-    # but SQLAlchemy 1.4+ requires postgresql://
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
-
-    # Many managed Postgres providers require SSL. If the connection string
-    # doesn't specify sslmode, default to require.
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
-        if 'sslmode=' not in SQLALCHEMY_DATABASE_URI:
-            joiner = '&' if '?' in SQLALCHEMY_DATABASE_URI else '?'
-            SQLALCHEMY_DATABASE_URI = f"{SQLALCHEMY_DATABASE_URI}{joiner}sslmode=require"
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        """
+        Dynamically construct production database URI with proper fixes.
+        
+        This MUST be a property to ensure it's evaluated at request time,
+        not at class definition time.
+        """
+        db_uri = os.environ.get('DATABASE_URL')
+        
+        if not db_uri:
+            return None
+        
+        # Fix Render/Heroku postgres:// -> postgresql:// scheme
+        if db_uri.startswith('postgres://'):
+            db_uri = 'postgresql://' + db_uri[len('postgres://'):]
+        
+        # Enforce SSL for PostgreSQL connections if not explicitly disabled
+        if db_uri.startswith('postgresql://'):
+            if 'sslmode=' not in db_uri:
+                separator = '&' if '?' in db_uri else '?'
+                db_uri = f"{db_uri}{separator}sslmode=require"
+        
+        return db_uri
     
     # Disable SQL query logging in production
     SQLALCHEMY_ECHO = False

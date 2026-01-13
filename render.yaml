@@ -10,9 +10,10 @@ services:
     plan: free
     branch: main
     autodeploy: true
+    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
-    releaseCommand: flask db upgrade
-    startCommand: flask db upgrade && gunicorn wsgi:app --bind 0.0.0.0:$PORT
+    releaseCommand: flask db upgrade && flask reset-admin-password --username ${ADMIN_USERNAME}
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --log-level info
     envVars:
       - key: FLASK_APP
         value: wsgi:app
@@ -22,12 +23,15 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
+      # SECURITY: Admin credentials must be set in Render Dashboard
+      # DO NOT commit ADMIN_USERNAME, ADMIN_EMAIL, or ADMIN_PASSWORD to git
+      # These are declared here to document required env vars but have no value
       - key: ADMIN_USERNAME
-        value: bacseried@gmail.com
+        sync: false  # Managed in Render Dashboard only
       - key: ADMIN_EMAIL
-        value: bacseried@gmail.com
-      # IMPORTANT: Do NOT commit ADMIN_PASSWORD into git.
-      # Set ADMIN_PASSWORD as an Environment Variable in the Render dashboard.
+        sync: false  # Managed in Render Dashboard only
+      - key: ADMIN_PASSWORD
+        sync: false  # Managed in Render Dashboard only
       - key: PROTECTED_UPLOAD_FOLDER
         value: uploads_protected
       - key: UPLOAD_FOLDER

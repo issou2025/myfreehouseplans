@@ -26,6 +26,7 @@ from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
 from app.models import PlanFAQ
 from werkzeug.security import generate_password_hash
+from app.utils.db_resilience import with_db_resilience, safe_db_query
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -87,30 +88,19 @@ def admin_login():
 
     if form.validate_on_submit():
         username = (form.username.data or '').strip()
-        user = None
+        
+        # Use resilient database query with automatic retry
+        @with_db_resilience(max_retries=2, backoff_ms=100)
+        def find_admin_user():
+            return User.query.filter(
+                or_(User.username == username, User.email == username)
+            ).first()
+        
         try:
-            # Accept either username or email for convenience.
-            user = User.query.filter(or_(User.username == username, User.email == username)).first()
-        except (OperationalError, IntegrityError) as e:
-            # Common on managed Postgres: transient disconnects / stale pooled connections.
-            # Retry once after disposing the engine pool.
-            current_app.logger.warning('Admin login DB error (first attempt). Retrying once: %s', e)
-            db.session.rollback()
-            try:
-                db.engine.dispose()
-            except Exception:
-                pass
-            try:
-                user = User.query.filter(or_(User.username == username, User.email == username)).first()
-            except (OperationalError, IntegrityError) as e2:
-                current_app.logger.error('Admin login DB error (second attempt): %s', e2)
-                db.session.rollback()
-                flash('Database temporarily unavailable. Please try again shortly.', 'danger')
-                return render_template('admin/login.html', form=form)
-        except Exception as e:
-            current_app.logger.exception('Unexpected error during admin login query: %s', e)
-            db.session.rollback()
-            flash('An unexpected error occurred. Please contact support.', 'danger')
+            user = find_admin_user()
+        except Exception as exc:
+            current_app.logger.error('Admin login query failed permanently: %s', exc, exc_info=True)
+            flash('Database temporarily unavailable. Please try again shortly.', 'danger')
             return render_template('admin/login.html', form=form)
 
         if not user or user.role != 'superadmin' or not user.check_password(form.password.data):
