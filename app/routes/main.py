@@ -1023,6 +1023,9 @@ def contact():
         plan_choices = [('', 'Not sure yet')]
         form.plan_reference.choices = plan_choices
         plan_map = {}
+    if request.method == 'GET':
+        form.subject.data = form.subject.data or 'General contact request'
+        form.inquiry_type.data = form.inquiry_type.data or 'support'
     
     meta = generate_meta_tags(
         title='Contact',
@@ -1223,30 +1226,97 @@ def contact():
     return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
 
-@main_bp.route('/privacy')
-def privacy():
-    """Privacy policy page"""
-    
+@main_bp.route('/privacy-policy')
+def privacy_policy():
+    """Google-compliant privacy policy page."""
+
+    sections = [
+        {
+            'title': 'Data Collection',
+            'body': [
+                'My Free House Plans collects the information you provide when you browse the catalog, create an account, or submit a form. Typical data includes your name, email address, plan preferences, files you upload, and aggregated analytics collected through our site.',
+                'Purchase workflows managed through partners such as Gumroad share limited order metadata with us so we can deliver downloads and support.'
+            ],
+        },
+        {
+            'title': 'Cookies & Local Storage',
+            'body': [
+                'We use strictly necessary cookies to keep your favorites list and comparison tray synced across sessions. Optional analytics cookies measure which plans perform well so we can improve the catalog.',
+                'You can clear or block cookies at any time through your browser. Doing so may reset saved preferences such as language, currency, or shortlisted plans.'
+            ],
+        },
+        {
+            'title': 'Google AdSense Disclosure',
+            'body': [
+                'Third-party vendors, including Google, use cookies to serve ads based on your prior visits to My Free House Plans or other websites.',
+                'Google’s use of advertising cookies enables it and its partners to serve ads based on your visit to our site and other sites on the internet. You may opt out of personalized advertising by visiting Google’s Ads Settings or aboutads.info.'
+            ],
+        },
+        {
+            'title': 'Your Rights & Requests',
+            'body': [
+                'You can request a copy of the personal data we store, ask for corrections, or request deletion of non-essential records. We honor valid privacy requests within 30 days.',
+                'To exercise any right or raise a question, contact us at entreprise2rc@gmail.com or through the contact form on this site.'
+            ],
+        },
+    ]
+
     meta = generate_meta_tags(
         title='Privacy Policy',
-        description='How MyFreeHousePlans collects and uses information, and how to contact us with privacy questions.',
-        url=url_for('main.privacy', _external=True)
+        description='Understand how My Free House Plans handles analytics, cookies, Google AdSense data, and user privacy requests.',
+        url=url_for('main.privacy_policy', _external=True)
     )
-    
-    return render_template('privacy.html', meta=meta)
+
+    return render_template('privacy_policy.html', meta=meta, sections=sections, last_updated=datetime.utcnow().date())
+
+
+@main_bp.route('/privacy')
+def privacy():
+    """Backward-compatible alias for legacy /privacy."""
+    return redirect(url_for('main.privacy_policy'), code=301)
+
+
+@main_bp.route('/terms-of-service')
+def terms_of_service():
+    """Google-compliant terms of service page."""
+
+    clauses = [
+        {
+            'title': 'Intellectual Property',
+            'body': [
+                'All house plans, images, CAD files, and written content published on My Free House Plans remain the exclusive intellectual property of the studio or its licensors.',
+                'Purchasing a plan grants you a single-use, non-transferable license to construct one project. Reproduction, resale, or distribution of plan files without written permission is prohibited.'
+            ],
+        },
+        {
+            'title': 'Limitation of Liability',
+            'body': [
+                'House plans are provided “as-is” for informational and design inspiration purposes. Field conditions, local codes, soil reports, and engineering requirements may require modifications by licensed professionals.',
+                'My Free House Plans and its contributors are not liable for direct or indirect damages arising from the use of any plan, document, or consultation offered on this site.'
+            ],
+        },
+        {
+            'title': 'External Links & Third Parties',
+            'body': [
+                'Our catalog links to partners such as Gumroad for secure checkout and download fulfillment. We are not responsible for the content, policies, or availability of external websites.',
+                'When you leave our domain, review the destination’s policies to understand how your information will be handled.'
+            ],
+        },
+    ]
+
+    meta = generate_meta_tags(
+        title='Terms of Service',
+        description='Review the license, limitations, and third-party policies that govern your use of My Free House Plans.',
+        url=url_for('main.terms_of_service', _external=True)
+    )
+
+    return render_template('terms_of_service.html', meta=meta, clauses=clauses, last_updated=datetime.utcnow().date())
 
 
 @main_bp.route('/terms')
 def terms():
-    """Terms and conditions page"""
-    
-    meta = generate_meta_tags(
-        title='Terms & Conditions',
-        description='Terms for using MyFreeHousePlans and purchasing digital plan packs through Gumroad.',
-        url=url_for('main.terms', _external=True)
-    )
-    
-    return render_template('terms.html', meta=meta)
+    """Backward-compatible alias for legacy /terms."""
+    return redirect(url_for('main.terms_of_service'), code=301)
 
 
 @main_bp.route('/sitemap.xml')

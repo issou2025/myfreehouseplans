@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="legal-hero" aria-labelledby="privacy-title">
+    <div class="shell">
+        <p class="eyebrow">Google-compliant disclosure</p>
+        <h1 id="privacy-title">Privacy Policy</h1>
+        <p class="lead">This page explains how My Free House Plans collects information, why cookies are used, and how Google AdSense interacts with your browsing session.</p>
+        <p class="legal-meta">Last updated: {{ last_updated.strftime('%B %d, %Y') if last_updated else 'January 2026' }}</p>
+    </div>
+</section>
+<section class="shell legal-grid">
+    {% for section in sections %}
+    <article class="legal-card">
+        <h2>{{ section.title }}</h2>
+        {% for paragraph in section.body %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+    </article>
+    {% endfor %}
+    <article class="legal-card legal-card--accent" aria-label="Contact for privacy requests">
+        <h2>Your Privacy Contact</h2>
+        <p>Need to submit a privacy request? Email <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a> or use the <a href="{{ url_for('main.contact') }}">contact form</a>. We respond within 30 days.</p>
+        <ul>
+            <li><strong>Company:</strong> My Free House Plans</li>
+            <li><strong>Email:</strong> entreprise2rc@gmail.com</li>
+            <li><strong>Phone:</strong> +227 96 38 08 77</li>
+        </ul>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.legal-hero {
+    padding: 80px 0 40px;
+    background: linear-gradient(135deg, #05090f, #102241);
+    color: #fff;
+}
+.legal-hero .eyebrow { letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.8rem; opacity: 0.8; }
+.legal-hero h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 12px; }
+.legal-hero .lead { max-width: 720px; font-size: 1.1rem; }
+.legal-meta { margin-top: 20px; font-size: 0.9rem; opacity: 0.8; }
+.legal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    padding: 40px 0 80px;
+}
+.legal-card {
+    background: var(--color-surface, #fff);
+    border: 1px solid rgba(9, 13, 23, 0.12);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 20px 50px rgba(7, 14, 30, 0.08);
+}
+.legal-card h2 { font-size: 1.15rem; margin-bottom: 14px; color: var(--color-text, #0b1220); }
+.legal-card p { color: var(--color-muted, #434b5f); line-height: 1.6; }
+.legal-card--accent { border-color: rgba(22, 119, 190, 0.25); background: rgba(22, 119, 190, 0.08); }
+.legal-card--accent ul { list-style: none; padding: 0; margin: 16px 0 0; }
+.legal-card--accent li { margin-bottom: 6px; }
+@media (max-width: 640px) {
+    .legal-hero { padding: 60px 0 30px; }
+    .legal-card { padding: 22px; }
+}
+</style>
+{% endblock %}

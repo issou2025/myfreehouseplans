@@ -1,95 +1,153 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="contact-shell" aria-labelledby="contact-heading">
-    <div class="contact-intro">
-        <p class="eyebrow">Studio inbox</p>
-        <h1 id="contact-heading">Share your brief, files, or Gumroad receipt</h1>
-        <p class="lead">Attach site information, ask about pricing tiers, or request support for a specific reference code. We answer within two business days.</p>
-        <ul class="contact-highlights">
-            <li><strong>Support email:</strong> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></li>
-            <li><strong>Phone:</strong> +22796380877</li>
-            <li><strong>WhatsApp:</strong> <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
-            <li><strong>Response window:</strong> 72h average</li>
+<section class="contact-hero" aria-labelledby="contact-heading">
+    <div class="shell">
+        <p class="eyebrow">Talk to the studio</p>
+        <h1 id="contact-heading">We answer every message within two business days.</h1>
+        <p class="lead">Use the form below for plan questions, partnership ideas, or AdSense-required compliance inquiries. All fields are encrypted and protected.</p>
+    </div>
+</section>
+
+<section class="shell contact-grid" aria-label="Contact My Free House Plans">
+    <div class="contact-panel contact-panel--form">
+        <h2>Send a message</h2>
+        <p class="contact-panel__helper">We only need your name, email, and a short message. Attachments and extra details remain optional.</p>
+        <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="visually-hidden">
+                {{ form.subject(type='hidden', value=form.subject.data or 'General contact request') }}
+                {{ form.inquiry_type(class='hidden-input', value=form.inquiry_type.data or 'support') }}
+            </div>
+            <label class="form-field">
+                <span>{{ form.name.label.text }}</span>
+                {{ form.name(class="form-input", aria_label='Your name', placeholder='Jane Doe') }}
+                {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <label class="form-field">
+                <span>{{ form.email.label.text }}</span>
+                {{ form.email(class="form-input", aria_label='Your email', placeholder='you@email.com') }}
+                {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <label class="form-field">
+                <span>{{ form.message.label.text }}</span>
+                {{ form.message(class="form-textarea", rows=6, aria_label='Message', placeholder='Tell us about your project, question, or issue...') }}
+                {% for err in form.message.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+            </label>
+            <div class="form-field optional-field">
+                <details>
+                    <summary>Attach supporting files (optional)</summary>
+                    <label>
+                        <span>{{ form.attachment.label.text }}</span>
+                        {{ form.attachment(class="form-file") }}
+                        <p class="form-help">PDF, DOC/DOCX, DWG, JPG/PNG — up to 16 MB.</p>
+                        {% for err in form.attachment.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                    </label>
+                </details>
+            </div>
+            <label class="form-checkbox">
+                {{ form.subscribe() }}
+                <span>Send me quarterly studio updates</span>
+            </label>
+            <div class="form-submit">
+                {{ form.submit(class="btn btn-primary btn-cta") }}
+                <p class="microcopy">Submitting confirms you accept our <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a> and <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>.</p>
+            </div>
+        </form>
+    </div>
+    <div class="contact-panel contact-panel--info">
+        <h2>Prefer a direct line?</h2>
+        <ul class="contact-list">
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+22796380877">+227 96 38 08 77</a></li>
+            <li><i class="fa-brands fa-whatsapp"></i> <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Message on WhatsApp</a></li>
         </ul>
+        <div class="info-card">
+            <p class="muted">Business hours</p>
+            <p>Monday – Friday · 9:00–18:00 GMT</p>
+        </div>
         {% if plan_options %}
-        <div class="contact-ref-list" aria-label="Popular references">
-            <p class="muted">Recently referenced plans</p>
-            <ul>
+        <div class="info-card">
+            <p class="muted">Frequently referenced plans</p>
+            <ul class="plan-chip-list">
                 {% for plan in plan_options[:3] %}
                 <li>{{ plan.reference_code }} · {{ plan.title }}</li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
-    </div>
-    <div class="contact-form-card">
-        <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
-            {{ form.hidden_tag() }}
-            <div class="form-grid form-grid--2">
-                <label>
-                    <span>{{ form.name.label.text }}</span>
-                    {{ form.name(class="form-input", aria_label='Your name') }}
-                    {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-                <label>
-                    <span>{{ form.email.label.text }}</span>
-                    {{ form.email(class="form-input", aria_label='Your email') }}
-                    {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-                <label>
-                    <span>{{ form.phone.label.text }}</span>
-                    {{ form.phone(class="form-input", aria_label='Your phone number', placeholder='+22796380877') }}
-                    {% for err in form.phone.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-                <label>
-                    <span>{{ form.inquiry_type.label.text }}</span>
-                    {{ form.inquiry_type(class="form-select") }}
-                    {% for err in form.inquiry_type.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-            </div>
-            <label>
-                <span>{{ form.subject.label.text }}</span>
-                {{ form.subject(class="form-input", aria_label='Subject') }}
-                {% for err in form.subject.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-            </label>
-            <div class="form-grid form-grid--2">
-                <label>
-                    <span>{{ form.plan_reference.label.text }}</span>
-                    {{ form.plan_reference(class="form-select") }}
-                    {% for err in form.plan_reference.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-                <label>
-                    <span>{{ form.reference_code.label.text }}</span>
-                    {{ form.reference_code(class="form-input", placeholder='MYFREEHOUSEPLANS-0123/2026') }}
-                    {% for err in form.reference_code.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-                </label>
-            </div>
-            <label>
-                <span>{{ form.message.label.text }}</span>
-                {{ form.message(class="form-textarea", rows=6, aria_label='Message') }}
-                {% for err in form.message.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-            </label>
-            <label class="upload-field">
-                <span>{{ form.attachment.label.text }}</span>
-                {{ form.attachment(class="form-file") }}
-                <p class="form-help">Attach PDF, DOC/DOCX, DWG, or image files up to 16 MB.</p>
-                {% for err in form.attachment.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-            </label>
-            <label class="form-checkbox">
-                {{ form.subscribe() }}
-                <span>Send me quarterly studio updates</span>
-            </label>
-            <div class="form-submit">
-                {{ form.submit(class="btn btn-primary") }}
-            </div>
-        </form>
+        <div class="info-card info-card--accent">
+            <h3>After you submit</h3>
+            <ol>
+                <li>You receive an on-screen confirmation and email receipt.</li>
+                <li>We review your message within two business days.</li>
+                <li>A designer follows up with files, pricing, or next steps.</li>
+            </ol>
+        </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_css %}
 <style>
-    /* Ensure input text is visible on mobile */
-    .contact-form .form-input, .contact-form .form-textarea { color: #111; }
+.contact-hero {
+    padding: 90px 0 40px;
+    background: linear-gradient(135deg, #070a12, #112648);
+    color: #fff;
+}
+.contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 32px;
+    padding: 50px 0 90px;
+}
+.contact-panel {
+    border-radius: 28px;
+    padding: 32px;
+    background: var(--color-surface, #fff);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: 0 30px 60px rgba(8, 15, 32, 0.08);
+}
+.contact-panel--form { background: #fff; }
+.contact-panel--info { background: rgba(9, 13, 23, 0.03); }
+.contact-panel h2 { margin-top: 0; font-size: 1.4rem; }
+.contact-panel__helper { color: var(--color-muted, #4c5160); margin-bottom: 24px; }
+.contact-form .form-field { display: flex; flex-direction: column; margin-bottom: 18px; }
+.contact-form label span { font-weight: 600; margin-bottom: 6px; }
+.form-input,
+.form-textarea,
+.form-file {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(9, 13, 23, 0.2);
+    padding: 14px;
+    font-size: 1rem;
+    color: #0f172a;
+    background: #fff;
+}
+.form-textarea { min-height: 160px; resize: vertical; }
+.form-error { color: #c53030; font-size: 0.85rem; margin-top: 6px; }
+.form-help { font-size: 0.85rem; color: var(--color-muted, #4c5160); }
+.form-checkbox { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.form-submit { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+.contact-list { list-style: none; padding: 0; margin: 0 0 20px; }
+.contact-list li { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.info-card { border-radius: 20px; border: 1px solid rgba(9, 13, 23, 0.12); padding: 20px; margin-bottom: 18px; background: #fff; }
+.info-card--accent { background: rgba(15, 118, 110, 0.08); border-color: rgba(15, 118, 110, 0.3); }
+.plan-chip-list { list-style: none; padding: 0; margin: 0; }
+.plan-chip-list li { padding: 6px 0; border-bottom: 1px solid rgba(9, 13, 23, 0.08); }
+.plan-chip-list li:last-child { border-bottom: none; }
+.visually-hidden,
+.hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; padding: 0; margin: -1px; }
+.microcopy { font-size: 0.8rem; color: var(--color-muted, #5c6272); }
+@media (max-width: 640px) {
+    .contact-panel { padding: 24px; }
+    .contact-hero { padding: 70px 0 30px; }
+}
 </style>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const form = document.getElementById('contact-form');
@@ -97,14 +155,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const submit = form.querySelector('button[type="submit"], input[type="submit"]');
     form.addEventListener('submit', function(){
         if(submit){
-            try{
-                submit.disabled = true;
-                if(submit.tagName.toLowerCase() === 'input'){
-                    submit.value = 'Sending...';
-                } else {
-                    submit.innerText = 'Sending...';
-                }
-            }catch(e){/* ignore */}
+            submit.disabled = true;
+            submit.classList.add('is-loading');
+            if(submit.tagName.toLowerCase() === 'input'){
+                submit.value = 'Sending…';
+            } else {
+                submit.innerText = 'Sending…';
+            }
         }
     });
 });

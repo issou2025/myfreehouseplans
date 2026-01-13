@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="legal-hero legal-hero--ink" aria-labelledby="tos-title">
+    <div class="shell">
+        <p class="eyebrow">Usage terms</p>
+        <h1 id="tos-title">Terms of Service</h1>
+        <p class="lead">These terms govern your use of My Free House Plans, our downloadable files, and linked services such as Gumroad.</p>
+        <p class="legal-meta">Last updated: {{ last_updated.strftime('%B %d, %Y') if last_updated else 'January 2026' }}</p>
+    </div>
+</section>
+<section class="shell legal-grid">
+    {% for clause in clauses %}
+    <article class="legal-card">
+        <h2>{{ clause.title }}</h2>
+        {% for paragraph in clause.body %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+    </article>
+    {% endfor %}
+    <article class="legal-card legal-card--accent" aria-label="Additional terms">
+        <h2>How to reach us</h2>
+        <p>Questions about licensing, multi-build rights, or contractor usage? Email <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a> or start a conversation on the <a href="{{ url_for('main.contact') }}">contact page</a>.</p>
+        <p>Continuing to use this site confirms your acceptance of these terms and any updates we publish here.</p>
+    </article>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.legal-hero {
+    padding: 80px 0 40px;
+    background: linear-gradient(135deg, #05090f, #102241);
+    color: #fff;
+}
+.legal-hero--ink {
+    background: linear-gradient(140deg, #0b141f, #132d4f);
+}
+.legal-hero .eyebrow { letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.8rem; opacity: 0.8; }
+.legal-hero h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 12px; }
+.legal-hero .lead { max-width: 720px; font-size: 1.1rem; }
+.legal-meta { margin-top: 20px; font-size: 0.9rem; opacity: 0.8; }
+.legal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    padding: 40px 0 80px;
+}
+.legal-card {
+    background: var(--color-surface, #fff);
+    border: 1px solid rgba(9, 13, 23, 0.12);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 20px 50px rgba(7, 14, 30, 0.08);
+}
+.legal-card h2 { font-size: 1.15rem; margin-bottom: 14px; color: var(--color-text, #0b1220); }
+.legal-card p { color: var(--color-muted, #434b5f); line-height: 1.6; }
+.legal-card--accent { border-color: rgba(22, 119, 190, 0.25); background: rgba(22, 119, 190, 0.08); }
+@media (max-width: 640px) {
+    .legal-hero { padding: 60px 0 30px; }
+    .legal-card { padding: 22px; }
+}
+</style>
+{% endblock %}
