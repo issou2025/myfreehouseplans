@@ -231,13 +231,23 @@ class HousePlan(db.Model):
     
     @property
     def current_price(self):
-        """Return sale price if available, otherwise regular price"""
-        return self.sale_price if self.sale_price else self.price
+        """Return sale price if available, otherwise regular price.
+
+        Normalizes values so templates and SEO code don't crash if legacy
+        records contain NULLs or non-numeric strings.
+        """
+        sale = self._normalize_price(self.sale_price)
+        regular = self._normalize_price(self.price)
+        return sale if sale is not None else regular
     
     @property
     def is_on_sale(self):
         """Check if plan is on sale"""
-        return bool(self.sale_price and self.sale_price < self.price)
+        sale = self._normalize_price(self.sale_price)
+        regular = self._normalize_price(self.price)
+        if sale is None or regular is None:
+            return False
+        return sale < regular
     
     def increment_views(self):
         """Increment view counter"""
@@ -295,6 +305,8 @@ class HousePlan(db.Model):
     def pricing_tiers(self):
         """Return a structured view of pack pricing for UI rendering."""
         free_price = self._normalize_price(self.price_pack_1) or 0
+        pack_2_price = self._normalize_price(self.price_pack_2)
+        pack_3_price = self._normalize_price(self.price_pack_3)
         tiers = [
             {
                 'pack': 1,
@@ -306,14 +318,14 @@ class HousePlan(db.Model):
             {
                 'pack': 2,
                 'label': 'PDF Pro Pack',
-                'price': self.price_pack_2,
+                'price': pack_2_price,
                 'is_free': False,
                 'available': bool(self.gumroad_pack_2_url),
             },
             {
                 'pack': 3,
                 'label': 'Ultimate CAD Pack',
-                'price': self.price_pack_3,
+                'price': pack_3_price,
                 'is_free': False,
                 'available': bool(self.gumroad_pack_3_url),
             },
@@ -336,7 +348,7 @@ class HousePlan(db.Model):
         normalized = []
         for value in prices:
             price = self._normalize_price(value)
-            if price:
+            if price is not None and price > 0:
                 normalized.append(price)
         return min(normalized) if normalized else None
 

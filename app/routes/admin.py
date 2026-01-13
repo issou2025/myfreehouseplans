@@ -740,6 +740,15 @@ def edit_plan(id):
             except Exception:
                 current_app.logger.exception('Failed to prefill category_ids for plan id=%s', id)
                 form.category_ids.data = []
+
+        # On POST, if category_ids is missing from the submitted form, preserve existing categories.
+        # This protects price-only edits from failing validation or clearing categories.
+        if request.method == 'POST':
+            try:
+                if getattr(form.category_ids, 'raw_data', None) is None:
+                    form.category_ids.data = [c.id for c in (plan.categories or [])]
+            except Exception:
+                current_app.logger.exception('Failed to preserve category_ids on POST for plan id=%s', id)
     
         if form.validate_on_submit():
             try:
@@ -765,17 +774,23 @@ def edit_plan(id):
                     plan.price_pack_3 = None
                 if plan.price_pack_1 is None:
                     plan.price_pack_1 = 0
-                category_ids = form.category_ids.data or []
-                if category_ids:
-                    try:
-                        selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
-                    except Exception:
-                        current_app.logger.exception('Failed to load selected categories for plan id=%s; category_ids=%s', plan.id, category_ids)
+
+                # Only update categories if the field was actually submitted.
+                if getattr(form.category_ids, 'raw_data', None) is not None:
+                    category_ids = form.category_ids.data or []
+                    if category_ids:
+                        try:
+                            selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
+                        except Exception:
+                            current_app.logger.exception(
+                                'Failed to load selected categories for plan id=%s; category_ids=%s',
+                                plan.id, category_ids
+                            )
+                            selected_categories = []
+                            flash('Selected categories could not be saved (database error).', 'warning')
+                    else:
                         selected_categories = []
-                        flash('Selected categories could not be saved (database error).', 'warning')
-                else:
-                    selected_categories = []
-                plan.categories = selected_categories
+                    plan.categories = selected_categories
                 plan.is_featured = form.is_featured.data
                 plan.is_published = form.is_published.data
 

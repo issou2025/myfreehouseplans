@@ -1,10 +1,12 @@
 {% for plan in plans %}
+{% set plan_title = plan.title|default('House Plan', true) %}
+{% set plan_ref = plan.reference_code|default(plan.id, true) %}
 <article class="plan-card plan-card--lux" itemscope itemtype="https://schema.org/Product">
     <div class="plan-card__media" aria-hidden="true">
         {% set card_image = plan.cover_image or plan.main_image %}
         {% if card_image %}
             <div class="skeleton"></div>
-            <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}" title="Open {{ plan.title }}" itemprop="url">
+            <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}" title="Open {{ plan_title }}" itemprop="url">
                 {{ picture_tag(card_image, alt='', preset=CARD_PRESET, variant='base', loading='lazy', css_class='plan-card__img js-lazy-img') }}
             </a>
         {% else %}
@@ -17,13 +19,13 @@
         <button
             class="favorite-toggle"
             type="button"
-            title="Save {{ plan.title }}"
+            title="Save {{ plan_title }}"
             aria-pressed="false"
             data-favorite-toggle
             data-plan-id="{{ plan.id }}"
             data-plan-slug="{{ plan.slug }}"
-            data-plan-title="{{ plan.title }}"
-            data-plan-reference="{{ plan.reference_code }}"
+            data-plan-title="{{ plan_title }}"
+            data-plan-reference="{{ plan_ref }}"
             data-plan-thumb="{{ upload_url(card_image) if card_image else '' }}">
             <span class="favorite-toggle__icon" aria-hidden="true">♡</span>
             <span class="favorite-toggle__label">Add to favorites</span>
@@ -40,8 +42,8 @@
                     Thoughtful living
                 {% endif %}
             </p>
-            <h3 class="plan-card__title" itemprop="name"><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
-            <div class="plan-card__ref" aria-label="Reference code">Ref {{ plan.reference_code }}</div>
+            <h3 class="plan-card__title" itemprop="name"><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan_title }}</a></h3>
+            <div class="plan-card__ref" aria-label="Reference code">Ref {{ plan_ref }}</div>
         </div>
 
         <div class="plan-card__facts" aria-label="Key facts">
@@ -67,8 +69,8 @@
                 data-compare-toggle
                 data-plan-id="{{ plan.id }}"
                 data-plan-slug="{{ plan.slug }}"
-                data-plan-title="{{ plan.title }}"
-                data-plan-reference="{{ plan.reference_code }}"
+                data-plan-title="{{ plan_title }}"
+                data-plan-reference="{{ plan_ref }}"
                 data-plan-thumb="{{ upload_url(card_image) if card_image else '' }}"
                 data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or '' }}"
                 data-plan-area-m2="{{ plan.area_m2 or '' }}"

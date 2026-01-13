@@ -257,6 +257,21 @@ class HousePlanForm(FlaskForm):
         if not category_ids.data or len(category_ids.data) < 1:
             raise ValidationError('Please select at least one category for this plan.')
 
+    def validate_sale_price(self, sale_price):
+        """Prevent inconsistent price states.
+
+        Sale price is optional, but if provided it must not exceed the base price.
+        """
+        if sale_price.data is None:
+            return
+        if self.price.data is None:
+            return
+        try:
+            if sale_price.data > self.price.data:
+                raise ValidationError('Sale price must be less than or equal to the display price.')
+        except TypeError:
+            raise ValidationError('Invalid sale price value.')
+
 
 class CategoryForm(FlaskForm):
     """Form for creating/editing categories (Admin)"""

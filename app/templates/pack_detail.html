@@ -11,12 +11,14 @@
 
 {% block content %}
 {% set hero_image = plan.cover_image or plan.main_image %}
+{% set plan_title = plan.title|default('House Plan', true) %}
+{% set plan_ref = plan.reference_code|default(plan.id, true) %}
 <div class="shell">
     <article class="plan-detail" itemscope itemtype="https://schema.org/Product">
            <div data-plan-track hidden
              data-plan-slug="{{ plan.slug }}"
-             data-plan-title="{{ plan.title }}"
-             data-plan-reference="{{ plan.reference_code }}"
+                         data-plan-title="{{ plan_title }}"
+                         data-plan-reference="{{ plan_ref }}"
              data-plan-thumb="{{ url_for('static', filename=hero_image) if hero_image else '' }}"
              data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
                data-plan-bedrooms="{{ plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or '' }}"
@@ -24,15 +26,15 @@
         <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="{{ url_for('main.index') }}">Home</a>
             <a href="{{ url_for('main.packs') }}">Plans</a>
-            <span aria-current="page">{{ plan.title }}</span>
+                        <span aria-current="page">{{ plan_title }}</span>
         </nav>
 
         <div class="plan-hero">
             <div class="plan-hero__media">
                 {% if hero_image %}
                 <figure>
-                    {{ picture_tag(hero_image, alt=plan.title, preset=HERO_PRESET, orientation_swap=True, loading='eager', itemprop='image') }}
-                    <figcaption>{{ plan.title }} · Perspective study</figcaption>
+                    {{ picture_tag(hero_image, alt=plan_title, preset=HERO_PRESET, orientation_swap=True, loading='eager', itemprop='image') }}
+                    <figcaption>{{ plan_title }} · Perspective study</figcaption>
                 </figure>
                 {% else %}
                 <div class="plan-card__placeholder">Rendering in progress</div>
@@ -52,10 +54,10 @@
                         Residential concept
                     {% endif %}
                 </p>
-                <h1 itemprop="name">{{ plan.title }}</h1>
+                <h1 itemprop="name">{{ plan_title }}</h1>
                 <p class="plan-hero__lead" itemprop="description">{{ plan.architectural_summary if plan.architectural_summary else 'A thoughtfully designed house plan.' }}</p>
                 <div class="plan-meta-bar">
-                    <span class="badge badge--ghost">Ref {{ plan.reference_code if plan.reference_code else plan.id }}</span>
+                    <span class="badge badge--ghost">Ref {{ plan_ref }}</span>
                     {% if plan.has_free_download %}
                         <span class="badge badge--soft">Free pack ready</span>
                     {% else %}
@@ -70,8 +72,8 @@
                         data-favorite-toggle
                         data-plan-id="{{ plan.id }}"
                         data-plan-slug="{{ plan.slug }}"
-                        data-plan-title="{{ plan.title }}"
-                        data-plan-reference="{{ plan.reference_code }}"
+                        data-plan-title="{{ plan_title }}"
+                        data-plan-reference="{{ plan_ref }}"
                         data-plan-thumb="{{ url_for('static', filename=hero_image) if hero_image else '' }}">
                         <span class="favorite-toggle__icon" aria-hidden="true">♡</span>
                         <span class="favorite-toggle__label">Add to favorites</span>
@@ -86,8 +88,8 @@
                         data-compare-toggle
                         data-plan-id="{{ plan.id }}"
                         data-plan-slug="{{ plan.slug }}"
-                        data-plan-title="{{ plan.title }}"
-                        data-plan-reference="{{ plan.reference_code }}"
+                        data-plan-title="{{ plan_title }}"
+                        data-plan-reference="{{ plan_ref }}"
                         data-plan-thumb="{{ url_for('static', filename=hero_image) if hero_image else '' }}"
                         data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
                         data-plan-area-m2="{{ plan.area_m2 or '' }}"
@@ -106,7 +108,7 @@
                 <div class="plan-trust-badges" role="list" aria-label="Trust notes">
                     <span role="listitem">Architect-designed</span>
                     <span role="listitem">Build-ready drawings</span>
-                    <span role="listitem">Reference {{ plan.reference_code }}</span>
+                    <span role="listitem">Reference {{ plan_ref }}</span>
                 </div>
                 <blockquote class="plan-testimonial">
                     “We deliver the same level of care as for our private clients: clear documentation, responsive humans, no surprises.”
@@ -380,7 +382,7 @@
                     <p class="eyebrow">Editorial note</p>
                     <h2>The story of this plan</h2>
                 </div>
-                <div class="rich-text" itemprop="description">{{ plan.description | safe }}</div>
+                <div class="rich-text" itemprop="description">{{ plan.description|default('', true) | safe }}</div>
             </article>
 
             {% if plan.design_philosophy or plan.lifestyle_suitability or plan.customization_potential %}
@@ -393,19 +395,19 @@
                     {% if plan.design_philosophy %}
                     <details class="plan-accordion__item" open>
                         <summary>Why it was designed this way</summary>
-                        <div class="rich-text">{{ plan.design_philosophy | replace('\n','<br>') | safe }}</div>
+                        <div class="rich-text">{{ plan.design_philosophy|default('', true) | replace('\n','<br>') | safe }}</div>
                     </details>
                     {% endif %}
                     {% if plan.lifestyle_suitability %}
                     <details class="plan-accordion__item">
                         <summary>What lifestyle it supports</summary>
-                        <div class="rich-text">{{ plan.lifestyle_suitability | replace('\n','<br>') | safe }}</div>
+                        <div class="rich-text">{{ plan.lifestyle_suitability|default('', true) | replace('\n','<br>') | safe }}</div>
                     </details>
                     {% endif %}
                     {% if plan.customization_potential %}
                     <details class="plan-accordion__item">
                         <summary>How it adapts to your needs</summary>
-                        <div class="rich-text">{{ plan.customization_potential | replace('\n','<br>') | safe }}</div>
+                        <div class="rich-text">{{ plan.customization_potential|default('', true) | replace('\n','<br>') | safe }}</div>
                     </details>
                     {% endif %}
                 </div>
@@ -418,7 +420,7 @@
                     <p class="eyebrow">Highlights</p>
                     <h2>Main features</h2>
                 </div>
-                <div class="rich-text">{{ plan.main_features | replace('\n','<br>') | safe }}</div>
+                <div class="rich-text">{{ plan.main_features|default('', true) | replace('\n','<br>') | safe }}</div>
             </article>
             {% endif %}
 
@@ -428,7 +430,7 @@
                     <p class="eyebrow">Layouts</p>
                     <h2>Room-by-room</h2>
                 </div>
-                <div class="rich-text">{{ plan.room_details | replace('\n','<br>') | safe }}</div>
+                <div class="rich-text">{{ plan.room_details|default('', true) | replace('\n','<br>') | safe }}</div>
             </article>
             {% endif %}
 
@@ -442,7 +444,7 @@
                     <p class="muted">{{ plan.estimated_construction_cost_note }}</p>
                 {% endif %}
                 {% if plan.construction_notes %}
-                    <div class="rich-text">{{ plan.construction_notes | replace('\n','<br>') | safe }}</div>
+                    <div class="rich-text">{{ plan.construction_notes|default('', true) | replace('\n','<br>') | safe }}</div>
                 {% endif %}
             </article>
             {% endif %}

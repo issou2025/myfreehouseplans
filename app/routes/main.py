@@ -651,11 +651,15 @@ def pack_detail(slug):
                 flash('The plan you requested could not be found or is not available.', 'warning')
                 return redirect(url_for('main.packs'))
             
-            # Verify critical plan data integrity before rendering
-            if not plan.title or not plan.description:
-                current_app.logger.error('Plan id=%s missing critical fields (title or description)', plan.id)
-                flash('This plan has incomplete data. Please contact support.', 'danger')
-                return redirect(url_for('main.packs'))
+            # Data integrity guardrail: do not crash if legacy records are incomplete.
+            # Templates render safe fallbacks for missing fields.
+            if not getattr(plan, 'title', None) or not getattr(plan, 'description', None):
+                current_app.logger.error(
+                    'Plan id=%s has incomplete fields (title=%r, description_present=%s)',
+                    getattr(plan, 'id', None),
+                    getattr(plan, 'title', None),
+                    bool(getattr(plan, 'description', None))
+                )
             
             # Increment view count (non-fatal if this fails)
             try:
