@@ -48,6 +48,9 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'dwg', 'doc', 'docx'}
+    # Placeholder used when an expected local image is missing.
+    # (Kept in static so it always resolves in templates.)
+    IMAGE_PLACEHOLDER = 'images/placeholder.svg'
     # Protected uploads (not served by static). Used for paid downloads and private artifacts.
     PROTECTED_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads_protected')
     PROTECTED_FOLDERS = {'pdfs', 'support'}

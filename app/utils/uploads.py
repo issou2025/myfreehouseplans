@@ -107,17 +107,18 @@ def save_uploaded_file(
         raise ValueError('Invalid upload object provided. Please reselect the file and try again.')
 
     # Sanitize and validate filename
+    # NOTE: secure_filename() keeps dots. We collapse extra dots in the basename
+    # so users can upload names like "plan.v2.final.jpg" without triggering a
+    # false-positive "multiple extensions" rejection.
     filename = secure_filename(file.filename)
     if not filename or '.' not in filename:
         raise ValueError('The uploaded file must include a valid filename and extension.')
-    
-    # Check for double extensions (security: prevents .pdf.exe attacks)
-    parts = filename.lower().split('.')
-    if len(parts) > 2:
-        raise ValueError(
-            'Files with multiple extensions are not allowed for security reasons. '
-            f'Detected extensions: {", ".join(parts[1:])}'
-        )
+
+    base, ext_part = filename.rsplit('.', 1)
+    ext_part = ext_part.lower()
+    # Collapse any remaining dots in the base name to avoid ambiguous names.
+    base = (base or 'upload').replace('.', '_')
+    filename = f"{base}.{ext_part}"
 
     ext = filename.rsplit('.', 1)[1].lower()
     allowed = allowed_extensions or current_app.config.get('ALLOWED_EXTENSIONS', set())

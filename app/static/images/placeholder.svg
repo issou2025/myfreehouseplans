@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Image placeholder">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f4f6f8"/>
+      <stop offset="1" stop-color="#e9edf2"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <rect x="70" y="70" width="1060" height="660" rx="28" fill="#ffffff" stroke="#d6dee8" stroke-width="6"/>
+  <g fill="none" stroke="#c2ccd8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,0)">
+    <path d="M260 560l170-190 130 150 160-210 250 250"/>
+    <circle cx="410" cy="330" r="46"/>
+  </g>
+  <text x="600" y="640" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="44" fill="#7a8796">Image unavailable</text>
+</svg>
