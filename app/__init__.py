@@ -8,12 +8,92 @@ Flask application instances with different configurations.
 from flask import Flask, render_template
 from app.config import config
 from app.extensions import db, migrate, login_manager, mail
-from app.bootstrap import ensure_database_ready
 from datetime import datetime
 import os
+import importlib
+from sqlalchemy import inspect, text
 # NOTE: Removed destructive bootstrap behavior. Admin seeding and any
 # DROP/CREATE operations are intentionally disabled in the factory.
 # Use explicit CLI commands (app.cli) to seed data in controlled environments.
+
+
+def _safe_log(app, level: str, message: str, *args, **kwargs) -> None:
+    """Log without risking startup due to logger misconfiguration."""
+    try:
+        logger = getattr(app.logger, level)
+        logger(message, *args, **kwargs)
+    except Exception:
+        try:
+            import sys
+
+            print(f"[{level.upper()}] {message % args if args else message}", file=sys.stderr)
+        except Exception:
+            pass
+
+
+def _force_create_tables(app) -> None:
+    """Best-effort schema creation.
+
+    NOTE: This is intentionally resilient and non-fatal for zero-touch deployments.
+    It will:
+    - Import models lazily (inside app_context) to avoid circular imports
+    - Run db.create_all() to create missing tables if possible
+    - Log warnings/errors but NEVER abort the process
+    """
+    if os.environ.get('SKIP_STARTUP_DB_TASKS') == '1':
+        _safe_log(app, 'warning', 'Skipping startup DB tasks due to SKIP_STARTUP_DB_TASKS=1')
+        return
+
+    with app.app_context():
+        # 1) Verify connectivity (non-fatal)
+        try:
+            db.session.execute(text('SELECT 1'))
+            db.session.commit()
+            _safe_log(app, 'info', '✓ Database connectivity verified')
+        except Exception as exc:
+            db.session.rollback()
+            _safe_log(app, 'error', '✗ Database connectivity check failed (continuing): %s', exc, exc_info=True)
+            return
+
+        # 2) Import models inside context to populate metadata (avoids circular imports)
+        try:
+            importlib.import_module('app.models')
+        except Exception as exc:
+            _safe_log(app, 'error', '✗ Failed to import models during bootstrap (continuing): %s', exc, exc_info=True)
+            return
+
+        # 3) Force table creation
+        try:
+            _safe_log(
+                app,
+                'warning',
+                '⚠ Running db.create_all() startup bootstrap (zero-touch). '
+                'This is not a substitute for migrations in the long term.'
+            )
+            db.create_all()
+            _safe_log(app, 'info', '✓ db.create_all() completed')
+        except Exception as exc:
+            _safe_log(app, 'error', '✗ db.create_all() failed (continuing): %s', exc, exc_info=True)
+            return
+
+        # 4) Non-fatal schema sanity check
+        try:
+            inspector = inspect(db.engine)
+            existing = set(inspector.get_table_names())
+            required = set(db.metadata.tables.keys())
+            missing = sorted(required - existing)
+            if missing:
+                _safe_log(
+                    app,
+                    'warning',
+                    '⚠ Schema still appears incomplete after create_all(). Missing tables: %s. '
+                    'App will continue, but features may fail until migrations run.',
+                    ', '.join(missing),
+                )
+            else:
+                _safe_log(app, 'info', '✓ All required tables present (%d)', len(required))
+        except Exception as exc:
+            _safe_log(app, 'warning', '⚠ Could not verify schema completeness (continuing): %s', exc, exc_info=True)
 
 
 def create_app(config_name='default'):
@@ -27,11 +107,18 @@ def create_app(config_name='default'):
         Flask: Configured Flask application instance
     """
     
+    # Normalize config name
+    config_name = (config_name or 'default').lower()
+
     # Create Flask app instance
     app = Flask(__name__)
     
     # Load configuration
-    app.config.from_object(config[config_name])
+    # IMPORTANT: Instantiate the config object so @property values (like
+    # ProductionConfig.SQLALCHEMY_DATABASE_URI) are evaluated correctly.
+    cfg = config.get(config_name) or config['default']
+    cfg_obj = cfg() if isinstance(cfg, type) else cfg
+    app.config.from_object(cfg_obj)
 
     # Ensure SECRET_KEY exists for any environment that uses sessions/CSRF.
     # - Production: enforced via environment variable (fail fast).
@@ -54,6 +141,15 @@ def create_app(config_name='default'):
         if not db_uri:
             app.logger.error('Production requires DATABASE_URL (SQLALCHEMY_DATABASE_URI) to be set')
             raise RuntimeError('Missing DATABASE_URL in production')
+
+        # Extra defensive fix: Render/Heroku often provide postgres:// which
+        # SQLAlchemy rejects. This is also handled in ProductionConfig, but we
+        # normalize here too to be robust.
+        if isinstance(db_uri, str) and db_uri.startswith('postgres://'):
+            app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://' + db_uri[len('postgres://'):]
+            app.logger.warning('✓ Normalized DATABASE_URL prefix: postgres:// -> postgresql://')
+            db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+
         if db_uri.strip().startswith('sqlite:'):
             app.logger.error('Production requires PostgreSQL (DATABASE_URL must not be sqlite): %s', db_uri)
             raise RuntimeError('SQLite not allowed in production')
@@ -69,12 +165,11 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
 
-    # Intelligent database initialization with proper fallback strategy
-    # This verifies database connectivity and schema integrity
-    # In production: FAILS FAST if tables are missing (requires migrations)
-    # In development: Can fallback to db.create_all() as emergency measure
-    from app.db_init import intelligent_db_init
-    intelligent_db_init(app)
+    # Zero-touch bootstrap (Render-friendly): force-create tables and NEVER
+    # hard-fail startup if schema is incomplete.
+    # This is intentionally resilient, and imports models inside app_context
+    # to avoid circular import issues.
+    _force_create_tables(app)
 
     
     # Register blueprints
