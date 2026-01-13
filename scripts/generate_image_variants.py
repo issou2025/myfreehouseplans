@@ -76,15 +76,22 @@ def generate(
     generate_avif: bool,
     generate_webp: bool,
 ) -> None:
-    images_root = uploads_root / "images"
-    if not images_root.exists():
-        raise SystemExit(f"No uploads image directory found at: {images_root}")
+    if not uploads_root.exists():
+        raise SystemExit(f"No uploads directory found at: {uploads_root}")
 
     if generate_avif and not AVIF_AVAILABLE:
         print("[warn] AVIF requested but pillow-avif-plugin is unavailable; skipping AVIF outputs.")
         generate_avif = False
 
-    for src in _iter_images(images_root):
+    for src in _iter_images(uploads_root):
+        # Never generate variants-of-variants.
+        try:
+            rel_from_uploads = src.relative_to(uploads_root)
+        except Exception:
+            continue
+        if rel_from_uploads.parts and rel_from_uploads.parts[0] == "variants":
+            continue
+
         rel = src.relative_to(uploads_root)
         stem = src.stem
         parent = rel.parent

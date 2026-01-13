@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from flask import url_for
+from flask import current_app, url_for
 from markupsafe import Markup, escape
 
 from app.utils.media import is_absolute_url, upload_url
@@ -81,6 +81,32 @@ def picture_tag(
 
     original_rel = value
     fallback_src = upload_url(original_rel) or ""
+
+    # If responsive variants have not been generated yet, do not emit <source>
+    # tags or srcset pointing at missing files. Some browsers will select a
+    # missing srcset candidate and render a broken image even though the
+    # original upload exists. For admin uploads this is common (new files).
+    variants_available = False
+    try:
+        static_folder = current_app.static_folder
+        if static_folder:
+            static_root = Path(static_folder).resolve()
+            probe = _variant_relpath(original_rel, variant=variant, width=preset.widths[0], fmt="webp")
+            variants_available = (static_root / probe).exists()
+    except Exception:
+        variants_available = False
+
+    if not variants_available:
+        attrs = []
+        if css_class:
+            attrs.append(f"class=\"{escape(css_class)}\"")
+        if itemprop:
+            attrs.append(f"itemprop=\"{escape(itemprop)}\"")
+        attrs.append(f"src=\"{escape(fallback_src)}\"")
+        attrs.append(f"alt=\"{escape(alt)}\"")
+        attrs.append(f"loading=\"{escape(loading)}\"")
+        attrs.append(f"decoding=\"{escape(decoding)}\"")
+        return Markup(f"<img {' '.join(attrs)}>")
 
     img_attrs = []
     if css_class:
