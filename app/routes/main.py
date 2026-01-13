@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.utils.media import is_absolute_url, upload_url
 from app.utils.visitor_tracking import tag_visit_identity
+from werkzeug.exceptions import HTTPException
 
 # Create Blueprint
 main_bp = Blueprint('main', __name__)
@@ -633,66 +634,42 @@ def insight_page(slug):
 
 @main_bp.route('/plan/<slug>')
 def pack_detail(slug):
-    """House plan detail page - bulletproofed with comprehensive error handling"""
-    
+    """Public plan detail page.
+
+    This route must never 500 due to missing optional fields or relationships.
+    """
+
+    plan = None
     try:
-        plan = None
+        plan = (
+            HousePlan.query
+            .options(selectinload(HousePlan.categories))
+            .filter_by(slug=slug, is_published=True)
+            .first_or_404()
+        )
+
+        category_name = plan.category.name if getattr(plan, 'category', None) else 'No Category'
+
+        # Increment view count (non-fatal).
         try:
-            # Get plan by slug or 404
-            plan = (
-                HousePlan.query
-                .options(selectinload(HousePlan.categories))
-                .filter_by(slug=slug, is_published=True)
-                .first()
-            )
-            
-            if plan is None:
-                current_app.logger.warning('Plan not found for slug=%s (or not published)', slug)
-                flash('The plan you requested could not be found or is not available.', 'warning')
-                return redirect(url_for('main.packs'))
-            
-            # Data integrity guardrail: do not crash if legacy records are incomplete.
-            # Templates render safe fallbacks for missing fields.
-            if not getattr(plan, 'title', None) or not getattr(plan, 'description', None):
-                current_app.logger.error(
-                    'Plan id=%s has incomplete fields (title=%r, description_present=%s)',
-                    getattr(plan, 'id', None),
-                    getattr(plan, 'title', None),
-                    bool(getattr(plan, 'description', None))
-                )
-            
-            # Increment view count (non-fatal if this fails)
-            try:
-                plan.increment_views()
-            except Exception as view_exc:
-                current_app.logger.warning('Failed to increment view count for plan id=%s: %s', plan.id, view_exc)
-            
-        except Exception as query_exc:
-            current_app.logger.exception('Database query failed on plan detail page for slug=%s', slug)
-            flash('Unable to load plan details right now. Please try again later.', 'danger')
-            return redirect(url_for('main.packs'))
-        
-        # Find similar plans (non-fatal if this fails)
+            plan.increment_views()
+        except Exception as view_exc:
+            current_app.logger.warning('Failed to increment view count for plan id=%s: %s', plan.id, view_exc)
+
         similar_plans = []
         try:
             similar_plans = _find_similar_plans(plan, limit=6)
         except Exception as similar_exc:
             current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', plan.id, similar_exc)
-        
-        # SEO meta tags (use safe fallbacks)
-        try:
-            meta = generate_meta_tags(
-                title=getattr(plan, 'meta_title', None) or plan.title,
-                description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
-                keywords=getattr(plan, 'meta_keywords', None),
-                url=url_for('main.pack_detail', slug=plan.slug, _external=True),
-                type='product'
-            )
-        except Exception as meta_exc:
-            current_app.logger.warning('Failed to generate meta tags for plan id=%s: %s', plan.id, meta_exc)
-            meta = {'title': plan.title, 'description': ''}
-        
-        # Structured data for product (non-fatal)
+
+        meta = generate_meta_tags(
+            title=getattr(plan, 'meta_title', None) or plan.title,
+            description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
+            keywords=getattr(plan, 'meta_keywords', None),
+            url=url_for('main.pack_detail', slug=plan.slug, _external=True),
+            type='product'
+        )
+
         product_schema = None
         try:
             product_schema = generate_product_schema(plan)
@@ -703,13 +680,11 @@ def pack_detail(slug):
         faqs = []
         faq_schema = None
         try:
-            from app.models import PlanFAQ
             if getattr(plan, 'faqs', None):
                 faqs = list(plan.faqs) if plan.faqs else []
             if not faqs and hasattr(plan, 'default_faqs'):
                 faqs = plan.default_faqs()
-            
-            # Build structured FAQ schema
+
             if faqs:
                 faq_schema = {
                     '@context': 'https://schema.org',
@@ -736,11 +711,10 @@ def pack_detail(slug):
                     except Exception:
                         continue
         except Exception as faq_exc:
-            current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', plan.id, faq_exc)
+            current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', getattr(plan, 'id', None), faq_exc)
             faqs = []
             faq_schema = None
-        
-        # Breadcrumb schema (non-fatal)
+
         breadcrumb_schema = None
         try:
             breadcrumbs = [
@@ -751,20 +725,58 @@ def pack_detail(slug):
             breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
         except Exception as breadcrumb_exc:
             current_app.logger.warning('Failed to generate breadcrumb schema for plan id=%s: %s', plan.id, breadcrumb_exc)
-        
-        return render_template('pack_detail.html',
-                             plan=plan,
-                             faqs=faqs,
-                             faq_schema=faq_schema,
-                             similar_plans=similar_plans,
-                             meta=meta,
-                             product_schema=product_schema,
-                             breadcrumb_schema=breadcrumb_schema)
-    
-    except Exception as fatal_exc:
-        # Catch-all for template rendering errors or any other unexpected failures
-        current_app.logger.exception('Fatal error in pack_detail route for slug=%s', slug)
+
+        return render_template(
+            'pack_detail.html',
+            plan=plan,
+            category_name=category_name,
+            faqs=faqs,
+            faq_schema=faq_schema,
+            similar_plans=similar_plans,
+            meta=meta,
+            product_schema=product_schema,
+            breadcrumb_schema=breadcrumb_schema,
+        )
+
+    except HTTPException:
+        # Preserve correct HTTP error behavior (404, etc.).
+        raise
+    except Exception as e:
+        # Ensure the session is clean after any error.
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        plan_id = getattr(plan, 'id', None)
+        current_app.logger.error(f'Plan Detail Error for ID {plan_id}: {e}', exc_info=True)
         flash('Unable to display this plan right now. Please try again later or contact support.', 'danger')
+        return redirect(url_for('main.packs'))
+
+
+@main_bp.route('/plan/id/<int:id>')
+def plan_detail_by_id(id: int):
+    """ID-based plan detail entrypoint.
+
+    Useful when links are built from DB IDs. Redirects to canonical slug URL.
+    """
+
+    try:
+        plan = (
+            db.session.query(HousePlan)
+            .options(selectinload(HousePlan.categories))
+            .filter_by(id=id)
+            .first_or_404()
+        )
+        return redirect(url_for('main.pack_detail', slug=plan.slug), code=302)
+    except HTTPException:
+        raise
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.error(f'Plan Detail Error for ID {id}: {e}', exc_info=True)
+        flash('Unable to display this plan right now. Please try again later.', 'danger')
         return redirect(url_for('main.packs'))
 
 

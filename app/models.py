@@ -196,6 +196,20 @@ class HousePlan(db.Model):
         back_populates='plans',
         lazy='selectin',
     )
+
+    @property
+    def category(self):
+        """Return a primary category when present.
+
+        The data model supports many-to-many categories, but some templates and
+        route logic expect a single `.category` relationship. This property
+        provides a safe, backward-compatible accessor that returns the first
+        category or None.
+        """
+        try:
+            return self.categories[0] if self.categories else None
+        except Exception:
+            return None
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

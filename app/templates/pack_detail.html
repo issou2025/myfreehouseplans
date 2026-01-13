@@ -13,10 +13,11 @@
 {% set hero_image = plan.cover_image or plan.main_image %}
 {% set plan_title = plan.title|default('House Plan', true) %}
 {% set plan_ref = plan.reference_code|default(plan.id, true) %}
+{% set plan_slug = plan.slug|default('', true) %}
 <div class="shell">
     <article class="plan-detail" itemscope itemtype="https://schema.org/Product">
            <div data-plan-track hidden
-             data-plan-slug="{{ plan.slug }}"
+                         data-plan-slug="{{ plan_slug }}"
                          data-plan-title="{{ plan_title }}"
                          data-plan-reference="{{ plan_ref }}"
                          data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
@@ -51,7 +52,7 @@
                             <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
                         {% endfor %}
                     {% else %}
-                        Residential concept
+                        {{ plan.category.name if plan.category else (category_name|default('Uncategorized', true)) }}
                     {% endif %}
                 </p>
                 <h1 itemprop="name">{{ plan_title }}</h1>
@@ -87,7 +88,7 @@
                         aria-pressed="false"
                         data-compare-toggle
                         data-plan-id="{{ plan.id }}"
-                        data-plan-slug="{{ plan.slug }}"
+                        data-plan-slug="{{ plan_slug }}"
                         data-plan-title="{{ plan_title }}"
                         data-plan-reference="{{ plan_ref }}"
                         data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
@@ -100,7 +101,7 @@
                         data-plan-price="{{ plan.starting_paid_price or '' }}"
                         data-plan-free="{{ '1' if plan.has_free_download else '0' }}"
                         data-plan-categories="{{ plan.categories|map(attribute='name')|join(' · ') if plan.categories else '' }}"
-                        data-plan-url="{{ url_for('main.pack_detail', slug=plan.slug) }}">
+                        data-plan-url="{{ url_for('main.pack_detail', slug=plan_slug) }}">
                         <span class="compare-toggle__label">Add to compare</span>
                     </button>
                     <p class="microcopy">Pick up to three plans to compare side by side.</p>
