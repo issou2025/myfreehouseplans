@@ -2,156 +2,282 @@
 
 {% block title %}{{ plan.title|default('Plan', true) }}{% endblock %}
 
-{% block extra_css %}
-<style>
-  .pd-wrap {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    gap: clamp(20px, 3vw, 36px);
-    align-items: start;
-  }
-  @media (max-width: 960px) {
-    .pd-wrap { grid-template-columns: 1fr; }
-  }
-
-  .pd-media {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-  }
-  .pd-media img {
-    width: 100%;
-    height: auto;
-    display: block;
-    aspect-ratio: 3 / 2;
-    object-fit: cover;
-  }
-
-  .pd-panel {
-    position: sticky;
-    top: 92px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    padding: 18px;
-    box-shadow: var(--shadow-sm);
-  }
-  @media (max-width: 960px) {
-    .pd-panel { position: static; top: auto; }
-  }
-
-  .pd-kpis {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 14px;
-  }
-  .pd-kpi {
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    padding: 12px;
-    background: var(--color-surface-alt);
-  }
-  .pd-kpi .k { font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-soft); }
-  .pd-kpi .v { font-family: var(--font-display); font-size: 1.15rem; color: var(--color-text); margin-top: 6px; }
-
-  .pd-desc {
-    margin-top: 18px;
-    background: rgba(255,255,255,0.7);
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    padding: 18px;
-    box-shadow: var(--shadow-xs);
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-{% set placeholder = 'https://via.placeholder.com/600x400?text=No+Image' %}
-{% set img_value = plan.image_url if plan.image_url else '' %}
-{% set img_src = upload_url(img_value) if img_value else placeholder %}
+{% set placeholder = 'https://via.placeholder.com/1200x800?text=No+Image' %}
 
-{% set price_value = plan.current_price if plan.current_price is not none else None %}
-{% set area_value = plan.area_sqft if plan.area_sqft else (plan.total_area_sqft if plan.total_area_sqft else (plan.square_feet if plan.square_feet else None)) %}
-{% set beds_value = plan.bedrooms_count if plan.bedrooms_count else None %}
+{% set cover_value = plan.image_url if plan.image_url else '' %}
+{% set floor_value = plan.floor_plan_image if plan.floor_plan_image else '' %}
+{% set alt_value = plan.main_image if plan.main_image else '' %}
 
-<div class="shell">
+{% set cover_src = upload_url(cover_value) if cover_value else placeholder %}
+{% set floor_src = upload_url(floor_value) if floor_value else '' %}
+{% set alt_src = upload_url(alt_value) if alt_value else '' %}
+
+{% set area_m2 = plan.area_m2 if plan.area_m2 else None %}
+{% set area_sqft = plan.area_sqft if plan.area_sqft else None %}
+{% set beds = plan.bedrooms_count if plan.bedrooms_count is not none else None %}
+{% set baths = plan.bathrooms_count if plan.bathrooms_count is not none else None %}
+{% set floors = plan.floors_count if plan.floors_count is not none else None %}
+
+<div class="shell plan-tech">
   <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="{{ url_for('main.index') }}">Home</a>
     <a href="{{ url_for('main.packs') }}">Plans</a>
     <span aria-current="page">{{ plan.title|default('Plan', true) }}</span>
   </nav>
 
-  <h1 style="margin-top: 14px;">{{ plan.title|default('Plan', true) }}</h1>
-  <p class="eyebrow" style="margin-top: 6px;">
-    {{ plan.category.name if plan.category else 'Non classé' }}
-  </p>
+  <header class="plan-tech__header" aria-label="Plan technical header">
+    <div class="plan-tech__badges">
+      <span class="plan-badge plan-badge--category">
+        <i class="fa-solid fa-tag" aria-hidden="true"></i>
+        {{ plan.category.name if plan.category else 'Non classé' }}
+      </span>
+      <span class="plan-badge plan-badge--ref">
+        <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
+        {{ plan.reference_code|default(plan.id, true) }}
+      </span>
+    </div>
+    <h1 class="plan-tech__title">{{ plan.title|default('Plan', true) }}</h1>
+    <p class="plan-tech__subtitle">
+      {% if plan.architectural_summary %}
+        {{ plan.architectural_summary }}
+      {% elif plan.short_description %}
+        {{ plan.short_description }}
+      {% else %}
+        A technical, build-ready plan overview.
+      {% endif %}
+    </p>
+  </header>
 
-  <div class="pd-wrap" style="margin-top: 18px;">
-    <section class="pd-media" aria-label="Plan image">
-      <img src="{{ img_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
-    </section>
+  <section class="plan-tech__hero" aria-label="Gallery and key specs">
+    <div class="plan-tech__gallery">
+      <figure class="plan-tech__main" aria-label="Main image">
+        <img id="planMainImage" src="{{ cover_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+      </figure>
 
-    <aside class="pd-panel" aria-label="Plan details">
-      <div>
-        <p class="eyebrow">Key details</p>
-        <h2 style="margin: 0; font-size: 1.6rem;">Overview</h2>
-        <p style="margin-top: 10px;">
-          {% if plan.short_description %}
-            {{ plan.short_description }}
-          {% elif plan.description %}
-            {{ plan.description|striptags|truncate(180, True, '…') }}
+      <div class="plan-tech__thumbs" aria-label="Gallery thumbnails">
+        <button class="plan-thumb is-active" type="button" data-src="{{ cover_src }}" aria-label="View cover image">
+          <img src="{{ cover_src }}" alt="Cover thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+        </button>
+        {% if floor_src and floor_src != cover_src %}
+          <button class="plan-thumb" type="button" data-src="{{ floor_src }}" aria-label="View floor plan">
+            <img src="{{ floor_src }}" alt="Floor plan thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+          </button>
+        {% endif %}
+        {% if alt_src and alt_src != cover_src and alt_src != floor_src %}
+          <button class="plan-thumb" type="button" data-src="{{ alt_src }}" aria-label="View alternate image">
+            <img src="{{ alt_src }}" alt="Alternate thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+          </button>
+        {% endif %}
+      </div>
+
+      <div class="plan-tech__specbar" aria-label="Key specs">
+        <div class="spec-pill">
+          <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+          <span class="k">Total area</span>
+          <span class="v">
+            {% if area_m2 %}{{ area_m2|round(0)|int }} m²{% else %}—{% endif %}
+            <small>{% if area_sqft %}{{ area_sqft|round(0)|int }} sqft{% else %}{% endif %}</small>
+          </span>
+        </div>
+        <div class="spec-pill">
+          <i class="fa-solid fa-bed" aria-hidden="true"></i>
+          <span class="k">Bedrooms</span>
+          <span class="v">{{ beds if beds is not none else '—' }}</span>
+        </div>
+        <div class="spec-pill">
+          <i class="fa-solid fa-bath" aria-hidden="true"></i>
+          <span class="k">Bathrooms</span>
+          <span class="v">{% if baths is not none %}{{ baths }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="spec-pill">
+          <i class="fa-solid fa-building" aria-hidden="true"></i>
+          <span class="k">Floors</span>
+          <span class="v">{{ floors if floors is not none else '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="plan-tech__aside" aria-label="Plan quick actions">
+      <div class="aside-card">
+        <h2>Project notes</h2>
+        <p>
+          {% if plan.dimensions_summary %}
+            <strong>Footprint:</strong> {{ plan.dimensions_summary }}
           {% else %}
-            Description coming soon.
+            <strong>Reference:</strong> {{ plan.reference_code|default(plan.id, true) }}
           {% endif %}
         </p>
-      </div>
-
-      <div class="pd-kpis" aria-label="KPIs">
-        <div class="pd-kpi">
-          <div class="k">Price</div>
-          <div class="v">
-            {% if price_value is not none %}
-              ${{ price_value|round(0)|int }}
-            {% else %}
-              —
-            {% endif %}
-          </div>
-        </div>
-        <div class="pd-kpi">
-          <div class="k">Area</div>
-          <div class="v">
-            {% if area_value %}
-              {{ area_value|round|int }} sq ft
-            {% else %}
-              —
-            {% endif %}
-          </div>
-        </div>
-        <div class="pd-kpi">
-          <div class="k">Beds</div>
-          <div class="v">{{ beds_value if beds_value else '—' }}</div>
+        <p class="aside-muted">Need engineering adaptation for your local code? We can help you plan the next steps.</p>
+        <div class="aside-actions">
+          <a class="btn btn-primary" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> Contact</a>
+          <a class="btn btn-ghost" href="#pricing"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> View packs</a>
         </div>
       </div>
-
-      <div style="display:flex; gap: 10px; margin-top: 16px;">
-        <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Contact us</a>
-        <a class="btn btn-ghost" href="{{ url_for('main.packs') }}">Back to catalog</a>
-      </div>
-
-      <p class="microcopy" style="margin-top: 12px;">
-        Ref {{ plan.reference_code|default(plan.id, true) }}
-      </p>
     </aside>
-  </div>
+  </section>
 
-  <section class="pd-desc" aria-label="Description" style="margin-top: 22px;">
-    <h2 style="margin-top: 0;">Description</h2>
-    <div class="rich-text">
-      {{ plan.description|default('Description coming soon.', true) | safe }}
+  <section class="plan-tech__content" aria-label="Technical description">
+    <div class="tech-grid">
+      <article class="tech-card" aria-label="Design philosophy">
+        <header class="tech-card__head">
+          <h2>Design philosophy</h2>
+          <p>Concept and intent, from an architect’s perspective.</p>
+        </header>
+        <div class="tech-card__body rich-text">
+          {% if plan.design_philosophy %}
+            {{ plan.design_philosophy | safe }}
+          {% elif plan.description %}
+            {{ plan.description | safe }}
+          {% else %}
+            <p>Description coming soon.</p>
+          {% endif %}
+        </div>
+      </article>
+
+      <article class="tech-card" aria-label="Technical features">
+        <header class="tech-card__head">
+          <h2>Technical features</h2>
+          <p>Materials, structure, and build notes.</p>
+        </header>
+        <div class="tech-card__body rich-text">
+          {% if plan.main_features %}
+            {{ plan.main_features | safe }}
+          {% elif plan.room_details %}
+            {{ plan.room_details | safe }}
+          {% elif plan.construction_notes %}
+            {{ plan.construction_notes | safe }}
+          {% else %}
+            <p>Technical details will be added soon.</p>
+          {% endif %}
+        </div>
+      </article>
+    </div>
+
+    <section class="spec-table" aria-label="Detailed specifications">
+      <header class="spec-table__head">
+        <h2>Detailed specifications</h2>
+        <p>Clean technical data for quick evaluation.</p>
+      </header>
+      <div class="spec-table__wrap" role="region" aria-label="Specification table" tabindex="0">
+        <table>
+          <tbody>
+            {% if plan.dimensions_summary %}
+              <tr><th>Dimensions</th><td>{{ plan.dimensions_summary }}</td></tr>
+            {% endif %}
+            {% if plan.roof_type %}
+              <tr><th>Roof type</th><td>{{ plan.roof_type }}</td></tr>
+            {% endif %}
+            {% if plan.foundation_type %}
+              <tr><th>Foundation</th><td>{{ plan.foundation_type }}</td></tr>
+            {% endif %}
+            {% if plan.structure_type %}
+              <tr><th>Structure</th><td>{{ plan.structure_type }}</td></tr>
+            {% endif %}
+            {% if plan.ceiling_height %}
+              <tr><th>Ceiling height</th><td>{{ plan.ceiling_height }} m</td></tr>
+            {% endif %}
+            {% if plan.parking_count %}
+              <tr><th>Parking</th><td>{{ plan.parking_count }}</td></tr>
+            {% endif %}
+            {% if plan.suitable_climate %}
+              <tr><th>Climate</th><td>{{ plan.suitable_climate }}</td></tr>
+            {% endif %}
+            {% if plan.ideal_for %}
+              <tr><th>Ideal for</th><td>{{ plan.ideal_for }}</td></tr>
+            {% endif %}
+            {% if plan.construction_complexity %}
+              <tr><th>Complexity</th><td>{{ plan.construction_complexity }}</td></tr>
+            {% endif %}
+            {% if plan.estimated_construction_cost_note %}
+              <tr><th>Cost note</th><td>{{ plan.estimated_construction_cost_note }}</td></tr>
+            {% endif %}
+            {% if not (plan.dimensions_summary or plan.roof_type or plan.foundation_type or plan.structure_type or plan.ceiling_height or plan.parking_count or plan.suitable_climate or plan.ideal_for or plan.construction_complexity or plan.estimated_construction_cost_note) %}
+              <tr><th>Specifications</th><td>Technical specifications are being prepared.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <section class="plan-tech__pricing" id="pricing" aria-label="Pricing packs">
+    <header class="pricing-head">
+      <h2>Choose your pack</h2>
+      <p>Pricing packs are shown after the technical description — pick the level that matches your build stage.</p>
+    </header>
+
+    <div class="pricing-grid">
+      {% for tier in plan.pricing_tiers %}
+        {% set is_recommended = (tier.pack == 2) %}
+        <article class="pricing-card {% if is_recommended %}is-recommended{% endif %}">
+          <div class="pricing-card__top">
+            <div class="pricing-card__label">
+              <span class="pack">Pack {{ tier.pack }}</span>
+              {% if is_recommended %}<span class="rec"><i class="fa-solid fa-star" aria-hidden="true"></i> Recommended</span>{% endif %}
+            </div>
+            <h3>{{ tier.label }}</h3>
+            <p class="pricing-card__price">
+              {% if tier.is_free %}
+                <span class="amount">Free</span>
+              {% elif tier.price is not none %}
+                <span class="amount">${{ tier.price|round(0)|int }}</span>
+              {% else %}
+                <span class="amount">—</span>
+              {% endif %}
+            </p>
+          </div>
+
+          <ul class="pricing-card__features">
+            {% if tier.pack == 1 %}
+              <li><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF preview download</li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i> Quick specs overview</li>
+            {% elif tier.pack == 2 %}
+              <li><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Full PDF documentation set</li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i> Dimensions & elevations</li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i> Ready for local adaptation</li>
+            {% else %}
+              <li><i class="fa-solid fa-drafting-compass" aria-hidden="true"></i> Ultimate CAD/BIM files (where available)</li>
+              <li><i class="fa-solid fa-check" aria-hidden="true"></i> Best for contractors & consultants</li>
+            {% endif %}
+          </ul>
+
+          <div class="pricing-card__cta">
+            {% if tier.pack == 1 %}
+              {% if plan.free_pdf_file %}
+                <a class="btn btn-primary" href="{{ url_for('main.download_free', plan_id=plan.id) }}"><i class="fa-solid fa-download" aria-hidden="true"></i> Download</a>
+              {% else %}
+                <span class="btn btn-ghost is-disabled" aria-disabled="true"><i class="fa-solid fa-clock" aria-hidden="true"></i> Not available</span>
+              {% endif %}
+            {% elif tier.available %}
+              <a class="btn btn-primary" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=tier.pack) }}" rel="nofollow"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Buy now</a>
+            {% else %}
+              <span class="btn btn-ghost is-disabled" aria-disabled="true"><i class="fa-solid fa-clock" aria-hidden="true"></i> Coming soon</span>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
     </div>
   </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const main = document.getElementById('planMainImage');
+    const thumbs = document.querySelectorAll('.plan-thumb');
+    if (!main || !thumbs.length) return;
+
+    thumbs.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const src = btn.getAttribute('data-src');
+        if (!src) return;
+        main.setAttribute('src', src);
+        thumbs.forEach(t => t.classList.remove('is-active'));
+        btn.classList.add('is-active');
+      });
+    });
+  })();
+</script>
 {% endblock %}
