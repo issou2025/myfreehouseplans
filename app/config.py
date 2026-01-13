@@ -115,21 +115,44 @@ class ProductionConfig(Config):
         
         This MUST be a property to ensure it's evaluated at request time,
         not at class definition time.
+        
+        ARCHITECTURAL RATIONALE:
+        - Render/Heroku provide DATABASE_URL with postgres:// prefix
+        - SQLAlchemy 1.4+ requires postgresql:// prefix
+        - SSL is required for managed PostgreSQL (security)
+        - Property evaluation ensures environment changes are reflected
         """
         db_uri = os.environ.get('DATABASE_URL')
         
         if not db_uri:
+            # Log detailed error for debugging
+            import sys
+            print('❌ FATAL: DATABASE_URL not set in environment', file=sys.stderr)
+            print('Available env vars:', list(os.environ.keys()), file=sys.stderr)
             return None
         
-        # Fix Render/Heroku postgres:// -> postgresql:// scheme
+        original_uri = db_uri
+        
+        # Fix postgres:// -> postgresql:// (Render/Heroku compatibility)
         if db_uri.startswith('postgres://'):
             db_uri = 'postgresql://' + db_uri[len('postgres://'):]
+            print(f'✓ Fixed DATABASE_URL prefix: postgres:// -> postgresql://', file=sys.stderr)
         
-        # Enforce SSL for PostgreSQL connections if not explicitly disabled
+        # Enforce SSL for PostgreSQL connections (security best practice)
         if db_uri.startswith('postgresql://'):
             if 'sslmode=' not in db_uri:
                 separator = '&' if '?' in db_uri else '?'
                 db_uri = f"{db_uri}{separator}sslmode=require"
+                print(f'✓ Added SSL requirement to PostgreSQL connection', file=sys.stderr)
+        
+        # Log sanitized connection info (hide password)
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(db_uri)
+            safe_uri = f"{parsed.scheme}://{parsed.username}:***@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            print(f'✓ Database URI configured: {safe_uri}', file=sys.stderr)
+        except Exception:
+            pass
         
         return db_uri
     

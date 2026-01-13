@@ -69,11 +69,12 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     mail.init_app(app)
 
-    # REMOVED: ensure_database_ready(app) - moved to health check endpoint
-    # Bootstrap tasks should be handled by:
-    # 1. Migrations (flask db upgrade) for schema
-    # 2. CLI commands (flask create-admin) for admin seeding
-    # 3. Release commands in render.yaml for pre-deployment tasks
+    # Intelligent database initialization with proper fallback strategy
+    # This verifies database connectivity and schema integrity
+    # In production: FAILS FAST if tables are missing (requires migrations)
+    # In development: Can fallback to db.create_all() as emergency measure
+    from app.db_init import intelligent_db_init
+    intelligent_db_init(app)
 
     
     # Register blueprints
@@ -186,10 +187,13 @@ def register_cli_commands(app):
         seed_categories_command,
         seed_sample_plans_command
     )
+    from app.cli_diagnostics import diagnose_db_command
+    
     app.cli.add_command(create_admin_command)
     app.cli.add_command(reset_admin_password_command)
     app.cli.add_command(seed_categories_command)
     app.cli.add_command(seed_sample_plans_command)
+    app.cli.add_command(diagnose_db_command)
 
 
 def register_request_hooks(app):
