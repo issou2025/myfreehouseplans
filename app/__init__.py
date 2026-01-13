@@ -431,3 +431,24 @@ def register_request_hooks(app):
         finally:
             g.visit_track = None
         return response
+
+    @app.teardown_request
+    def _cleanup_sessions(exc):
+        if exc is not None:
+            try:
+                db.session.rollback()
+            except Exception as rollback_exc:
+                try:
+                    app.logger.error('Rollback during teardown failed: %s', rollback_exc, exc_info=True)
+                except Exception:
+                    import traceback
+                    print(traceback.format_exc())
+        try:
+            db.session.remove()
+        except Exception as remove_exc:
+            try:
+                app.logger.error('Session remove during teardown failed: %s', remove_exc, exc_info=True)
+            except Exception:
+                import traceback
+                print(traceback.format_exc())
+        return None

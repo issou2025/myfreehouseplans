@@ -12,6 +12,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
 import os
+import traceback
 from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor
 from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm
 from app.forms import PlanFAQForm
@@ -709,14 +710,55 @@ def add_plan():
 @login_required
 @admin_required
 def edit_plan(id):
-    """Edit existing house plan - fully bulletproofed"""
+    """Edit existing house plan with hardened transaction guarantees."""
+
+    class UploadProcessError(Exception):
+        """Raised when a file upload fails so we can stop processing safely."""
+
+    def _log_upload_size(field_name, storage):
+        size = getattr(storage, 'content_length', None)
+        if size is None:
+            try:
+                current_pos = storage.stream.tell()
+                storage.stream.seek(0, os.SEEK_END)
+                size = storage.stream.tell()
+                storage.stream.seek(current_pos)
+            except Exception:
+                print(traceback.format_exc())
+                size = 'unknown'
+        filename = getattr(storage, 'filename', 'unknown')
+        current_app.logger.info(
+            'Admin upload incoming | plan_id=%s field=%s filename=%s size=%s bytes',
+            id,
+            field_name,
+            filename,
+            size,
+        )
+        print(f'UPLOAD DEBUG | plan_id={id} field={field_name} filename={filename} size={size}')
+
+    def _save_upload(storage, folder, field_name):
+        _log_upload_size(field_name, storage)
+        try:
+            return save_uploaded_file(storage, folder)
+        except Exception as upload_exc:
+            db.session.rollback()
+            print(traceback.format_exc())
+            current_app.logger.error(
+                'Upload failed for plan id=%s field=%s: %s',
+                id,
+                field_name,
+                upload_exc,
+            )
+            flash(f'{field_name.replace("_", " ").title()} upload failed. No changes were saved.', 'danger')
+            raise UploadProcessError(field_name) from upload_exc
 
     try:
-        # Load plan
         try:
-            plan = HousePlan.query.get(id)
-        except Exception:
-            current_app.logger.exception('Failed to load plan id=%s for edit (DB/query error)', id)
+            plan = db.session.get(HousePlan, id)
+        except Exception as load_exc:
+            db.session.rollback()
+            print(traceback.format_exc())
+            current_app.logger.error('Failed to load plan id=%s for edit (DB/query error): %s', id, load_exc)
             flash('Unable to load this plan right now (database error). Please try again.', 'danger')
             return redirect(url_for('admin.plans'))
 
@@ -724,36 +766,34 @@ def edit_plan(id):
             flash('House plan not found.', 'warning')
             return redirect(url_for('admin.plans'))
 
-        # Initialize form
         form = HousePlanForm(obj=plan)
 
-        # Load categories
         try:
             categories = Category.query.order_by(Category.name).all()
-        except Exception:
-            current_app.logger.exception('Failed to load categories while editing plan id=%s', id)
+        except Exception as cat_exc:
+            print(traceback.format_exc())
+            current_app.logger.error('Failed to load categories while editing plan id=%s: %s', id, cat_exc)
             categories = []
             flash('Categories could not be loaded (database error). You can still edit other fields.', 'warning')
 
         form.category_ids.choices = [(c.id, c.name) for c in categories]
-        
-        # Prefill categories on GET
+
         if request.method == 'GET':
             try:
                 form.category_ids.data = [c.id for c in (plan.categories or [])]
-            except Exception:
-                current_app.logger.exception('Failed to prefill category_ids for plan id=%s', id)
+            except Exception as prefill_exc:
+                print(traceback.format_exc())
+                current_app.logger.error('Failed to prefill category_ids for plan id=%s: %s', id, prefill_exc)
                 form.category_ids.data = []
 
-        # On POST, if category_ids is missing from the submitted form, preserve existing categories.
-        # This protects price-only edits from failing validation or clearing categories.
         if request.method == 'POST':
             try:
                 if getattr(form.category_ids, 'raw_data', None) is None:
                     form.category_ids.data = [c.id for c in (plan.categories or [])]
-            except Exception:
-                current_app.logger.exception('Failed to preserve category_ids on POST for plan id=%s', id)
-    
+            except Exception as preserve_exc:
+                print(traceback.format_exc())
+                current_app.logger.error('Failed to preserve category_ids on POST for plan id=%s: %s', id, preserve_exc)
+
         if form.validate_on_submit():
             try:
                 plan.title = form.title.data
@@ -779,22 +819,25 @@ def edit_plan(id):
                 if plan.price_pack_1 is None:
                     plan.price_pack_1 = 0
 
-                # Only update categories if the field was actually submitted.
                 if getattr(form.category_ids, 'raw_data', None) is not None:
                     category_ids = form.category_ids.data or []
                     if category_ids:
                         try:
                             selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
-                        except Exception:
-                            current_app.logger.exception(
-                                'Failed to load selected categories for plan id=%s; category_ids=%s',
-                                plan.id, category_ids
+                        except Exception as selected_exc:
+                            print(traceback.format_exc())
+                            current_app.logger.error(
+                                'Failed to load selected categories for plan id=%s; category_ids=%s; %s',
+                                plan.id,
+                                category_ids,
+                                selected_exc,
                             )
                             selected_categories = []
                             flash('Selected categories could not be saved (database error).', 'warning')
                     else:
                         selected_categories = []
                     plan.categories = selected_categories
+
                 plan.is_featured = form.is_featured.data
                 plan.is_published = form.is_published.data
 
@@ -832,36 +875,39 @@ def edit_plan(id):
 
                 cover_upload = form.cover_image.data
                 if cover_upload and getattr(cover_upload, 'filename', ''):
-                    plan.cover_image = save_uploaded_file(cover_upload, 'plans')
+                    plan.cover_image = _save_upload(cover_upload, 'plans', 'cover_image')
 
                 pdf_upload = form.free_pdf_file.data
                 if pdf_upload and getattr(pdf_upload, 'filename', ''):
-                    plan.free_pdf_file = save_uploaded_file(pdf_upload, 'pdfs')
+                    plan.free_pdf_file = _save_upload(pdf_upload, 'pdfs', 'free_pdf_file')
 
                 plan.seo_title = form.seo_title.data
                 plan.seo_description = form.seo_description.data
                 plan.seo_keywords = form.seo_keywords.data
 
                 diagnostics = diagnose_plan(plan)
-                # Non-blocking: surface policy issues as flash messages to reduce
-                # manual admin reasoning while preserving existing behavior.
                 if form.is_published.data or plan.gumroad_pack_2_url or plan.gumroad_pack_3_url:
                     for category, message in diagnostics_to_flash_messages(diagnostics):
                         flash(message, category)
-                
+
                 plan.updated_at = datetime.utcnow()
 
-                # If the admin clicked "Save Draft", ensure the plan remains unpublished
                 if getattr(form, 'save_draft', None) and form.save_draft.data:
                     plan.is_published = False
 
+                plan = db.session.merge(plan)
                 db.session.commit()
+            except UploadProcessError:
+                print(traceback.format_exc())
+                return render_template('admin/edit_plan.html', form=form, plan=plan)
             except ValueError as upload_error:
                 db.session.rollback()
+                print(traceback.format_exc())
                 flash(str(upload_error), 'danger')
             except Exception as exc:
                 db.session.rollback()
-                current_app.logger.exception('Failed to update plan %s: %s', plan.id, exc)
+                print(traceback.format_exc())
+                current_app.logger.error('Failed to update plan %s: %s', plan.id, exc)
                 flash('Unable to update the plan. Your changes were not saved.', 'danger')
             else:
                 if getattr(form, 'save_draft', None) and form.save_draft.data:
@@ -869,12 +915,13 @@ def edit_plan(id):
                     return redirect(url_for('admin.edit_plan', id=plan.id))
                 flash(f'House plan "{plan.title}" has been updated successfully!', 'success')
                 return redirect(url_for('admin.plans'))
-    
+
         return render_template('admin/edit_plan.html', form=form, plan=plan)
-    
-    except Exception as fatal_exc:
-        # Catch-all for any unexpected errors (form init, template rendering, etc.)
-        current_app.logger.exception('Fatal error in edit_plan route for id=%s', id)
+
+    except Exception:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Fatal error in edit_plan route for id=%s', id, exc_info=True)
         flash('An unexpected error occurred while loading the edit page. Please try again or contact support.', 'danger')
         return redirect(url_for('admin.plans'))
 

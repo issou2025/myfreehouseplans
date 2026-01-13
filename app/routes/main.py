@@ -26,6 +26,7 @@ from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.utils.media import is_absolute_url, upload_url
 from app.utils.visitor_tracking import tag_visit_identity
 from werkzeug.exceptions import HTTPException
+import traceback
 
 # Create Blueprint
 main_bp = Blueprint('main', __name__)
@@ -791,7 +792,7 @@ def plan_detail_by_id(id: int):
             db.session.rollback()
         except Exception:
             pass
-        import traceback
+        print(traceback.format_exc())
         current_app.logger.error(f'Plan Detail Error for ID {id}: {e}')
         current_app.logger.error(traceback.format_exc())
         raise
@@ -802,13 +803,15 @@ def plan_detail(plan_id: int):
     """Plan detail page (ID-based).
 
     Requirements:
-    - Uses HousePlan.query.get_or_404(plan_id)
-    - Wraps render in try/except; on error logs via app.logger.error(), rolls back,
-      flashes "Plan unavailable" and redirects to home.
+        - Uses db.session.get(HousePlan, plan_id)
+        - Wraps render in try/except; on error logs via app.logger.error(), rolls back,
+            and returns a clear error message instead of a generic 500 page.
     """
 
     try:
-        plan = HousePlan.query.get_or_404(plan_id)
+        plan = db.session.get(HousePlan, plan_id)
+        if plan is None:
+            abort(404)
 
         # Only public plans should be visible.
         if not getattr(plan, 'is_published', False):
@@ -828,17 +831,15 @@ def plan_detail(plan_id: int):
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         # Any DB failure here must rollback to clear InFailedSqlTransaction.
         try:
             db.session.rollback()
         except Exception:
             pass
-        from flask import current_app as app
-        import traceback
         print(traceback.format_exc())
-        app.logger.error("DETAILED ERROR: " + traceback.format_exc())
-        raise
+        current_app.logger.error('Plan detail rendering failed for id=%s: %s', plan_id, exc, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later or contact support.', status=503)
 
 
 @main_bp.route('/favorites')
