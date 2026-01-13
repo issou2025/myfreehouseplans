@@ -79,16 +79,27 @@ def generate_product_schema(plan):
     if entry_price is None:
         entry_price = float(getattr(plan, 'current_price', 0) or 0)
 
+    image_value = getattr(plan, 'cover_image', None) or getattr(plan, 'main_image', None)
+    image_url = None
+    try:
+        if image_value:
+            if isinstance(image_value, str) and image_value.startswith(('http://', 'https://')):
+                image_url = image_value
+            else:
+                image_url = url_for('static', filename=image_value, _external=True)
+    except Exception:
+        image_url = None
+
     schema = {
         "@context": "https://schema.org/",
         "@type": "Product",
         "name": plan.title,
         "description": plan.description,
-            "image": f"{site_url}{url_for('static', filename=(plan.cover_image or plan.main_image))}" if (plan.cover_image or plan.main_image) else None,
+        "image": image_url,
         "sku": getattr(plan, 'reference_code', None) or f"PLAN-{plan.id}",
         "offers": {
             "@type": "Offer",
-            "url": f"{site_url}{url_for('main.pack_detail', slug=plan.slug)}",
+            "url": url_for('main.pack_detail', slug=plan.slug, _external=True),
             "priceCurrency": "USD",
             "price": entry_price,
             "availability": "https://schema.org/InStock",
