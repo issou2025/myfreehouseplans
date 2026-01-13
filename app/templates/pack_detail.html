@@ -10,8 +10,10 @@
 {% endblock %}
 
 {% block content %}
-{% set hero_image = plan.cover_image or plan.main_image %}
-{% set hero_thumb = upload_url(hero_image) if hero_image else url_for('static', filename='images/placeholder.svg') %}
+{% set hero_image = plan.image_url if plan is defined and plan.image_url else (plan.cover_image or plan.main_image) %}
+{% set placeholder_src = url_for('static', filename='images/placeholder.svg') %}
+{% set hero_src = upload_url(hero_image) if hero_image else placeholder_src %}
+{% set hero_thumb = hero_src or placeholder_src %}
 {% set plan_title = plan.title|default('House Plan', true) %}
 {% set plan_ref = plan.reference_code|default(plan.id, true) %}
 {% set plan_slug = plan.slug|default('', true) %}
@@ -33,17 +35,16 @@
 
         <div class="plan-hero">
             <div class="plan-hero__media">
-                {% if hero_image %}
                 <figure>
-                    {{ picture_tag(hero_image, alt=plan_title, preset=HERO_PRESET, orientation_swap=True, loading='eager', itemprop='image') }}
-                    <figcaption>{{ plan_title }} · Perspective study</figcaption>
+                    <img
+                        src="{{ hero_src }}"
+                        alt="{{ plan_title }}"
+                        loading="eager"
+                        decoding="async"
+                        itemprop="image"
+                        onerror="this.onerror=null;this.src='{{ placeholder_src }}';">
+                    <figcaption>{{ plan_title }} · {{ 'Perspective study' if hero_image else 'Image coming soon' }}</figcaption>
                 </figure>
-                {% else %}
-                <figure>
-                    <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ plan_title }}" loading="eager" itemprop="image">
-                    <figcaption>{{ plan_title }} · Image coming soon</figcaption>
-                </figure>
-                {% endif %}
                 <div class="plan-hero__tags">
                     {% if plan.is_featured %}<span class="badge badge--glow">Signature pick</span>{% endif %}
                     {% if plan.suitable_climate %}<span class="badge badge--outline">{{ plan.suitable_climate }}</span>{% endif %}
@@ -387,7 +388,7 @@
                     <p class="eyebrow">Editorial note</p>
                     <h2>The story of this plan</h2>
                 </div>
-                <div class="rich-text" itemprop="description">{{ plan.description|default('', true) | safe }}</div>
+                <div class="rich-text" itemprop="description">{{ plan.description|default('Description coming soon.', true) | safe }}</div>
             </article>
 
             {% if plan.design_philosophy or plan.lifestyle_suitability or plan.customization_potential %}

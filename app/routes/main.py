@@ -639,97 +639,107 @@ def pack_detail(slug):
     This route must never 500 due to missing optional fields or relationships.
     """
 
-    plan = (
-        HousePlan.query
-        .options(selectinload(HousePlan.categories))
-        .filter_by(slug=slug, is_published=True)
-        .first_or_404()
-    )
-
-    category_name = plan.category.name if getattr(plan, 'category', None) else 'No Category'
-
-    # Increment view count (non-fatal).
+    plan = None
     try:
-        plan.increment_views()
-    except Exception as view_exc:
-        current_app.logger.warning('Failed to increment view count for plan id=%s: %s', plan.id, view_exc)
+        # Support legacy /plan/<id> links even though the canonical URL is /plan/<slug>.
+        if slug and str(slug).isdigit():
+            plan_id = int(slug)
+            plan = HousePlan.query.get_or_404(plan_id)
+        else:
+            plan = (
+                HousePlan.query
+                .options(selectinload(HousePlan.categories))
+                .filter_by(slug=slug)
+                .first_or_404()
+            )
 
-    similar_plans = []
-    try:
-        similar_plans = _find_similar_plans(plan, limit=6)
-    except Exception as similar_exc:
-        current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', plan.id, similar_exc)
+        # Only public plans should be visible.
+        if not getattr(plan, 'is_published', False):
+            abort(404)
 
-    meta = None
-    try:
-        meta = generate_meta_tags(
-            title=getattr(plan, 'meta_title', None) or plan.title,
-            description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
-            keywords=getattr(plan, 'meta_keywords', None),
-            url=url_for('main.pack_detail', slug=plan.slug, _external=True),
-            type='product'
-        )
-    except Exception as meta_exc:
-        current_app.logger.warning('Failed to generate meta tags for plan id=%s: %s', plan.id, meta_exc)
-        meta = generate_meta_tags(title=plan.title, url=url_for('main.packs', _external=True), type='product')
+        category_name = plan.category.name if getattr(plan, 'category', None) else 'Uncategorized'
 
-    product_schema = None
-    try:
-        product_schema = generate_product_schema(plan)
-    except Exception as schema_exc:
-        current_app.logger.warning('Failed to generate product schema for plan id=%s: %s', plan.id, schema_exc)
+        # Increment view count (non-fatal).
+        try:
+            plan.increment_views()
+        except Exception as view_exc:
+            current_app.logger.warning('Failed to increment view count for plan id=%s: %s', getattr(plan, 'id', None), view_exc)
 
-    # FAQs: prefer custom FAQs attached to the plan; if none, use defaults
-    faqs = []
-    faq_schema = None
-    try:
-        if getattr(plan, 'faqs', None):
-            faqs = list(plan.faqs) if plan.faqs else []
-        if not faqs and hasattr(plan, 'default_faqs'):
-            faqs = plan.default_faqs()
+        similar_plans = []
+        try:
+            similar_plans = _find_similar_plans(plan, limit=6)
+        except Exception as similar_exc:
+            current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', getattr(plan, 'id', None), similar_exc)
 
-        if faqs:
-            faq_schema = {
-                '@context': 'https://schema.org',
-                '@type': 'FAQPage',
-                'mainEntity': []
-            }
-            for item in faqs:
-                try:
-                    if hasattr(item, 'question'):
-                        q = item.question
-                        a = item.answer
-                    else:
-                        q = item.get('question')
-                        a = item.get('answer')
-                    if q and a:
-                        faq_schema['mainEntity'].append({
-                            '@type': 'Question',
-                            'name': q,
-                            'acceptedAnswer': {
-                                '@type': 'Answer',
-                                'text': a
-                            }
-                        })
-                except Exception:
-                    continue
-    except Exception as faq_exc:
-        current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', getattr(plan, 'id', None), faq_exc)
+        meta = None
+        try:
+            meta = generate_meta_tags(
+                title=getattr(plan, 'meta_title', None) or plan.title,
+                description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
+                keywords=getattr(plan, 'meta_keywords', None),
+                url=url_for('main.pack_detail', slug=getattr(plan, 'slug', slug), _external=True),
+                type='product'
+            )
+        except Exception as meta_exc:
+            current_app.logger.warning('Failed to generate meta tags for plan id=%s: %s', getattr(plan, 'id', None), meta_exc)
+            meta = generate_meta_tags(title=getattr(plan, 'title', 'House Plan'), url=url_for('main.packs', _external=True), type='product')
+
+        product_schema = None
+        try:
+            product_schema = generate_product_schema(plan)
+        except Exception as schema_exc:
+            current_app.logger.warning('Failed to generate product schema for plan id=%s: %s', getattr(plan, 'id', None), schema_exc)
+
+        # FAQs: prefer custom FAQs attached to the plan; if none, use defaults.
         faqs = []
         faq_schema = None
+        try:
+            if getattr(plan, 'faqs', None):
+                faqs = list(plan.faqs) if plan.faqs else []
+            if not faqs and hasattr(plan, 'default_faqs'):
+                faqs = plan.default_faqs()
 
-    breadcrumb_schema = None
-    try:
-        breadcrumbs = [
-            ('Home', url_for('main.index')),
-            ('Plans', url_for('main.packs')),
-            (plan.title, url_for('main.pack_detail', slug=plan.slug))
-        ]
-        breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
-    except Exception as breadcrumb_exc:
-        current_app.logger.warning('Failed to generate breadcrumb schema for plan id=%s: %s', plan.id, breadcrumb_exc)
+            if faqs:
+                faq_schema = {
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    'mainEntity': []
+                }
+                for item in faqs:
+                    try:
+                        if hasattr(item, 'question'):
+                            q = item.question
+                            a = item.answer
+                        else:
+                            q = item.get('question')
+                            a = item.get('answer')
+                        if q and a:
+                            faq_schema['mainEntity'].append({
+                                '@type': 'Question',
+                                'name': q,
+                                'acceptedAnswer': {
+                                    '@type': 'Answer',
+                                    'text': a
+                                }
+                            })
+                    except Exception:
+                        continue
+        except Exception as faq_exc:
+            current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', getattr(plan, 'id', None), faq_exc)
+            faqs = []
+            faq_schema = None
 
-    try:
+        breadcrumb_schema = None
+        try:
+            breadcrumbs = [
+                ('Home', url_for('main.index')),
+                ('Plans', url_for('main.packs')),
+                (getattr(plan, 'title', 'House Plan'), url_for('main.pack_detail', slug=getattr(plan, 'slug', slug)))
+            ]
+            breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
+        except Exception as breadcrumb_exc:
+            current_app.logger.warning('Failed to generate breadcrumb schema for plan id=%s: %s', getattr(plan, 'id', None), breadcrumb_exc)
+
         return render_template(
             'pack_detail.html',
             plan=plan,
@@ -741,17 +751,21 @@ def pack_detail(slug):
             product_schema=product_schema,
             breadcrumb_schema=breadcrumb_schema,
         )
-    except Exception as render_exc:
-        # Rendering failures should never redirect away from an existing plan;
-        # log full traceback and let the 500 error handler render an error page.
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Defensive: never crash the public plan detail page.
         try:
             db.session.rollback()
         except Exception:
             pass
         import traceback
-        current_app.logger.error('Plan detail template render failed for plan id=%s slug=%s: %s', plan.id, plan.slug, render_exc)
-        current_app.logger.error(traceback.format_exc())
-        raise
+        from flask import current_app as app
+        app.logger.error(f"Plan Detail Error: {e}")
+        app.logger.error(traceback.format_exc())
+        flash('Sorry — we could not load that plan right now. Please try again in a moment.', 'error')
+        return redirect(url_for('main.packs'), code=302)
 
 
 @main_bp.route('/plan/id/<int:id>')
@@ -808,12 +822,12 @@ def plan_detail(id: int):
             return redirect(url_for('main.pack_detail', slug=plan.slug), code=302)
 
         # Extremely defensive fallback: render directly if slug is missing.
-        category_name = plan.category.name if getattr(plan, 'category', None) else 'No Category'
+        category_name = plan.category.name if getattr(plan, 'category', None) else 'Uncategorized'
         meta = generate_meta_tags(
-            title=getattr(plan, 'meta_title', None) or plan.title,
+            title=getattr(plan, 'meta_title', None) or getattr(plan, 'title', 'House Plan'),
             description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
             keywords=getattr(plan, 'meta_keywords', None),
-            url=url_for('main.plan_detail', id=plan.id, _external=True),
+            url=url_for('main.plan_detail', id=getattr(plan, 'id', id), _external=True),
             type='product'
         )
         return render_template('pack_detail.html', plan=plan, category_name=category_name, meta=meta)
@@ -826,9 +840,11 @@ def plan_detail(id: int):
         except Exception:
             pass
         import traceback
-        current_app.logger.error(f'Plan Detail Error for ID {getattr(plan, "id", id)}: {e}')
-        current_app.logger.error(traceback.format_exc())
-        raise
+        from flask import current_app as app
+        app.logger.error(f"Plan Detail Error: {e}")
+        app.logger.error(traceback.format_exc())
+        flash('Sorry — we could not load that plan right now. Please try again in a moment.', 'error')
+        return redirect(url_for('main.packs'), code=302)
 
 
 @main_bp.route('/favorites')
