@@ -416,34 +416,6 @@ class HousePlan(db.Model):
             return self._sqft_from_m2(self.total_area_m2)
         return None
 
-
-class PlanFAQ(db.Model):
-    """FAQ entries associated with a specific HousePlan."""
-
-    __tablename__ = 'plan_faqs'
-
-    id = db.Column(db.Integer, primary_key=True)
-    plan_id = db.Column(db.Integer, db.ForeignKey('house_plans.id', ondelete='CASCADE'), nullable=True, index=True)
-    reference_code = db.Column(db.String(80), nullable=True, index=True)
-    question = db.Column(db.String(500), nullable=False)
-    answer = db.Column(db.Text, nullable=False)
-    pack_context = db.Column(db.String(20), nullable=True)  # 'free', 'pro', 'ultimate' or empty
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def as_structured(self):
-        return {
-            '@type': 'Question',
-            'name': self.question,
-            'acceptedAnswer': {
-                '@type': 'Answer',
-                'text': self.answer
-            }
-        }
-
-    def __repr__(self):
-        return f'<PlanFAQ {self.id} for plan={self.plan_id or self.reference_code}>'
-
     @property
     def area_m2(self):
         """Preferred area in square meters (new fields first, then derived)."""
@@ -498,15 +470,12 @@ class PlanFAQ(db.Model):
                 b = float(self.bathrooms_count)
                 parts.append(f"{b:g}-bath")
             except (ValueError, TypeError) as exc:
-                # Log data quality issues for monitoring
                 try:
-                    from flask import current_app
                     current_app.logger.warning(
                         'Invalid bathrooms_count for plan %s: %s (value: %r)',
                         self.id, exc, self.bathrooms_count
                     )
                 except (RuntimeError, Exception):
-                    # Outside application context or logger broken - skip logging
                     pass
         if self.roof_type:
             parts.append(f"{self.roof_type.strip().lower()} roof")
@@ -530,9 +499,37 @@ class PlanFAQ(db.Model):
     def meta_keywords(self):
         """Return SEO keywords for templates"""
         return self.seo_keywords or ''
-    
+
     def __repr__(self):
         return f'<HousePlan {self.title}>'
+
+
+class PlanFAQ(db.Model):
+    """FAQ entries associated with a specific HousePlan."""
+
+    __tablename__ = 'plan_faqs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('house_plans.id', ondelete='CASCADE'), nullable=True, index=True)
+    reference_code = db.Column(db.String(80), nullable=True, index=True)
+    question = db.Column(db.String(500), nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    pack_context = db.Column(db.String(20), nullable=True)  # 'free', 'pro', 'ultimate' or empty
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def as_structured(self):
+        return {
+            '@type': 'Question',
+            'name': self.question,
+            'acceptedAnswer': {
+                '@type': 'Answer',
+                'text': self.answer
+            }
+        }
+
+    def __repr__(self):
+        return f'<PlanFAQ {self.id} for plan={self.plan_id or self.reference_code}>'
 
 
 class Order(db.Model):
