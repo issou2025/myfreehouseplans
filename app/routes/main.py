@@ -659,6 +659,9 @@ def pack_detail(slug):
 
         category_name = plan.category.name if getattr(plan, 'category', None) else 'Uncategorized'
 
+        print(f'DEBUG: pack_detail slug={slug!r} resolved plan id={getattr(plan, "id", None)} title={getattr(plan, "title", None)!r}')
+        print(f'DEBUG: pack_detail plan has category? {bool(getattr(plan, "category", None))}')
+
         # Increment view count (non-fatal).
         try:
             plan.increment_views()
@@ -755,17 +758,15 @@ def pack_detail(slug):
     except HTTPException:
         raise
     except Exception as e:
-        # Defensive: never crash the public plan detail page.
         try:
             db.session.rollback()
         except Exception:
             pass
         import traceback
         from flask import current_app as app
-        app.logger.error(f"Plan Detail Error: {e}")
-        app.logger.error(traceback.format_exc())
-        flash('Sorry — we could not load that plan right now. Please try again in a moment.', 'error')
-        return redirect(url_for('main.packs'), code=302)
+        print(traceback.format_exc())
+        app.logger.error("DETAILED ERROR: " + traceback.format_exc())
+        raise
 
 
 @main_bp.route('/plan/id/<int:id>')
@@ -806,13 +807,16 @@ def plan_detail(plan_id: int):
       flashes "Plan unavailable" and redirects to home.
     """
 
-    plan = HousePlan.query.get_or_404(plan_id)
-
-    # Only public plans should be visible.
-    if not getattr(plan, 'is_published', False):
-        abort(404)
-
     try:
+        plan = HousePlan.query.get_or_404(plan_id)
+
+        # Only public plans should be visible.
+        if not getattr(plan, 'is_published', False):
+            abort(404)
+
+        print(f'DEBUG: Plan ID {plan_id} found: {plan}')
+        print(f'DEBUG: Plan ID {plan_id} category exists: {bool(getattr(plan, "category", None))}')
+
         meta = generate_meta_tags(
             title=getattr(plan, 'meta_title', None) or getattr(plan, 'title', 'House Plan'),
             description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
@@ -821,15 +825,20 @@ def plan_detail(plan_id: int):
             type='product'
         )
         return render_template('plan_detail.html', plan=plan, meta=meta)
-    except Exception as e:
+
+    except HTTPException:
+        raise
+    except Exception:
+        # Any DB failure here must rollback to clear InFailedSqlTransaction.
         try:
             db.session.rollback()
         except Exception:
             pass
         from flask import current_app as app
-        app.logger.error(f"Plan Detail Error: {e}")
-        flash('Plan unavailable', 'error')
-        return redirect(url_for('main.index'))
+        import traceback
+        print(traceback.format_exc())
+        app.logger.error("DETAILED ERROR: " + traceback.format_exc())
+        raise
 
 
 @main_bp.route('/favorites')

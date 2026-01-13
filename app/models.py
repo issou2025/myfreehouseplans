@@ -26,7 +26,16 @@ house_plan_categories = db.Table(
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login"""
-    return User.query.get(int(user_id))
+    try:
+        if user_id is None:
+            return None
+        return User.query.get(int(user_id))
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
 
 
 class User(UserMixin, db.Model):
