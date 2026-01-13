@@ -796,55 +796,40 @@ def plan_detail_by_id(id: int):
         raise
 
 
-@main_bp.route('/plans/<int:id>')
-def plan_detail(id: int):
-    """Public plan detail route by numeric ID.
-
-    Some external links and older sitemap entries reference /plans/<id>.
-    We resolve the plan safely, then redirect to the canonical slug URL.
+@main_bp.route('/plans/<int:plan_id>')
+def plan_detail(plan_id: int):
+    """Plan detail page (ID-based).
 
     Requirements:
-    - Uses HousePlan.query.get_or_404(id)
-    - Never 500s due to missing relationships/media
-    - Logs full traceback on unexpected errors
+    - Uses HousePlan.query.get_or_404(plan_id)
+    - Wraps render in try/except; on error logs via app.logger.error(), rolls back,
+      flashes "Plan unavailable" and redirects to home.
     """
 
-    plan = None
+    plan = HousePlan.query.get_or_404(plan_id)
+
+    # Only public plans should be visible.
+    if not getattr(plan, 'is_published', False):
+        abort(404)
+
     try:
-        plan = HousePlan.query.get_or_404(id)
-
-        # Only public plans should be visible.
-        if not getattr(plan, 'is_published', False):
-            abort(404)
-
-        # Canonical URL is slug-based.
-        if getattr(plan, 'slug', None):
-            return redirect(url_for('main.pack_detail', slug=plan.slug), code=302)
-
-        # Extremely defensive fallback: render directly if slug is missing.
-        category_name = plan.category.name if getattr(plan, 'category', None) else 'Uncategorized'
         meta = generate_meta_tags(
             title=getattr(plan, 'meta_title', None) or getattr(plan, 'title', 'House Plan'),
             description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
             keywords=getattr(plan, 'meta_keywords', None),
-            url=url_for('main.plan_detail', id=getattr(plan, 'id', id), _external=True),
+            url=url_for('main.plan_detail', plan_id=getattr(plan, 'id', plan_id), _external=True),
             type='product'
         )
-        return render_template('pack_detail.html', plan=plan, category_name=category_name, meta=meta)
-
-    except HTTPException:
-        raise
+        return render_template('plan_detail.html', plan=plan, meta=meta)
     except Exception as e:
         try:
             db.session.rollback()
         except Exception:
             pass
-        import traceback
         from flask import current_app as app
         app.logger.error(f"Plan Detail Error: {e}")
-        app.logger.error(traceback.format_exc())
-        flash('Sorry — we could not load that plan right now. Please try again in a moment.', 'error')
-        return redirect(url_for('main.packs'), code=302)
+        flash('Plan unavailable', 'error')
+        return redirect(url_for('main.index'))
 
 
 @main_bp.route('/favorites')

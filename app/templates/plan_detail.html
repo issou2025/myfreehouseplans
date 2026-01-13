@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.title|default('Plan', true) }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pd-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: clamp(20px, 3vw, 36px);
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .pd-wrap { grid-template-columns: 1fr; }
+  }
+
+  .pd-media {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .pd-media img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+  }
+
+  .pd-panel {
+    position: sticky;
+    top: 92px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  @media (max-width: 960px) {
+    .pd-panel { position: static; top: auto; }
+  }
+
+  .pd-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .pd-kpi {
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 12px;
+    background: var(--color-surface-alt);
+  }
+  .pd-kpi .k { font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-soft); }
+  .pd-kpi .v { font-family: var(--font-display); font-size: 1.15rem; color: var(--color-text); margin-top: 6px; }
+
+  .pd-desc {
+    margin-top: 18px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow-xs);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set placeholder = 'https://via.placeholder.com/600x400?text=No+Image' %}
+{% set img_value = plan.image_url if plan.image_url else '' %}
+{% set img_src = upload_url(img_value) if img_value else placeholder %}
+
+{% set price_value = plan.current_price if plan.current_price is not none else None %}
+{% set area_value = plan.area_sqft if plan.area_sqft else (plan.total_area_sqft if plan.total_area_sqft else (plan.square_feet if plan.square_feet else None)) %}
+{% set beds_value = plan.bedrooms_count if plan.bedrooms_count else None %}
+
+<div class="shell">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('main.index') }}">Home</a>
+    <a href="{{ url_for('main.packs') }}">Plans</a>
+    <span aria-current="page">{{ plan.title|default('Plan', true) }}</span>
+  </nav>
+
+  <h1 style="margin-top: 14px;">{{ plan.title|default('Plan', true) }}</h1>
+  <p class="eyebrow" style="margin-top: 6px;">
+    {{ plan.category.name if plan.category else 'Non classé' }}
+  </p>
+
+  <div class="pd-wrap" style="margin-top: 18px;">
+    <section class="pd-media" aria-label="Plan image">
+      <img src="{{ img_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+    </section>
+
+    <aside class="pd-panel" aria-label="Plan details">
+      <div>
+        <p class="eyebrow">Key details</p>
+        <h2 style="margin: 0; font-size: 1.6rem;">Overview</h2>
+        <p style="margin-top: 10px;">
+          {% if plan.short_description %}
+            {{ plan.short_description }}
+          {% elif plan.description %}
+            {{ plan.description|striptags|truncate(180, True, '…') }}
+          {% else %}
+            Description coming soon.
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="pd-kpis" aria-label="KPIs">
+        <div class="pd-kpi">
+          <div class="k">Price</div>
+          <div class="v">
+            {% if price_value is not none %}
+              ${{ price_value|round(0)|int }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+        <div class="pd-kpi">
+          <div class="k">Area</div>
+          <div class="v">
+            {% if area_value %}
+              {{ area_value|round|int }} sq ft
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+        <div class="pd-kpi">
+          <div class="k">Beds</div>
+          <div class="v">{{ beds_value if beds_value else '—' }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap: 10px; margin-top: 16px;">
+        <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Contact us</a>
+        <a class="btn btn-ghost" href="{{ url_for('main.packs') }}">Back to catalog</a>
+      </div>
+
+      <p class="microcopy" style="margin-top: 12px;">
+        Ref {{ plan.reference_code|default(plan.id, true) }}
+      </p>
+    </aside>
+  </div>
+
+  <section class="pd-desc" aria-label="Description" style="margin-top: 22px;">
+    <h2 style="margin-top: 0;">Description</h2>
+    <div class="rich-text">
+      {{ plan.description|default('Description coming soon.', true) | safe }}
+    </div>
+  </section>
+</div>
+{% endblock %}
