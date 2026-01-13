@@ -210,6 +210,18 @@ class HousePlan(db.Model):
             return self.categories[0] if self.categories else None
         except Exception:
             return None
+
+    @property
+    def image_url(self):
+        """Backward-compatible image URL accessor.
+
+        Some routes/templates may refer to `plan.image_url`. Prefer cover_image
+        when set, otherwise fall back to main_image.
+        """
+        try:
+            return self.cover_image or self.main_image
+        except Exception:
+            return None
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -11,6 +11,7 @@
 
 {% block content %}
 {% set hero_image = plan.cover_image or plan.main_image %}
+{% set hero_thumb = upload_url(hero_image) if hero_image else url_for('static', filename='images/placeholder.svg') %}
 {% set plan_title = plan.title|default('House Plan', true) %}
 {% set plan_ref = plan.reference_code|default(plan.id, true) %}
 {% set plan_slug = plan.slug|default('', true) %}
@@ -20,7 +21,7 @@
                          data-plan-slug="{{ plan_slug }}"
                          data-plan-title="{{ plan_title }}"
                          data-plan-reference="{{ plan_ref }}"
-                         data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
+                                                 data-plan-thumb="{{ hero_thumb }}"
              data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
                data-plan-bedrooms="{{ plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or '' }}"
                data-plan-price="{{ plan.starting_paid_price or '' }}"></div>
@@ -38,7 +39,10 @@
                     <figcaption>{{ plan_title }} · Perspective study</figcaption>
                 </figure>
                 {% else %}
-                <div class="plan-card__placeholder">Rendering in progress</div>
+                <figure>
+                    <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ plan_title }}" loading="eager" itemprop="image">
+                    <figcaption>{{ plan_title }} · Image coming soon</figcaption>
+                </figure>
                 {% endif %}
                 <div class="plan-hero__tags">
                     {% if plan.is_featured %}<span class="badge badge--glow">Signature pick</span>{% endif %}
@@ -75,7 +79,7 @@
                         data-plan-slug="{{ plan.slug }}"
                         data-plan-title="{{ plan_title }}"
                         data-plan-reference="{{ plan_ref }}"
-                        data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}">
+                        data-plan-thumb="{{ hero_thumb }}">
                         <span class="favorite-toggle__icon" aria-hidden="true">♡</span>
                         <span class="favorite-toggle__label">Add to favorites</span>
                     </button>
@@ -91,7 +95,7 @@
                         data-plan-slug="{{ plan_slug }}"
                         data-plan-title="{{ plan_title }}"
                         data-plan-reference="{{ plan_ref }}"
-                        data-plan-thumb="{{ upload_url(hero_image) if hero_image else '' }}"
+                        data-plan-thumb="{{ hero_thumb }}"
                         data-plan-area="{{ plan.area_sqft or plan.total_area_sqft or plan.square_feet or '' }}"
                         data-plan-area-m2="{{ plan.area_m2 or '' }}"
                         data-plan-bedrooms="{{ plan.bedrooms_count or plan.number_of_bedrooms or plan.bedrooms or '' }}"

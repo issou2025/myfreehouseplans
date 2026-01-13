@@ -748,7 +748,9 @@ def pack_detail(slug):
         except Exception:
             pass
         plan_id = getattr(plan, 'id', None)
-        current_app.logger.error(f'Plan Detail Error for ID {plan_id}: {e}', exc_info=True)
+        import traceback
+        current_app.logger.error(f'Plan Detail Error for ID {plan_id}: {e}')
+        current_app.logger.error(traceback.format_exc())
         flash('Unable to display this plan right now. Please try again later or contact support.', 'danger')
         return redirect(url_for('main.packs'))
 
@@ -775,7 +777,59 @@ def plan_detail_by_id(id: int):
             db.session.rollback()
         except Exception:
             pass
-        current_app.logger.error(f'Plan Detail Error for ID {id}: {e}', exc_info=True)
+        import traceback
+        current_app.logger.error(f'Plan Detail Error for ID {id}: {e}')
+        current_app.logger.error(traceback.format_exc())
+        flash('Unable to display this plan right now. Please try again later.', 'danger')
+        return redirect(url_for('main.packs'))
+
+
+@main_bp.route('/plans/<int:id>')
+def plan_detail(id: int):
+    """Public plan detail route by numeric ID.
+
+    Some external links and older sitemap entries reference /plans/<id>.
+    We resolve the plan safely, then redirect to the canonical slug URL.
+
+    Requirements:
+    - Uses HousePlan.query.get_or_404(id)
+    - Never 500s due to missing relationships/media
+    - Logs full traceback on unexpected errors
+    """
+
+    plan = None
+    try:
+        plan = HousePlan.query.get_or_404(id)
+
+        # Only public plans should be visible.
+        if not getattr(plan, 'is_published', False):
+            abort(404)
+
+        # Canonical URL is slug-based.
+        if getattr(plan, 'slug', None):
+            return redirect(url_for('main.pack_detail', slug=plan.slug), code=302)
+
+        # Extremely defensive fallback: render directly if slug is missing.
+        category_name = plan.category.name if getattr(plan, 'category', None) else 'No Category'
+        meta = generate_meta_tags(
+            title=getattr(plan, 'meta_title', None) or plan.title,
+            description=getattr(plan, 'meta_description', None) or getattr(plan, 'short_description', None) or '',
+            keywords=getattr(plan, 'meta_keywords', None),
+            url=url_for('main.plan_detail', id=plan.id, _external=True),
+            type='product'
+        )
+        return render_template('pack_detail.html', plan=plan, category_name=category_name, meta=meta)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        import traceback
+        current_app.logger.error(f'Plan Detail Error for ID {getattr(plan, "id", id)}: {e}')
+        current_app.logger.error(traceback.format_exc())
         flash('Unable to display this plan right now. Please try again later.', 'danger')
         return redirect(url_for('main.packs'))
 
