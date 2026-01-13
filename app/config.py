@@ -28,8 +28,8 @@ class Config:
     # Make database connections more resilient in production (stale connections,
     # temporary network blips). Safe defaults for all environments.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
     }
     
     # Pagination

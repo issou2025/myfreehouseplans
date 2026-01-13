@@ -254,6 +254,10 @@ def create_app(config_name='default'):
 
     # Register request lifecycle hooks
     register_request_hooks(app)
+
+    @app.route('/favicon.ico')
+    def favicon_placeholder():  # pragma: no cover - trivial route
+        return ('', 204)
     
     return app
 
@@ -360,6 +364,7 @@ def register_request_hooks(app):
     """Attach request hooks for analytics tracking."""
 
     from flask import request, g
+    from flask_login import current_user
 
     def _client_ip():
         forwarded = request.headers.get('X-Forwarded-For', '')
@@ -372,10 +377,19 @@ def register_request_hooks(app):
         path = (request.path or '/').strip()
         if not path:
             path = '/'
+        if path == '/favicon.ico':
+            g.visit_track = None
+            return
         if path.startswith('/static/') or request.endpoint == 'static':
             g.visit_track = None
             return
+        if path.startswith('/admin'):
+            g.visit_track = None
+            return
         if request.method not in ('GET', 'POST'):
+            g.visit_track = None
+            return
+        if current_user.is_authenticated and getattr(current_user, 'role', None) == 'superadmin':
             g.visit_track = None
             return
         g.visit_track = {

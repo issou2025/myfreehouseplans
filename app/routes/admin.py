@@ -674,9 +674,6 @@ def add_plan():
             # If the admin clicked "Save Draft", ensure the plan remains unpublished
             if getattr(form, 'save_draft', None) and form.save_draft.data:
                 plan.is_published = False
-
-            db.session.add(plan)
-            db.session.commit()
         except ValueError as upload_error:
             db.session.rollback()
             flash(str(upload_error), 'danger')
@@ -685,14 +682,21 @@ def add_plan():
             current_app.logger.exception('Failed to add plan "%s": %s', form.title.data, exc)
             flash('Unable to save the plan. No data was written.', 'danger')
         else:
-            # Provide specific feedback and redirect depending on whether this
-            # was an explicit "Save Draft" action or a full publish/save.
-            if getattr(form, 'save_draft', None) and form.save_draft.data:
-                flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
-                current_app.logger.info('Session after POST (draft save): user_id=%s, username=%s, role=%s, permanent=%s',
-                                        session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
-                return redirect(url_for('admin.edit_plan', id=plan.id))
+            try:
+                db.session.add(plan)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                current_app.logger.exception('Failed to persist new plan "%s": %s', form.title.data, exc)
+                flash('Unable to save the plan. No data was written.', 'danger')
             else:
+                # Provide specific feedback and redirect depending on whether this
+                # was an explicit "Save Draft" action or a full publish/save.
+                if getattr(form, 'save_draft', None) and form.save_draft.data:
+                    flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
+                    current_app.logger.info('Session after POST (draft save): user_id=%s, username=%s, role=%s, permanent=%s',
+                                            session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
+                    return redirect(url_for('admin.edit_plan', id=plan.id))
                 flash(f'House plan "{plan.title}" has been added successfully!', 'success')
                 current_app.logger.info('Session after POST: user_id=%s, username=%s, role=%s, permanent=%s', 
                                        session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
