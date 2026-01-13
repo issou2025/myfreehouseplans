@@ -248,6 +248,12 @@ class HousePlanForm(FlaskForm):
     save_draft = SubmitField('Save Draft')
 
     def validate_category_ids(self, category_ids):
+        # Only enforce category requirement on final save, not on draft save
+        # Check if this is a draft save by looking at the form data
+        if hasattr(self, 'save_draft') and self.save_draft.data:
+            # Draft save - categories optional
+            return
+        
         if not category_ids.data or len(category_ids.data) < 1:
             raise ValidationError('Please select at least one category for this plan.')
 

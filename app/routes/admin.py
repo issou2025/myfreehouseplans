@@ -705,147 +705,159 @@ def add_plan():
 @login_required
 @admin_required
 def edit_plan(id):
-    """Edit existing house plan"""
+    """Edit existing house plan - fully bulletproofed"""
 
     try:
-        plan = HousePlan.query.get(id)
-    except Exception:
-        current_app.logger.exception('Failed to load plan id=%s for edit (DB/query error)', id)
-        flash('Unable to load this plan right now (database error). Please try again.', 'danger')
-        return redirect(url_for('admin.plans'))
-
-    if plan is None:
-        flash('House plan not found.', 'warning')
-        return redirect(url_for('admin.plans'))
-
-    form = HousePlanForm(obj=plan)
-
-    try:
-        categories = Category.query.order_by(Category.name).all()
-    except Exception:
-        current_app.logger.exception('Failed to load categories while editing plan id=%s', id)
-        categories = []
-        flash('Categories could not be loaded (database error). You can still edit other fields.', 'warning')
-
-    form.category_ids.choices = [(c.id, c.name) for c in categories]
-    if request.method == 'GET':
+        # Load plan
         try:
-            form.category_ids.data = [c.id for c in (plan.categories or [])]
+            plan = HousePlan.query.get(id)
         except Exception:
-            current_app.logger.exception('Failed to prefill category_ids for plan id=%s', id)
-            form.category_ids.data = []
-    
-    if form.validate_on_submit():
-        try:
-            plan.title = form.title.data
-            plan.description = form.description.data
-            plan.short_description = form.short_description.data
-            plan.plan_type = form.plan_type.data or None
-            plan.bedrooms = form.bedrooms.data
-            plan.bathrooms = form.bathrooms.data
-            plan.stories = form.stories.data
-            plan.garage = form.garage.data
-            plan.price = form.price.data
-            plan.sale_price = form.sale_price.data
-            if form.price_pack_1.data is not None:
-                plan.price_pack_1 = form.price_pack_1.data
-            if form.price_pack_2.data is not None:
-                plan.price_pack_2 = form.price_pack_2.data
-            else:
-                plan.price_pack_2 = None
-            if form.price_pack_3.data is not None:
-                plan.price_pack_3 = form.price_pack_3.data
-            else:
-                plan.price_pack_3 = None
-            if plan.price_pack_1 is None:
-                plan.price_pack_1 = 0
-            category_ids = form.category_ids.data or []
-            if category_ids:
-                try:
-                    selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
-                except Exception:
-                    current_app.logger.exception('Failed to load selected categories for plan id=%s; category_ids=%s', plan.id, category_ids)
-                    selected_categories = []
-                    flash('Selected categories could not be saved (database error).', 'warning')
-            else:
-                selected_categories = []
-            plan.categories = selected_categories
-            plan.is_featured = form.is_featured.data
-            plan.is_published = form.is_published.data
-
-            plan.total_area_m2 = form.total_area_m2.data
-            plan.total_area_sqft = form.total_area_sqft.data
-            plan.number_of_bedrooms = form.bedrooms.data
-            plan.number_of_bathrooms = float(form.bathrooms.data) if form.bathrooms.data is not None else None
-            plan.number_of_floors = form.stories.data
-            plan.parking_spaces = form.garage.data
-            plan.building_width = form.building_width.data
-            plan.building_length = form.building_length.data
-            plan.roof_type = form.roof_type.data
-            plan.structure_type = form.structure_type.data
-            plan.foundation_type = form.foundation_type.data
-            plan.ceiling_height = form.ceiling_height.data
-            plan.construction_complexity = form.construction_complexity.data or None
-            plan.estimated_construction_cost_note = form.estimated_construction_cost_note.data
-            plan.suitable_climate = form.suitable_climate.data
-            plan.ideal_for = form.ideal_for.data
-            plan.main_features = form.main_features.data
-            plan.room_details = form.room_details.data
-            plan.construction_notes = form.construction_notes.data
-
-            plan.design_philosophy = form.design_philosophy.data
-            plan.lifestyle_suitability = form.lifestyle_suitability.data
-            plan.customization_potential = form.customization_potential.data
-
-            if plan.total_area_sqft:
-                plan.square_feet = int(plan.total_area_sqft)
-            elif plan.total_area_m2:
-                plan.square_feet = int(plan.total_area_m2 * 10.7639)
-
-            plan.gumroad_pack_2_url = form.gumroad_pack_2_url.data
-            plan.gumroad_pack_3_url = form.gumroad_pack_3_url.data
-
-            cover_upload = form.cover_image.data
-            if cover_upload and getattr(cover_upload, 'filename', ''):
-                plan.cover_image = save_uploaded_file(cover_upload, 'plans')
-
-            pdf_upload = form.free_pdf_file.data
-            if pdf_upload and getattr(pdf_upload, 'filename', ''):
-                plan.free_pdf_file = save_uploaded_file(pdf_upload, 'pdfs')
-
-            plan.seo_title = form.seo_title.data
-            plan.seo_description = form.seo_description.data
-            plan.seo_keywords = form.seo_keywords.data
-
-            diagnostics = diagnose_plan(plan)
-            # Non-blocking: surface policy issues as flash messages to reduce
-            # manual admin reasoning while preserving existing behavior.
-            if form.is_published.data or plan.gumroad_pack_2_url or plan.gumroad_pack_3_url:
-                for category, message in diagnostics_to_flash_messages(diagnostics):
-                    flash(message, category)
-            
-            plan.updated_at = datetime.utcnow()
-
-            # If the admin clicked "Save Draft", ensure the plan remains unpublished
-            if getattr(form, 'save_draft', None) and form.save_draft.data:
-                plan.is_published = False
-
-            db.session.commit()
-        except ValueError as upload_error:
-            db.session.rollback()
-            flash(str(upload_error), 'danger')
-        except Exception as exc:
-            db.session.rollback()
-            current_app.logger.exception('Failed to update plan %s: %s', plan.id, exc)
-            flash('Unable to update the plan. Your changes were not saved.', 'danger')
-        else:
-            if getattr(form, 'save_draft', None) and form.save_draft.data:
-                flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
-                return redirect(url_for('admin.edit_plan', id=plan.id))
-            flash(f'House plan "{plan.title}" has been updated successfully!', 'success')
+            current_app.logger.exception('Failed to load plan id=%s for edit (DB/query error)', id)
+            flash('Unable to load this plan right now (database error). Please try again.', 'danger')
             return redirect(url_for('admin.plans'))
+
+        if plan is None:
+            flash('House plan not found.', 'warning')
+            return redirect(url_for('admin.plans'))
+
+        # Initialize form
+        form = HousePlanForm(obj=plan)
+
+        # Load categories
+        try:
+            categories = Category.query.order_by(Category.name).all()
+        except Exception:
+            current_app.logger.exception('Failed to load categories while editing plan id=%s', id)
+            categories = []
+            flash('Categories could not be loaded (database error). You can still edit other fields.', 'warning')
+
+        form.category_ids.choices = [(c.id, c.name) for c in categories]
+        
+        # Prefill categories on GET
+        if request.method == 'GET':
+            try:
+                form.category_ids.data = [c.id for c in (plan.categories or [])]
+            except Exception:
+                current_app.logger.exception('Failed to prefill category_ids for plan id=%s', id)
+                form.category_ids.data = []
     
-    return render_template('admin/edit_plan.html', form=form, plan=plan)
+        if form.validate_on_submit():
+            try:
+                plan.title = form.title.data
+                plan.description = form.description.data
+                plan.short_description = form.short_description.data
+                plan.plan_type = form.plan_type.data or None
+                plan.bedrooms = form.bedrooms.data
+                plan.bathrooms = form.bathrooms.data
+                plan.stories = form.stories.data
+                plan.garage = form.garage.data
+                plan.price = form.price.data
+                plan.sale_price = form.sale_price.data
+                if form.price_pack_1.data is not None:
+                    plan.price_pack_1 = form.price_pack_1.data
+                if form.price_pack_2.data is not None:
+                    plan.price_pack_2 = form.price_pack_2.data
+                else:
+                    plan.price_pack_2 = None
+                if form.price_pack_3.data is not None:
+                    plan.price_pack_3 = form.price_pack_3.data
+                else:
+                    plan.price_pack_3 = None
+                if plan.price_pack_1 is None:
+                    plan.price_pack_1 = 0
+                category_ids = form.category_ids.data or []
+                if category_ids:
+                    try:
+                        selected_categories = Category.query.filter(Category.id.in_(category_ids)).all()
+                    except Exception:
+                        current_app.logger.exception('Failed to load selected categories for plan id=%s; category_ids=%s', plan.id, category_ids)
+                        selected_categories = []
+                        flash('Selected categories could not be saved (database error).', 'warning')
+                else:
+                    selected_categories = []
+                plan.categories = selected_categories
+                plan.is_featured = form.is_featured.data
+                plan.is_published = form.is_published.data
+
+                plan.total_area_m2 = form.total_area_m2.data
+                plan.total_area_sqft = form.total_area_sqft.data
+                plan.number_of_bedrooms = form.bedrooms.data
+                plan.number_of_bathrooms = float(form.bathrooms.data) if form.bathrooms.data is not None else None
+                plan.number_of_floors = form.stories.data
+                plan.parking_spaces = form.garage.data
+                plan.building_width = form.building_width.data
+                plan.building_length = form.building_length.data
+                plan.roof_type = form.roof_type.data
+                plan.structure_type = form.structure_type.data
+                plan.foundation_type = form.foundation_type.data
+                plan.ceiling_height = form.ceiling_height.data
+                plan.construction_complexity = form.construction_complexity.data or None
+                plan.estimated_construction_cost_note = form.estimated_construction_cost_note.data
+                plan.suitable_climate = form.suitable_climate.data
+                plan.ideal_for = form.ideal_for.data
+                plan.main_features = form.main_features.data
+                plan.room_details = form.room_details.data
+                plan.construction_notes = form.construction_notes.data
+
+                plan.design_philosophy = form.design_philosophy.data
+                plan.lifestyle_suitability = form.lifestyle_suitability.data
+                plan.customization_potential = form.customization_potential.data
+
+                if plan.total_area_sqft:
+                    plan.square_feet = int(plan.total_area_sqft)
+                elif plan.total_area_m2:
+                    plan.square_feet = int(plan.total_area_m2 * 10.7639)
+
+                plan.gumroad_pack_2_url = form.gumroad_pack_2_url.data
+                plan.gumroad_pack_3_url = form.gumroad_pack_3_url.data
+
+                cover_upload = form.cover_image.data
+                if cover_upload and getattr(cover_upload, 'filename', ''):
+                    plan.cover_image = save_uploaded_file(cover_upload, 'plans')
+
+                pdf_upload = form.free_pdf_file.data
+                if pdf_upload and getattr(pdf_upload, 'filename', ''):
+                    plan.free_pdf_file = save_uploaded_file(pdf_upload, 'pdfs')
+
+                plan.seo_title = form.seo_title.data
+                plan.seo_description = form.seo_description.data
+                plan.seo_keywords = form.seo_keywords.data
+
+                diagnostics = diagnose_plan(plan)
+                # Non-blocking: surface policy issues as flash messages to reduce
+                # manual admin reasoning while preserving existing behavior.
+                if form.is_published.data or plan.gumroad_pack_2_url or plan.gumroad_pack_3_url:
+                    for category, message in diagnostics_to_flash_messages(diagnostics):
+                        flash(message, category)
+                
+                plan.updated_at = datetime.utcnow()
+
+                # If the admin clicked "Save Draft", ensure the plan remains unpublished
+                if getattr(form, 'save_draft', None) and form.save_draft.data:
+                    plan.is_published = False
+
+                db.session.commit()
+            except ValueError as upload_error:
+                db.session.rollback()
+                flash(str(upload_error), 'danger')
+            except Exception as exc:
+                db.session.rollback()
+                current_app.logger.exception('Failed to update plan %s: %s', plan.id, exc)
+                flash('Unable to update the plan. Your changes were not saved.', 'danger')
+            else:
+                if getattr(form, 'save_draft', None) and form.save_draft.data:
+                    flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
+                    return redirect(url_for('admin.edit_plan', id=plan.id))
+                flash(f'House plan "{plan.title}" has been updated successfully!', 'success')
+                return redirect(url_for('admin.plans'))
+    
+        return render_template('admin/edit_plan.html', form=form, plan=plan)
+    
+    except Exception as fatal_exc:
+        # Catch-all for any unexpected errors (form init, template rendering, etc.)
+        current_app.logger.exception('Fatal error in edit_plan route for id=%s', id)
+        flash('An unexpected error occurred while loading the edit page. Please try again or contact support.', 'danger')
+        return redirect(url_for('admin.plans'))
 
 
 @admin_bp.route('/plans/delete/<int:id>', methods=['POST'])

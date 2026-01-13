@@ -72,6 +72,7 @@
                 <div class="form-group">
                     {{ form.category_ids.label(class="form-label") }}
                     <div class="category-picker" role="group" aria-label="Categories">
+                        {% if form.category_ids.choices %}
                         {% for choice in form.category_ids.iter_choices() %}
                         {% set value = choice[0] %}
                         {% set label = choice[1] %}
@@ -81,6 +82,9 @@
                             <span>{{ label }}</span>
                         </label>
                         {% endfor %}
+                        {% else %}
+                        <p class="form-help muted">No categories available. Please create categories first.</p>
+                        {% endif %}
                     </div>
                     <p class="form-help">Choose one or more categories. Customers will use these to filter plans.</p>
                     {% for err in form.category_ids.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
