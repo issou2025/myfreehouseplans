@@ -953,9 +953,13 @@ form { overflow: visible; }
 
 /* Mobile bottom-sheet behavior */
 @media (max-width: 860px) {
-	.filters-panel { position: fixed; left: 0; right: 0; bottom: 0; transform: translateY(100%); opacity: 0; z-index: 220; border-radius: 18px 18px 0 0; max-height: 86vh; overflow: auto; }
-	.filters-panel.is-open { transform: translateY(0); opacity: 1; box-shadow: var(--shadow-elevated); }
-	.filters-toggle { display: inline-flex; }
+	/* CRITICAL MOBILE FIX: Never hide the filter fields on mobile.
+	   The previous bottom-sheet pattern relied on JS to open the panel.
+	   If JS fails to load, mobile users cannot access filters at all.
+	   Keep the panel inline + visible so all fields are always accessible. */
+	.filters-panel { position: static; left: auto; right: auto; bottom: auto; transform: none; opacity: 1; z-index: auto; border-radius: 18px; max-height: none; overflow: visible; }
+	.filters-panel.is-open { transform: none; opacity: 1; box-shadow: var(--shadow-sm); }
+	.filters-toggle { display: none; }
 }
 @media (min-width: 861px) {
 	.filters-toggle { display: none; }
@@ -2360,6 +2364,12 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 	display: flex;
 	gap: 10px;
 	grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+	/* Ensure Apply/Reset are always visible and tappable on phones */
+	.filter-form__actions { flex-direction: column; align-items: stretch; }
+	.filter-form__actions .btn { width: 100%; justify-content: center; }
 }
 
 .filters__summary {
