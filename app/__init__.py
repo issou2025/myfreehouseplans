@@ -12,6 +12,7 @@ from datetime import datetime
 import os
 import importlib
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 # NOTE: Removed destructive bootstrap behavior. Admin seeding and any
 # DROP/CREATE operations are intentionally disabled in the factory.
 # Use explicit CLI commands (app.cli) to seed data in controlled environments.
@@ -94,6 +95,70 @@ def _force_create_tables(app) -> None:
                 _safe_log(app, 'info', '✓ All required tables present (%d)', len(required))
         except Exception as exc:
             _safe_log(app, 'warning', '⚠ Could not verify schema completeness (continuing): %s', exc, exc_info=True)
+
+        # 5) Fail-safe admin seeding (non-fatal)
+        # This exists specifically to recover access on fresh deployments.
+        # It uses lazy imports INSIDE app_context to avoid circular imports.
+        if os.environ.get('SKIP_ADMIN_SEED') == '1':
+            _safe_log(app, 'warning', 'Skipping admin seeding due to SKIP_ADMIN_SEED=1')
+            return
+
+        try:
+            # If the users table doesn't exist, seeding cannot happen.
+            inspector = inspect(db.engine)
+            if 'users' not in set(inspector.get_table_names()):
+                _safe_log(app, 'warning', 'Skipping admin seed: users table is missing')
+                return
+
+            # Requirements (with safe env overrides):
+            # - Check for email='ton-email@exemple.com'
+            # - Create username='admin'
+            # - Password hashed via generate_password_hash('ton_mot_de_passe_secret')
+            # - Admin flag: role == 'superadmin'
+            admin_email = os.environ.get('ADMIN_EMAIL') or 'ton-email@exemple.com'
+            admin_username = os.environ.get('ADMIN_USERNAME') or 'admin'
+            admin_password = os.environ.get('ADMIN_PASSWORD') or 'ton_mot_de_passe_secret'
+
+            if not admin_email:
+                _safe_log(app, 'warning', 'Skipping admin seed: ADMIN_EMAIL not set and no default provided')
+                return
+
+            # Loud warning if defaults are used in production.
+            if app.config.get('ENV') == 'production':
+                if admin_email == 'ton-email@exemple.com' or admin_password == 'ton_mot_de_passe_secret':
+                    _safe_log(
+                        app,
+                        'warning',
+                        '⚠ Insecure default admin credentials are in use. '
+                        'Set ADMIN_EMAIL/ADMIN_PASSWORD in Render dashboard immediately.'
+                    )
+
+            # Lazy imports inside context to avoid circular import crashes.
+            from werkzeug.security import generate_password_hash
+            from app.models import User
+
+            existing_admin = User.query.filter_by(email=admin_email).first()
+            if existing_admin:
+                _safe_log(app, 'info', '✓ Admin seed: user already exists for email=%s', admin_email)
+                return
+
+            new_admin = User(
+                username=admin_username,
+                email=admin_email,
+                password_hash=generate_password_hash(admin_password),
+                role='superadmin',
+                is_active=True,
+            )
+            db.session.add(new_admin)
+            db.session.commit()
+            _safe_log(app, 'warning', '✓ Admin seed: created superadmin user for email=%s', admin_email)
+        except IntegrityError:
+            # Another worker (or another deploy) created it concurrently.
+            db.session.rollback()
+            _safe_log(app, 'info', '✓ Admin seed: user already created by another process')
+        except Exception as exc:
+            db.session.rollback()
+            _safe_log(app, 'error', '✗ Admin seed failed (continuing): %s', exc, exc_info=True)
 
 
 def create_app(config_name='default'):
