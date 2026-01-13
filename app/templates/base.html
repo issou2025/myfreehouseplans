@@ -39,28 +39,25 @@
     <meta name="color-scheme" content="light dark">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     {% block extra_css %}{% endblock %}
     
     {# Structured Data #}
     {% block structured_data %}{% endblock %}
 </head>
-<body class="site-body">
+<body class="site-body theme-lux">
     {# Header / Navigation #}
-    <header class="site-header site-header--sticky" role="banner">
+    <header class="site-header glass" role="banner">
         <div class="shell site-header__inner">
             <a class="site-brand" href="{{ url_for('main.index') }}" aria-label="Return to homepage">
                 <span class="site-brand__logo">
                     <span class="site-brand__mark" aria-hidden="true"><i class="fa-solid fa-house-chimney"></i></span>
                     <span class="site-brand__name">{{ site_name }}</span>
                 </span>
-                <span class="site-brand__tagline">Architecture-ready plans · Modern & practical</span>
+                <span class="site-brand__tagline">Curated architectural portfolio</span>
             </a>
-            <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">
-                <span class="nav-toggle__icon"></span>
-            </button>
             {% set current_endpoint = request.endpoint or '' %}
             <nav id="primary-navigation" class="nav" aria-label="Primary">
                 <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">
@@ -68,11 +65,11 @@
                     <span>Home</span>
                 </a>
                 <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">
-                    <i class="fa-solid fa-compass" aria-hidden="true"></i>
+                    <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
                     <span>Plans</span>
                 </a>
                 <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">
-                    <i class="fa-solid fa-book" aria-hidden="true"></i>
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                     <span>Guides</span>
                 </a>
                 <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">
@@ -88,26 +85,17 @@
                     <span>About</span>
                 </a>
                 <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">
-                    <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                    <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
                     <span>Contact</span>
                 </a>
                 {% if current_user.is_authenticated and current_user.is_admin %}
                     <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">
-                        <i class="fa-solid fa-shield" aria-hidden="true"></i>
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                         <span>Admin</span>
                     </a>
                     <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">
-                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                        <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
                         <span>Account</span>
-                    </a>
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">
-                        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                        <span>Logout</span>
-                    </a>
-                {% elif current_user.is_authenticated %}
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">
-                        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-                        <span>Logout</span>
                     </a>
                 {% endif %}
             </nav>
@@ -115,18 +103,21 @@
                 <a class="icon-btn" href="{{ url_for('main.packs') }}" aria-label="Search plans">
                     <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                 </a>
-                {% if current_user.is_authenticated and current_user.is_admin %}
-                    <a class="btn btn-primary btn-cta" href="{{ url_for('admin.add_plan') }}">
-                        <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-                        Upload plan
+                {% if current_user.is_authenticated %}
+                    <a class="btn btn-primary btn-cta" href="{{ url_for('auth.logout') }}">
+                        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                        Logout
                     </a>
                 {% else %}
                     <a class="btn btn-primary btn-cta" href="{{ url_for('auth.login') }}">
-                        <i class="fa-solid fa-crown" aria-hidden="true"></i>
-                        Premium Login
+                        <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+                        Premium Access
                     </a>
                 {% endif %}
             </div>
+            <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation" aria-label="Toggle navigation">
+                <span class="nav-toggle__icon"></span>
+            </button>
         </div>
     </header>
     <div class="nav-overlay" id="nav-overlay"></div>

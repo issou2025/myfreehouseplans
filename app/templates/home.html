@@ -1,68 +1,96 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero hero--architect" aria-labelledby="hero-heading">
-    <div class="shell hero__grid">
-        <div class="hero__content">
-            <p class="eyebrow">✨ Professional architectural plans</p>
-            <h1 id="hero-heading">Beautiful house plans for families who dream big</h1>
-            <p class="lead">{{ site_description }} We listen first, then share plans with clear annotations, flexible pricing, and supportive guidance so you always know your next step.</p>
-            <div class="hero__actions">
-                <a href="{{ url_for('main.packs') }}" class="btn btn-primary">🏡 Find my perfect plan</a>
-                <a href="{{ url_for('main.contact') }}" class="btn btn-outline">💬 Talk with our team</a>
+<section class="hero hero--immersive" aria-labelledby="hero-heading">
+    <div class="hero__backdrop" aria-hidden="true"></div>
+    <div class="shell hero__layout">
+        <div class="hero__text">
+            <span class="hero__tag"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Luxury Architectural Portfolio</span>
+            <h1 id="hero-heading">Plans curated for visionary homes.</h1>
+            <p class="hero__lead">{{ site_description }} Each design blends technical rigor with lifestyle narratives so your build moves from inspiration to permit-ready execution.</p>
+            <div class="hero__cta">
+                <a href="{{ url_for('main.packs') }}" class="btn btn-primary btn--glow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore catalog</a>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-outline btn-ghost"><i class="fa-solid fa-comments" aria-hidden="true"></i> Talk to an architect</a>
             </div>
             <div class="hero__metrics" aria-label="Studio metrics">
-                <div>
-                    {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
-                    <span class="metric-value">{{ stats.total_plans if stats else total_showcase }}+</span>
-                    <span class="metric-label">Ready-to-build plans</span>
+                {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
+                <div class="metric-pill">
+                    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                    <div>
+                        <span>{{ stats.total_plans if stats else total_showcase }}+</span>
+                        <p>Ready-to-build plans</p>
+                    </div>
                 </div>
-                <div>
-                    <span class="metric-value">48h</span>
-                    <span class="metric-label">Average support response</span>
+                <div class="metric-pill">
+                    <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+                    <div>
+                        <span>48h</span>
+                        <p>Average technical response</p>
+                    </div>
                 </div>
-                <div>
-                    <span class="metric-value">15+</span>
-                    <span class="metric-label">Architectural styles</span>
+                <div class="metric-pill">
+                    <i class="fa-solid fa-globe" aria-hidden="true"></i>
+                    <div>
+                        <span>15+</span>
+                        <p>Architectural styles</p>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="hero__preview" aria-hidden="true">
-            <div class="hero__visual">
-                <div class="hero__visual-frame"></div>
-                <div class="hero__tag">📦 Downloadable sets</div>
-                <div class="hero__tag hero__tag--soft">📏 Metric & Imperial</div>
-                <div class="hero__tag hero__tag--outline">🎨 CAD deliverables</div>
+        <div class="hero__visual" aria-label="Plan highlights">
+            <div class="hero__panel glass">
+                <div class="hero__panel-row">
+                    <i class="fa-solid fa-vector-square" aria-hidden="true"></i>
+                    <div>
+                        <span>Metric & Imperial</span>
+                        <p>Seamless documentation</p>
+                    </div>
+                </div>
+                <div class="hero__panel-row">
+                    <i class="fa-solid fa-vr-cardboard" aria-hidden="true"></i>
+                    <div>
+                        <span>Immersive visuals</span>
+                        <p>CAD + BIM ready packs</p>
+                    </div>
+                </div>
+                <div class="hero__panel-row">
+                    <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+                    <div>
+                        <span>Architect support</span>
+                        <p>Climate + code guidance</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 {% if featured_plans %}
-<section class="section" aria-labelledby="featured-heading">
+<section class="section section--bento" aria-labelledby="featured-heading">
     <div class="shell">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">Signature collection</p>
+                <p class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Signature collection</p>
                 <h2 id="featured-heading">Architect-approved favorites</h2>
-                <p>Handpicked plans with generous documentation and easy upgrade paths when you are ready to build.</p>
+                <p>Handpicked plans with deep documentation, BIM-friendly packs, and on-call experts.</p>
             </div>
-            <a class="text-link" href="{{ url_for('main.packs') }}">View entire catalog</a>
+            <a class="text-link" href="{{ url_for('main.packs') }}"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i> View all plans</a>
         </div>
-        <div class="plan-grid">
+        <div class="bento-grid">
             {% for plan in featured_plans %}
-            <article class="plan-card" itemscope itemtype="https://schema.org/Product">
+            {% set card_image = plan.cover_image or plan.main_image %}
+            <article class="plan-card plan-card--bento {% if loop.index == 1 %}span-2{% elif loop.index == 2 %}span-tall{% else %}span-1{% endif %}" itemscope itemtype="https://schema.org/Product">
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
-                    {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
                         <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" itemprop="image" loading="lazy">
                     {% else %}
                         <div class="plan-card__placeholder">Rendering in progress</div>
                     {% endif %}
-                    <span class="badge badge--glow">Featured</span>
+                    <div class="plan-card__status glass"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Featured</div>
                 </a>
                 <div class="plan-card__body">
                     <p class="plan-card__eyebrow">
+                        <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
                         {% if plan.categories %}
                             {% for c in plan.categories %}
                                 <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
@@ -73,42 +101,42 @@
                     </p>
                     <h3 itemprop="name"><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
                     <p class="plan-card__summary" itemprop="description">{{ plan.architectural_summary }}</p>
-                    <dl class="plan-card__specs" aria-label="Key characteristics">
-                        {% if plan.area_sqft %}<div><dt>Area</dt><dd>{{ plan.area_sqft|round|int }} sq ft</dd></div>{% endif %}
-                        {% if plan.bedrooms_count %}<div><dt>Beds</dt><dd>{{ plan.bedrooms_count }}</dd></div>{% endif %}
-                        {% if plan.bathrooms_count %}<div><dt>Baths</dt><dd>{{ plan.bathrooms_count }}</dd></div>{% endif %}
-                        {% if plan.floors_count %}<div><dt>Levels</dt><dd>{{ plan.floors_count }}</dd></div>{% endif %}
-                    </dl>
+                    <ul class="plan-card__stats" aria-label="Key characteristics">
+                        {% if plan.area_sqft %}<li><i class="fa-solid fa-maximize" aria-hidden="true"></i>{{ plan.area_sqft|round|int }} sq ft</li>{% endif %}
+                        {% if plan.bedrooms_count %}<li><i class="fa-solid fa-bed" aria-hidden="true"></i>{{ plan.bedrooms_count }} beds</li>{% endif %}
+                        {% if plan.bathrooms_count %}<li><i class="fa-solid fa-bath" aria-hidden="true"></i>{{ plan.bathrooms_count }} baths</li>{% endif %}
+                        {% if plan.floors_count %}<li><i class="fa-solid fa-building" aria-hidden="true"></i>{{ plan.floors_count }} floors</li>{% endif %}
+                    </ul>
                     <div class="plan-card__tiers" aria-label="Pack pricing overview">
                         {% for tier in plan.pricing_tiers %}
                         <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
-                            <span>Pack 0{{ tier.pack }}</span>
+                            <span><i class="fa-solid fa-box" aria-hidden="true"></i> Pack 0{{ tier.pack }}</span>
                             <span>
                                 {% if tier.price and tier.price > 0 %}
                                     ${{ tier.price|round(0)|int }}
                                 {% elif tier.pack == 1 %}
                                     Free
                                 {% else %}
-                                    Forthcoming
+                                    Soon
                                 {% endif %}
                             </span>
                         </div>
                         {% endfor %}
                     </div>
                     <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                        <div class="plan-card__price plan-card__price--stack">
-                            <span class="plan-card__ref">Ref {{ plan.reference_code }}</span>
+                        <div class="plan-card__price">
+                            <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.reference_code }}</span>
                             {% if plan.starting_paid_price %}
-                                <span class="price price--primary" itemprop="price">From ${{ plan.starting_paid_price|round(0)|int }}</span>
+                                <span class="price" itemprop="price">From ${{ plan.starting_paid_price|round(0)|int }}</span>
                             {% else %}
-                                <span class="price price--primary" itemprop="price">Free</span>
+                                <span class="price" itemprop="price">Free</span>
                             {% endif %}
-                            <meta itemprop="priceCurrency" content="USD">
                         </div>
                         <div class="plan-card__cta">
-                            <a class="btn btn-ghost" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">View plan</a>
-                            <a class="text-link" href="{{ url_for('main.contact') }}">Request guidance</a>
+                            <a class="btn btn-outline" href="{{ url_for('main.pack_detail', slug=plan.slug) }}"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> View plan</a>
+                            <a class="text-link" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Request guidance</a>
                         </div>
+                        <meta itemprop="priceCurrency" content="USD">
                     </div>
                 </div>
             </article>
@@ -119,18 +147,18 @@
 {% endif %}
 
 {% if recent_plans %}
-<section class="section section--soft" aria-labelledby="recent-heading">
+<section class="section section--scroll" aria-labelledby="recent-heading">
     <div class="shell">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">Fresh releases</p>
+                <p class="eyebrow"><i class="fa-solid fa-signal" aria-hidden="true"></i> Fresh releases</p>
                 <h2 id="recent-heading">New layouts every week</h2>
-                <p>Recently published plans with gentle onboarding. Explore, favorite, or message us when you need clarity.</p>
+                <p>Each release includes annotated PDFs, CAD-ready assets, and onboarding notes.</p>
             </div>
         </div>
-        <div class="plan-grid plan-grid--scroll">
+        <div class="plan-row" role="list">
             {% for plan in recent_plans %}
-            <article class="plan-card plan-card--compact">
+            <article class="plan-card plan-card--inline" role="listitem">
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
@@ -142,6 +170,7 @@
                 </a>
                 <div class="plan-card__body">
                     <p class="plan-card__eyebrow">
+                        <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
                         {% if plan.categories %}
                             {% for c in plan.categories %}
                                 <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
@@ -151,31 +180,14 @@
                         {% endif %}
                     </p>
                     <h3><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a></h3>
-                    <p class="plan-card__summary">{{ plan.architectural_summary }}</p>
-                    <ul class="plan-card__chips plan-card__stats" aria-label="Key characteristics">
-                        {% if plan.area_sqft %}<li>{{ plan.area_sqft|round|int }} sq ft</li>{% endif %}
-                        {% if plan.bedrooms_count %}<li>{{ plan.bedrooms_count }} beds</li>{% endif %}
-                        {% if plan.bathrooms_count %}<li>{{ plan.bathrooms_count }} baths</li>{% endif %}
-                    </ul>
-                    <div class="plan-card__tiers plan-card__tiers--inline" aria-label="Pack pricing overview">
-                        {% for tier in plan.pricing_tiers %}
-                        <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
-                            <span>Pack 0{{ tier.pack }}</span>
-                            <span>
-                                {% if tier.price and tier.price > 0 %}
-                                    ${{ tier.price|round(0)|int }}
-                                {% elif tier.pack == 1 %}
-                                    Free
-                                {% else %}
-                                    Forthcoming
-                                {% endif %}
-                            </span>
-                        </div>
-                        {% endfor %}
+                    <div class="plan-card__stats plan-card__stats--inline">
+                        {% if plan.area_sqft %}<span><i class="fa-solid fa-maximize" aria-hidden="true"></i>{{ plan.area_sqft|round|int }} sq ft</span>{% endif %}
+                        {% if plan.bedrooms_count %}<span><i class="fa-solid fa-bed" aria-hidden="true"></i>{{ plan.bedrooms_count }} beds</span>{% endif %}
+                        {% if plan.bathrooms_count %}<span><i class="fa-solid fa-bath" aria-hidden="true"></i>{{ plan.bathrooms_count }} baths</span>{% endif %}
                     </div>
                     <div class="plan-card__footer">
-                        <span class="plan-card__ref">Ref {{ plan.reference_code }}</span>
-                        <a class="btn btn-outline" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">View plan</a>
+                        <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.reference_code }}</span>
+                        <a class="btn btn-soft" href="{{ url_for('main.pack_detail', slug=plan.slug) }}"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> View</a>
                     </div>
                 </div>
             </article>
@@ -185,44 +197,44 @@
 </section>
 {% endif %}
 
-<section class="section section--duo" aria-labelledby="features-heading">
+<section class="section section--experience" aria-labelledby="experience-heading">
     <div class="shell">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">⭐ Why choose us</p>
-                <h2 id="features-heading">Architecture expertise, packaged for builders</h2>
+                <p class="eyebrow"><i class="fa-solid fa-star" aria-hidden="true"></i> Why builders trust us</p>
+                <h2 id="experience-heading">Architecture expertise, packaged for execution</h2>
             </div>
         </div>
-        <div class="value-grid value-grid--three">
-            <article class="value-card">
-                <div class="value-card__icon">📐</div>
+        <div class="experience-grid">
+            <article class="experience-card glass">
+                <i class="fa-solid fa-ruler-triangle" aria-hidden="true"></i>
                 <h3>Professional documentation</h3>
-                <p>Full drawing sets authored by licensed architects with precise dimensions, detailed sections, and complete schedules.</p>
+                <p>Full drawing sets authored by licensed architects with precise dimensions, sections, schedules, and notes for engineers.</p>
             </article>
-            <article class="value-card">
-                <div class="value-card__icon">🎁</div>
+            <article class="experience-card glass">
+                <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
                 <h3>Flexible deliverables</h3>
-                <p>Start with the free PDF, then upgrade to premium packs with metric, imperial, and editable CAD formats when ready.</p>
+                <p>Start with the free PDF, then upgrade to Pro or Ultimate packs with CAD/BIM layers, materials, and variant options.</p>
             </article>
-            <article class="value-card">
-                <div class="value-card__icon">🤝</div>
-                <h3>Expert support</h3>
-                <p>Our team guides you through code compliance, climate adaptation, and structural coordination every step of the way.</p>
+            <article class="experience-card glass">
+                <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+                <h3>Dedicated guidance</h3>
+                <p>Our architects advise on code compliance, structural adaptations, and climate optimization in every region.</p>
             </article>
         </div>
     </div>
 </section>
 
 <section class="section section--cta" aria-labelledby="cta-heading">
-    <div class="shell section-cta">
+    <div class="shell section-cta glass">
         <div>
-            <p class="eyebrow">💡 Need guidance?</p>
-            <h2 id="cta-heading">Let's find the perfect plan for your project</h2>
-            <p>Share your site, climate, and vision—our architects will help match the right plan or craft a custom approach tailored to you.</p>
+            <p class="eyebrow"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Need guidance?</p>
+            <h2 id="cta-heading">Let's choreograph your ideal plan.</h2>
+            <p>Share your site, climate, and timeline—our studio will recommend a plan or craft a custom approach.</p>
         </div>
         <div class="section-cta__actions">
-            <a class="btn btn-primary" href="{{ url_for('main.contact') }}">Start a conversation</a>
-            <a class="btn btn-soft" href="{{ url_for('main.about') }}">Meet our team</a>
+            <a class="btn btn-primary btn--glow" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> Start a conversation</a>
+            <a class="btn btn-outline" href="{{ url_for('main.about') }}"><i class="fa-solid fa-users" aria-hidden="true"></i> Meet the team</a>
         </div>
     </div>
 </section>
