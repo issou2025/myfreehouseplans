@@ -931,8 +931,67 @@ def edit_plan(id):
 @admin_required
 def delete_plan(id):
     """Delete house plan"""
-    flash('Deleting plans is disabled to protect live catalog data.', 'warning')
-    return redirect(url_for('admin.plans'))
+
+    plan = db.session.get(HousePlan, id)
+    if not plan:
+        flash('Plan not found.', 'warning')
+        return redirect(request.referrer or url_for('admin.plans'))
+
+    plan_title = getattr(plan, 'title', '')
+
+    try:
+        # Protect data integrity: if a plan has completed purchases, do not delete it.
+        # Orders.plan_id is NOT nullable and has no ondelete cascade.
+        order_count = Order.query.filter_by(plan_id=id).count()
+        if order_count:
+            flash(
+                f'Cannot delete "{plan_title}" because it has {order_count} order(s). Unpublish it instead.',
+                'warning',
+            )
+            return redirect(request.referrer or url_for('admin.plans'))
+
+        # Remove many-to-many category links first.
+        db.session.execute(
+            house_plan_categories.delete().where(house_plan_categories.c.plan_id == id)
+        )
+
+        db.session.delete(plan)
+        db.session.commit()
+        flash(f'Plan "{plan_title}" deleted.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to delete plan %s: %s', id, exc)
+        flash('Unable to delete the plan. Please try again.', 'danger')
+
+    return redirect(request.referrer or url_for('admin.plans'))
+
+
+@admin_bp.route('/plans/<int:id>/toggle-publish', methods=['POST'])
+@login_required
+@admin_required
+def toggle_plan_publish(id):
+    """Publish/unpublish a plan (public catalog only shows published plans)."""
+
+    plan = db.session.get(HousePlan, id)
+    if not plan:
+        flash('Plan not found.', 'warning')
+        return redirect(request.referrer or url_for('admin.plans'))
+
+    try:
+        plan.is_published = not bool(plan.is_published)
+        db.session.commit()
+        if plan.is_published:
+            flash(f'Plan "{plan.title}" is now published.', 'success')
+        else:
+            flash(f'Plan "{plan.title}" has been unpublished (draft).', 'info')
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to toggle publish for plan %s: %s', id, exc)
+        flash('Unable to update publish status. Please try again.', 'danger')
+
+    return redirect(request.referrer or url_for('admin.plans'))
 
 
 @admin_bp.route('/categories')

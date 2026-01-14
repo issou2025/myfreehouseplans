@@ -5292,6 +5292,16 @@ input[type="file"] {
 	color: white;
 }
 
+.btn-action--toggle {
+	background: var(--admin-orange-bg);
+	color: var(--admin-orange);
+}
+
+.btn-action--toggle:hover {
+	background: var(--admin-orange);
+	color: white;
+}
+
 /* Inbox & Message Center */
 .inbox-shell .admin-header {
 	margin-bottom: 32px;

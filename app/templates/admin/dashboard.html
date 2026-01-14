@@ -187,6 +187,14 @@
                         </td>
                         <td class="admin-table__actions">
                             <a class="btn-action btn-action--edit" href="{{ url_for('admin.edit_plan', id=plan.id) }}">Edit</a>
+                            <form method="post" action="{{ url_for('admin.toggle_plan_publish', id=plan.id) }}">
+                                {{ csrf_token() if csrf_token is defined else '' }}
+                                {% if plan.is_published %}
+                                <button type="submit" class="btn-action btn-action--toggle">Unpublish</button>
+                                {% else %}
+                                <button type="submit" class="btn-action btn-action--toggle">Publish</button>
+                                {% endif %}
+                            </form>
                             <form method="post" action="{{ url_for('admin.delete_plan', id=plan.id) }}" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
                                 {{ csrf_token() if csrf_token is defined else '' }}
                                 <button type="submit" class="btn-action btn-action--delete">Delete</button>
