@@ -59,4 +59,26 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.querySelector('form.admin-form');
+        if (!form) return;
+
+        form.addEventListener('submit', function () {
+            var btn = form.querySelector('.btn-submit');
+            if (!btn) return;
+
+            // Disable to prevent double-click submissions.
+            btn.disabled = true;
+
+            // Provide lightweight feedback.
+            if (typeof btn.value === 'string' && btn.value.length) {
+                btn.value = 'Saving…';
+            } else {
+                btn.textContent = 'Saving…';
+            }
+        });
+    });
+</script>
 {% endblock %}

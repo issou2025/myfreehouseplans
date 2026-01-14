@@ -33,6 +33,28 @@ from app.utils.db_resilience import with_db_resilience, safe_db_query
 admin_bp = Blueprint('admin', __name__)
 
 
+def _generate_unique_category_slug(name: str, *, exclude_category_id: int | None = None) -> str:
+    """Generate a unique Category.slug.
+
+    Slug collisions can happen even when Category.name is unique (punctuation,
+    transliteration, etc.). We keep app-level slug uniqueness by suffixing.
+    """
+
+    base = slugify(name) or 'category'
+    candidate = base
+    suffix = 2
+
+    while True:
+        query = Category.query.filter(Category.slug == candidate)
+        if exclude_category_id is not None:
+            query = query.filter(Category.id != exclude_category_id)
+        exists = query.first() is not None
+        if not exists:
+            return candidate
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+
+
 def ensure_admin_exists():
     """Return the current admin user if one exists.
 
@@ -435,105 +457,113 @@ def admin_index():
 @team_required
 def plans():
     """List all house plans"""
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    per_page = max(10, min(per_page, 100))
 
-    query = HousePlan.query
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        per_page = max(10, min(per_page, 100))
 
-    # Staff visibility: can see their own plans + all drafts.
-    if current_user.role == 'staff':
-        query = query.filter(
-            or_(
-                HousePlan.created_by_id == current_user.id,
-                HousePlan.is_published.is_(False),
+        query = HousePlan.query
+
+        # Staff visibility: can see their own plans + all drafts.
+        if current_user.role == 'staff':
+            query = query.filter(
+                or_(
+                    HousePlan.created_by_id == current_user.id,
+                    HousePlan.is_published.is_(False),
+                )
             )
-        )
 
-    search = request.args.get('q', '').strip()
-    if search:
-        like_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                HousePlan.title.ilike(like_pattern),
-                HousePlan.reference_code.ilike(like_pattern),
-                HousePlan.slug.ilike(like_pattern),
+        search = request.args.get('q', '').strip()
+        if search:
+            like_pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    HousePlan.title.ilike(like_pattern),
+                    HousePlan.reference_code.ilike(like_pattern),
+                    HousePlan.slug.ilike(like_pattern),
+                )
             )
-        )
 
-    status = request.args.get('status')
-    if status == 'published':
-        query = query.filter(HousePlan.is_published.is_(True))
-    elif status == 'draft':
-        query = query.filter(HousePlan.is_published.is_(False))
+        status = request.args.get('status')
+        if status == 'published':
+            query = query.filter(HousePlan.is_published.is_(True))
+        elif status == 'draft':
+            query = query.filter(HousePlan.is_published.is_(False))
 
-    category_id = request.args.get('category', type=int)
-    if category_id:
-        query = (
-            query.join(HousePlan.categories)
-            .filter(Category.id == category_id)
-            .distinct()
-        )
-
-    pack_filter = request.args.get('pack')
-    if pack_filter == 'free':
-        query = query.filter(HousePlan.free_pdf_file.isnot(None))
-    elif pack_filter == 'paid':
-        query = query.filter(
-            or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
-        )
-
-    sort = request.args.get('sort', 'newest')
-    if sort == 'updated':
-        query = query.order_by(HousePlan.updated_at.desc(), HousePlan.id.desc())
-    elif sort == 'title':
-        query = query.order_by(HousePlan.title.asc())
-    elif sort == 'views':
-        query = query.order_by(HousePlan.views_count.desc())
-    elif sort == 'price_low':
-        query = query.order_by(HousePlan.price.asc())
-    else:
-        query = query.order_by(HousePlan.created_at.desc())
-
-    plans = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    filters = {
-        'search': search,
-        'status': status or '',
-        'category': category_id or '',
-        'pack': pack_filter or '',
-        'sort': sort,
-        'per_page': per_page,
-    }
-
-    categories = Category.query.order_by(Category.name.asc()).all()
-    stats_query = HousePlan.query
-    if current_user.role == 'staff':
-        stats_query = stats_query.filter(
-            or_(
-                HousePlan.created_by_id == current_user.id,
-                HousePlan.is_published.is_(False),
+        category_id = request.args.get('category', type=int)
+        if category_id:
+            query = (
+                query.join(HousePlan.categories)
+                .filter(Category.id == category_id)
+                .distinct()
             )
+
+        pack_filter = request.args.get('pack')
+        if pack_filter == 'free':
+            query = query.filter(HousePlan.free_pdf_file.isnot(None))
+        elif pack_filter == 'paid':
+            query = query.filter(
+                or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
+            )
+
+        sort = request.args.get('sort', 'newest')
+        if sort == 'updated':
+            query = query.order_by(HousePlan.updated_at.desc(), HousePlan.id.desc())
+        elif sort == 'title':
+            query = query.order_by(HousePlan.title.asc())
+        elif sort == 'views':
+            query = query.order_by(HousePlan.views_count.desc())
+        elif sort == 'price_low':
+            query = query.order_by(HousePlan.price.asc())
+        else:
+            query = query.order_by(HousePlan.created_at.desc())
+
+        plans = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        filters = {
+            'search': search,
+            'status': status or '',
+            'category': category_id or '',
+            'pack': pack_filter or '',
+            'sort': sort,
+            'per_page': per_page,
+        }
+
+        categories = Category.query.order_by(Category.name.asc()).all()
+        stats_query = HousePlan.query
+        if current_user.role == 'staff':
+            stats_query = stats_query.filter(
+                or_(
+                    HousePlan.created_by_id == current_user.id,
+                    HousePlan.is_published.is_(False),
+                )
+            )
+        stats = {
+            'total': stats_query.count(),
+            'published': stats_query.filter_by(is_published=True).count(),
+            'draft': stats_query.filter_by(is_published=False).count(),
+            'free': stats_query.filter(HousePlan.free_pdf_file.isnot(None)).count(),
+        }
+
+        query_args = request.args.to_dict(flat=True)
+        query_args.pop('page', None)
+
+        return render_template(
+            'admin/plans_list.html',
+            plans=plans,
+            filters=filters,
+            categories=categories,
+            stats=stats,
+            query_args=query_args,
         )
-    stats = {
-        'total': stats_query.count(),
-        'published': stats_query.filter_by(is_published=True).count(),
-        'draft': stats_query.filter_by(is_published=False).count(),
-        'free': stats_query.filter(HousePlan.free_pdf_file.isnot(None)).count(),
-    }
 
-    query_args = request.args.to_dict(flat=True)
-    query_args.pop('page', None)
-
-    return render_template(
-        'admin/plans_list.html',
-        plans=plans,
-        filters=filters,
-        categories=categories,
-        stats=stats,
-        query_args=query_args,
-    )
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to load plans list: %s', exc, exc_info=True)
+        flash('Unable to load plans right now. Please try again later.', 'danger')
+        return redirect(url_for('admin.dashboard'))
 
 
 OPEN_INBOX_STATUSES = (
@@ -693,7 +723,15 @@ def add_plan():
     
     form = HousePlanForm()
     
-    categories = Category.query.order_by(Category.name).all()
+    try:
+        categories = Category.query.order_by(Category.name).all()
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to load categories for add_plan: %s', exc, exc_info=True)
+        flash('Unable to load categories. Please try again in a moment.', 'danger')
+        return redirect(url_for('admin.plans'))
+
     if not categories:
         if current_user.role == 'staff':
             flash('No categories exist yet. Ask the Owner to create categories before adding plans.', 'warning')
@@ -1183,20 +1221,51 @@ def add_category():
     form = CategoryForm()
     
     if form.validate_on_submit():
+        name = (form.name.data or '').strip()
+        if not name:
+            flash('Name is required.', 'danger')
+            return redirect(url_for('admin.add_category'))
+
         try:
-            name = (form.name.data or '').strip()
-            category = Category(name=name, description=form.description.data)
-            category.slug = slugify(name)
-            db.session.add(category)
-            db.session.commit()
+            existing = (
+                Category.query
+                .filter(func.lower(Category.name) == func.lower(name))
+                .first()
+            )
         except Exception as exc:
             db.session.rollback()
             print(traceback.format_exc())
-            current_app.logger.error('Failed to add category %s: %s', (form.name.data or ''), exc, exc_info=True)
+            current_app.logger.error('Failed to validate category uniqueness for %s: %s', name, exc, exc_info=True)
+            flash('Unable to verify category uniqueness. Please try again.', 'danger')
+            # PRG: do not return 200 on failed POST
+            return redirect(url_for('admin.add_category'))
+
+        if existing:
+            flash('A category with that name already exists.', 'warning')
+            # PRG: do not return 200 on failed POST
+            return redirect(url_for('admin.add_category'))
+
+        try:
+            category = Category(name=name, description=form.description.data)
+            category.slug = _generate_unique_category_slug(name)
+            db.session.add(category)
+            db.session.commit()
+        except IntegrityError as exc:
+            # Handles race conditions / double submits cleanly.
+            db.session.rollback()
+            print(traceback.format_exc())
+            current_app.logger.warning('Duplicate category insert blocked for name=%s: %s', name, exc)
+            flash('This category already exists (duplicate prevented).', 'warning')
+            return redirect(url_for('admin.add_category'))
+        except Exception as exc:
+            db.session.rollback()
+            print(traceback.format_exc())
+            current_app.logger.error('Failed to add category %s: %s', name, exc, exc_info=True)
             flash('Unable to save the category. No changes were applied.', 'danger')
-        else:
-            flash(f'Category "{category.name}" has been added successfully!', 'success')
-            return redirect(url_for('admin.categories'))
+            return redirect(url_for('admin.add_category'))
+
+        flash(f'Category "{category.name}" has been added successfully!', 'success')
+        return redirect(url_for('admin.categories'))
     
     return render_template('admin/add_category.html', form=form)
 
