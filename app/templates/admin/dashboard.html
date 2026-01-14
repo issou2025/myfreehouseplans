@@ -17,6 +17,12 @@
                 <span class="btn-admin__icon">📋</span>
                 <span>Manage Plans</span>
             </a>
+            {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.manage_categories') }}">
+                <span class="btn-admin__icon">📁</span>
+                <span>Manage Categories</span>
+            </a>
+            {% endif %}
             <a class="btn-admin btn-admin--primary" href="{{ url_for('admin.add_plan') }}">
                 <span class="btn-admin__icon">✨</span>
                 <span>Add New Plan</span>

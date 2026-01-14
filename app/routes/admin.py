@@ -966,6 +966,25 @@ def categories():
     return render_template('admin/categories_list.html', categories=categories, plan_counts=plan_counts)
 
 
+@admin_bp.route('/categories/manage')
+@login_required
+@admin_required
+def manage_categories():
+    """Alias route for category management.
+
+    This exists to provide a stable endpoint name for dashboard buttons.
+    """
+
+    try:
+        return categories()
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to render manage_categories: %s', exc, exc_info=True)
+        flash('Unable to load categories right now. Please try again.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
 @admin_bp.route('/categories/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
