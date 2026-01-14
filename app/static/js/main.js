@@ -821,6 +821,33 @@ document.addEventListener('DOMContentLoaded', function () {
 		tray.appendChild(frag);
 	}
 
+	function renderInlineCompare(plans) {
+		const bar = document.getElementById('compareInlineBar');
+		if (!bar) return;
+		const thresholdMet = plans.length >= 2;
+		if (!thresholdMet) {
+			bar.hidden = true;
+			bar.innerHTML = '';
+			return;
+		}
+		bar.hidden = false;
+		const summary = plans
+			.slice(0, 3)
+			.map((plan) => plan.reference || plan.title)
+			.filter(Boolean)
+			.join(' • ');
+		bar.innerHTML = `
+			<div class="compare-inline__text">
+				<strong>${plans.length} plan${plans.length === 1 ? '' : 's'} ready to compare</strong>
+				<p>${summary || 'Select plans to compare specs side by side.'}</p>
+			</div>
+			<div class="compare-inline__actions">
+				<a class="btn btn-primary" href="/compare">Launch compare</a>
+				<button class="compare-inline__clear" type="button" data-compare-clear>Clear</button>
+			</div>
+		`;
+	}
+
 	function formatArea(plan) {
 		const area = typeof plan.area === 'number' ? Math.round(plan.area) : null;
 		const areaM2 = typeof plan.areaM2 === 'number' ? Math.round(plan.areaM2) : null;
@@ -997,6 +1024,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		const snapshot = compareState.slice();
 		syncCompareButtons(snapshot);
 		renderCompareTray(snapshot);
+		renderInlineCompare(snapshot);
 		renderComparePage(snapshot);
 		syncClearButtons(snapshot.length > 0);
 	}

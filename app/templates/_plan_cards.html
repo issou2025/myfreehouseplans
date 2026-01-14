@@ -32,6 +32,22 @@
         </button>
     </div>
     <div class="plan-card__body">
+        {% set raw_best_for = plan.lifestyle_suitability or plan.ideal_for or plan.design_philosophy %}
+        {% if not raw_best_for and plan.categories %}
+            {% set fallback_category = plan.categories|first %}
+            {% if fallback_category %}
+                {% set raw_best_for = 'Great for ' ~ fallback_category.name ~ ' living' %}
+            {% endif %}
+        {% endif %}
+        {% if raw_best_for %}
+            {% set best_for = (raw_best_for|replace('\n', ' ')).split('.')|first %}
+            {% if best_for %}
+            <div class="plan-card__bestfor" aria-label="Lifestyle fit">
+                <span class="plan-card__bestfor-label">Best for</span>
+                <span>{{ best_for|trim }}</span>
+            </div>
+            {% endif %}
+        {% endif %}
         <div class="plan-card__top">
             <p class="plan-card__eyebrow">
                 {% if plan.categories %}
@@ -46,35 +62,58 @@
             <div class="plan-card__ref" aria-label="Reference code">Ref {{ plan_ref }}</div>
         </div>
 
-        <div class="plan-card__facts" aria-label="Key facts">
+        <div class="plan-card__quick-specs" aria-label="Quick specs">
             {% if plan.area_sqft %}
-                <span class="plan-fact" aria-label="{{ plan.area_sqft|round|int }} square feet of living space">
-                    <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-                    <span class="plan-fact__metric">
-                        <strong>{{ plan.area_sqft|round|int }}</strong>
-                        <span class="plan-fact__label">sq ft</span>
-                    </span>
+                <span class="plan-quick-spec" aria-label="{{ plan.area_sqft|round|int }} square feet of living space">
+                    <small>Area</small>
+                    <strong>{{ plan.area_sqft|round|int }} sq ft</strong>
                 </span>
             {% endif %}
             {% if plan.bedrooms_count %}
-                <span class="plan-fact" aria-label="{{ plan.bedrooms_count }} bedroom{% if plan.bedrooms_count|int != 1 %}s{% endif %}">
-                    <i class="fa-solid fa-bed" aria-hidden="true"></i>
-                    <span class="plan-fact__metric">
-                        <strong>{{ plan.bedrooms_count }}</strong>
-                        <span class="plan-fact__label">beds</span>
-                    </span>
+                <span class="plan-quick-spec" aria-label="{{ plan.bedrooms_count }} bedroom{% if plan.bedrooms_count|int != 1 %}s{% endif %}">
+                    <small>Beds</small>
+                    <strong>{{ plan.bedrooms_count }}</strong>
                 </span>
             {% endif %}
             {% if plan.bathrooms_count %}
-                <span class="plan-fact" aria-label="{{ plan.bathrooms_count }} bathroom{% if plan.bathrooms_count|int != 1 %}s{% endif %}">
-                    <i class="fa-solid fa-shower" aria-hidden="true"></i>
-                    <span class="plan-fact__metric">
-                        <strong>{{ plan.bathrooms_count }}</strong>
-                        <span class="plan-fact__label">baths</span>
-                    </span>
+                <span class="plan-quick-spec" aria-label="{{ plan.bathrooms_count }} bathroom{% if plan.bathrooms_count|int != 1 %}s{% endif %}">
+                    <small>Baths</small>
+                    <strong>{{ plan.bathrooms_count }}</strong>
+                </span>
+            {% endif %}
+            {% if plan.floors_count %}
+                <span class="plan-quick-spec" aria-label="{{ plan.floors_count }} floor{% if plan.floors_count|int != 1 %}s{% endif %}">
+                    <small>Floors</small>
+                    <strong>{{ plan.floors_count }}</strong>
+                </span>
+            {% endif %}
+            {% if plan.parking_count %}
+                <span class="plan-quick-spec" aria-label="{{ plan.parking_count }} parking space{% if plan.parking_count|int != 1 %}s{% endif %}">
+                    <small>Parking</small>
+                    <strong>{{ plan.parking_count }}</strong>
                 </span>
             {% endif %}
         </div>
+
+        {% set tiers = plan.pricing_tiers %}
+        {% if tiers %}
+        <div class="plan-card__tiers plan-card__tiers--inline" aria-label="Pack overview">
+            {% for tier in tiers %}
+            <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
+                <span>Pack {{ '%02d'|format(tier.pack) }}</span>
+                <span>
+                    {% if tier.price and tier.price > 0 %}
+                        ${{ tier.price|round(0)|int }}
+                    {% elif tier.is_free %}
+                        Free
+                    {% else %}
+                        Soon
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
             {% if plan.starting_paid_price %}
