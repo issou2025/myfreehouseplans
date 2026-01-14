@@ -13,7 +13,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
 import os
 import traceback
-from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor
+from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor, house_plan_categories
 from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm
 from app.forms import PlanFAQForm
 from app.extensions import db
@@ -941,12 +941,28 @@ def delete_plan(id):
 def categories():
     """List all categories"""
 
-    categories = Category.query.order_by(Category.name).all()
-    # Count plans per category (fast, single query)
-    plan_counts = {
-        c.id: HousePlan.query.filter(HousePlan.categories.any(Category.id == c.id)).count()
-        for c in categories
-    }
+    try:
+        categories = Category.query.order_by(Category.name).all()
+
+        # Count plans per category in a single query (avoids N+1).
+        counts = dict(
+            db.session.query(
+                Category.id,
+                func.count(house_plan_categories.c.plan_id),
+            )
+            .outerjoin(house_plan_categories, Category.id == house_plan_categories.c.category_id)
+            .group_by(Category.id)
+            .all()
+        )
+        plan_counts = {c.id: int(counts.get(c.id, 0) or 0) for c in categories}
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to load categories list: %s', exc, exc_info=True)
+        flash('Unable to load categories right now. Please try again.', 'danger')
+        categories = []
+        plan_counts = {}
+
     return render_template('admin/categories_list.html', categories=categories, plan_counts=plan_counts)
 
 
@@ -959,15 +975,16 @@ def add_category():
     form = CategoryForm()
     
     if form.validate_on_submit():
-        name = (form.name.data or '').strip()
-        category = Category(name=name, description=form.description.data)
-        category.slug = slugify(name)
         try:
+            name = (form.name.data or '').strip()
+            category = Category(name=name, description=form.description.data)
+            category.slug = slugify(name)
             db.session.add(category)
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            current_app.logger.exception('Failed to add category %s: %s', name, exc)
+            print(traceback.format_exc())
+            current_app.logger.error('Failed to add category %s: %s', (form.name.data or ''), exc, exc_info=True)
             flash('Unable to save the category. No changes were applied.', 'danger')
         else:
             flash(f'Category "{category.name}" has been added successfully!', 'success')
@@ -982,19 +999,31 @@ def add_category():
 def edit_category(id):
     """Edit an existing category"""
 
-    category = Category.query.get_or_404(id)
+    try:
+        category = db.session.get(Category, id)
+    except Exception as exc:
+        db.session.rollback()
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to load category id=%s for edit: %s', id, exc, exc_info=True)
+        flash('Unable to load this category right now. Please try again.', 'danger')
+        return redirect(url_for('admin.categories'))
+
+    if category is None:
+        abort(404)
+
     form = CategoryForm(obj=category, category_id=category.id)
 
     if form.validate_on_submit():
-        name = (form.name.data or '').strip()
-        category.name = name
-        category.description = form.description.data
-        category.slug = slugify(name)
         try:
+            name = (form.name.data or '').strip()
+            category.name = name
+            category.description = form.description.data
+            category.slug = slugify(name)
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            current_app.logger.exception('Failed to update category %s: %s', category.id, exc)
+            print(traceback.format_exc())
+            current_app.logger.error('Failed to update category %s: %s', getattr(category, 'id', None), exc, exc_info=True)
             flash('Unable to update the category. Changes were rolled back.', 'danger')
         else:
             flash(f'Category "{category.name}" has been updated successfully!', 'success')
@@ -1009,16 +1038,24 @@ def edit_category(id):
 def delete_category(id):
     """Delete a category (and detach it from plans)"""
 
-    category = Category.query.get_or_404(id)
-    name = category.name
-    # Detach from plans to avoid orphan association issues
     try:
-        category.plans = []
+        category = db.session.get(Category, id)
+        if category is None:
+            abort(404)
+        name = category.name
+
+        # Safe delete: remove association rows first so plans remain intact.
+        # (This avoids loading every related plan into memory.)
+        db.session.execute(
+            house_plan_categories.delete().where(house_plan_categories.c.category_id == id)
+        )
+
         db.session.delete(category)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        current_app.logger.exception('Failed to delete category %s: %s', id, exc)
+        print(traceback.format_exc())
+        current_app.logger.error('Failed to delete category %s: %s', id, exc, exc_info=True)
         flash('Unable to delete the category. No changes were made.', 'danger')
     else:
         flash(f'Category "{name}" has been deleted.', 'success')
