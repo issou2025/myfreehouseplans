@@ -78,6 +78,9 @@ class Config:
     # Admin configuration
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com')
 
+    # Cloudinary (Render): provide CLOUDINARY_URL in environment.
+    CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+
 
 class DevelopmentConfig(Config):
     """Development environment configuration"""

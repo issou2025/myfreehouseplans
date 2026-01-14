@@ -111,7 +111,7 @@
                             <div>
                                 <strong>{{ p.title }}</strong>
                                 {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
-                                <div class="muted">Created by: {{ p.created_by.username if p.created_by else '—' }}</div>
+                                <div class="muted">Created by: {{ (p.created_by.username if p.created_by else None)|default('System') }}</div>
                                 {% endif %}
                                 <div class="muted">
                                     {% if p.categories %}

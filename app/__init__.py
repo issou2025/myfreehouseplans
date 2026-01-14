@@ -33,13 +33,13 @@ def _safe_log(app, level: str, message: str, *args, **kwargs) -> None:
 
 
 def _force_create_tables(app) -> None:
-    """Best-effort schema creation.
+    """Non-destructive startup schema patch.
 
-    NOTE: This is intentionally resilient and non-fatal for zero-touch deployments.
-    It will:
-    - Import models lazily (inside app_context) to avoid circular imports
-    - Run db.create_all() to create missing tables if possible
-    - Log warnings/errors but NEVER abort the process
+    IMPORTANT:
+        - Never drops tables.
+        - Intentionally does NOT call db.create_all() to avoid creating an empty
+      schema on a misconfigured/brand-new database.
+    - Adds only critical missing columns via ALTER TABLE.
     """
     if os.environ.get('SKIP_STARTUP_DB_TASKS') == '1':
         _safe_log(app, 'warning', 'Skipping startup DB tasks due to SKIP_STARTUP_DB_TASKS=1')
@@ -63,21 +63,7 @@ def _force_create_tables(app) -> None:
             _safe_log(app, 'error', '✗ Failed to import models during bootstrap (continuing): %s', exc, exc_info=True)
             return
 
-        # 3) Force table creation
-        try:
-            _safe_log(
-                app,
-                'warning',
-                '⚠ Running db.create_all() startup bootstrap (zero-touch). '
-                'This is not a substitute for migrations in the long term.'
-            )
-            db.create_all()
-            _safe_log(app, 'info', '✓ db.create_all() completed')
-        except Exception as exc:
-            _safe_log(app, 'error', '✗ db.create_all() failed (continuing): %s', exc, exc_info=True)
-            return
-
-        # 4) Non-fatal schema sanity check
+        # 3) Non-fatal schema sanity check
         try:
             inspector = inspect(db.engine)
             existing = set(inspector.get_table_names())
@@ -87,7 +73,7 @@ def _force_create_tables(app) -> None:
                 _safe_log(
                     app,
                     'warning',
-                    '⚠ Schema still appears incomplete after create_all(). Missing tables: %s. '
+                    '⚠ Schema appears incomplete. Missing tables: %s. '
                     'App will continue, but features may fail until migrations run.',
                     ', '.join(missing),
                 )
@@ -95,6 +81,52 @@ def _force_create_tables(app) -> None:
                 _safe_log(app, 'info', '✓ All required tables present (%d)', len(required))
         except Exception as exc:
             _safe_log(app, 'warning', '⚠ Could not verify schema completeness (continuing): %s', exc, exc_info=True)
+
+        # 4) Patch critical columns (non-fatal)
+        try:
+            inspector = inspect(db.engine)
+            dialect = getattr(db.engine.dialect, 'name', '')
+            tables = set(inspector.get_table_names())
+
+            def _has_column(table_name: str, column_name: str) -> bool:
+                try:
+                    cols = inspector.get_columns(table_name)
+                except Exception:
+                    return False
+                return any(c.get('name') == column_name for c in cols)
+
+            if 'users' in tables and not _has_column('users', 'role'):
+                if dialect == 'postgresql':
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50)"))
+                else:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(50)"))
+                # Preserve admin access assumption: id=1 is the owner admin.
+                db.session.execute(text("UPDATE users SET role='superadmin' WHERE id=1 AND (role IS NULL OR role='')"))
+                db.session.execute(text("UPDATE users SET role='customer' WHERE role IS NULL OR role=''"))
+
+            if 'house_plans' in tables and not _has_column('house_plans', 'created_by_id'):
+                if dialect == 'postgresql':
+                    db.session.execute(text("ALTER TABLE house_plans ADD COLUMN IF NOT EXISTS created_by_id INTEGER"))
+                else:
+                    db.session.execute(text("ALTER TABLE house_plans ADD COLUMN created_by_id INTEGER"))
+                db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_house_plans_created_by_id ON house_plans (created_by_id)"))
+
+            if 'house_plans' in tables and _has_column('house_plans', 'created_by_id') and 'users' in tables:
+                admin_id = db.session.execute(text("SELECT id FROM users WHERE id=1")).scalar()
+                if not admin_id:
+                    admin_id = db.session.execute(text("SELECT id FROM users WHERE role='superadmin' ORDER BY id ASC LIMIT 1")).scalar()
+                if admin_id:
+                    db.session.execute(
+                        text("UPDATE house_plans SET created_by_id = :admin_id WHERE created_by_id IS NULL"),
+                        {'admin_id': int(admin_id)},
+                    )
+
+            db.session.commit()
+            _safe_log(app, 'info', '✓ Startup schema patch complete (role/created_by_id)')
+        except Exception as exc:
+            db.session.rollback()
+            _safe_log(app, 'error', '✗ Startup schema patch failed (continuing): %s', exc, exc_info=True)
+            # Continue; admin dashboard will surface the underlying SQL error.
 
         # 5) Fail-safe admin seeding (non-fatal)
         # This exists specifically to recover access on fresh deployments.

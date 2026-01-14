@@ -11,7 +11,6 @@ app = create_app('testing')
 
 with app.app_context():
     # Start from a clean DB state to validate bootstrap creates admin
-    db.drop_all()
     db.create_all()
 
     # Manual bootstrap logic matching app factory behavior

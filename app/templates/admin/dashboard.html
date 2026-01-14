@@ -162,7 +162,7 @@
                             </div>
                             {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
                             <div class="muted">
-                                Created by: {{ plan.created_by.username if plan.created_by else '—' }}
+                                Created by: {{ (plan.created_by.username if plan.created_by else None)|default('System') }}
                             </div>
                             {% endif %}
                         </td>

@@ -307,8 +307,12 @@ def dashboard():
                          inquiry_labels=INQUIRY_LABELS,
                          status_labels=status_labels)
     except Exception as e:
-        current_app.logger.error('Admin dashboard query failed: %s', e)
-        flash('Dashboard temporarily unavailable. Database may be initializing.', 'warning')
+        current_app.logger.error('Admin dashboard query failed: %s', e, exc_info=True)
+        underlying = getattr(e, 'orig', None) or getattr(e, '__cause__', None) or e
+        detail = str(underlying)
+        if len(detail) > 300:
+            detail = detail[:300] + '…'
+        flash(f'Dashboard query failed (SQL error): {detail}', 'warning')
         return render_template('admin/dashboard.html',
                              stats={'total_plans': 0, 'published_plans': 0, 'total_orders': 0,
                                    'completed_orders': 0, 'total_users': 0, 'total_categories': 0,

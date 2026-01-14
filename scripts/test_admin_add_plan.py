@@ -10,7 +10,6 @@ def run():
 
     with app.app_context():
         # Fresh DB
-        db.drop_all()
         db.create_all()
 
         # Create a category required by the form
