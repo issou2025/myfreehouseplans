@@ -24,6 +24,7 @@ python-slugify==8.0.1
 Pillow==11.1.0  # Image processing (Python 3.13 wheels)
 pillow-avif-plugin==1.4.6  # AVIF encoding/decoding for responsive media variants
 cloudinary==1.39.1  # Cloud uploads (Render-friendly)
+geoip2==4.8.0
 
 # Date and Time
 python-dateutil==2.8.2

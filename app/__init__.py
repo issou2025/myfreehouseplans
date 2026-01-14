@@ -255,6 +255,16 @@ def create_app(config_name='default'):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     # Ensure protected uploads folder exists
     os.makedirs(app.config.get('PROTECTED_UPLOAD_FOLDER', app.config['UPLOAD_FOLDER']), exist_ok=True)
+
+    # GeoIP (read-only) initialization
+    project_root = os.path.abspath(os.path.join(app.root_path, os.pardir))
+    app.config.setdefault('GEOIP_DB_PATH', os.path.join(project_root, 'GeoLite2-Country.mmdb'))
+    try:
+        from app.utils.geoip import init_geoip_reader
+        init_geoip_reader(app.config.get('GEOIP_DB_PATH'), app.logger)
+    except Exception:
+        # GeoIP is optional and must never break startup.
+        pass
     
     # Initialize extensions
     db.init_app(app)
@@ -351,6 +361,7 @@ def register_template_processors(app):
         from app.utils.media import upload_url
         from app.utils.responsive_media import picture_tag, CARD_PRESET, HERO_PRESET
         from flask import request
+        from app.utils.geoip import get_country_for_ip
 
         def query_args(exclude=None):
             exclude = set(exclude or [])
@@ -358,6 +369,15 @@ def register_template_processors(app):
             for key in exclude:
                 args.pop(key, None)
             return args
+
+        def client_ip():
+            forwarded = request.headers.get('X-Forwarded-For', '')
+            if forwarded:
+                return forwarded.split(',')[0].strip()
+            return request.remote_addr or '0.0.0.0'
+
+        visitor_ip = client_ip()
+        visitor_country = get_country_for_ip(visitor_ip)
         return {
             'site_name': app.config['SITE_NAME'],
             'site_description': app.config['SITE_DESCRIPTION'],
@@ -367,6 +387,9 @@ def register_template_processors(app):
             'CARD_PRESET': CARD_PRESET,
             'HERO_PRESET': HERO_PRESET,
             'query_args': query_args,
+            'client_ip': visitor_ip,
+            'visitor_country': visitor_country,
+            'geoip_country': get_country_for_ip,
         }
 
 

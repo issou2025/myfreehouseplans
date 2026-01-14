@@ -52,6 +52,7 @@
                         <th>Page</th>
                         <th>Time</th>
                         <th>IP Address</th>
+                        <th>Country</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,7 +61,7 @@
                         {% if current_date != visit.visit_date %}
                             {% set current_date = visit.visit_date %}
                             <tr class="visitors-date-row">
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="visitors-date">
                                         <div>
                                             <p class="eyebrow">{{ visit.visit_date.strftime('%A, %B %d, %Y') }}</p>
@@ -90,6 +91,7 @@
                             </td>
                             <td>{{ visit.created_at.strftime('%H:%M') }}</td>
                             <td>{{ visit.ip_address }}</td>
+                            <td>{{ geoip_country(visit.ip_address) }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
