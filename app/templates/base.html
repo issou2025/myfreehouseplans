@@ -159,17 +159,29 @@
     </header>
     <div class="nav-overlay" id="nav-overlay"></div>
 
-    {# Flash Messages #}
+    {# Toast Notifications (Flash Messages) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flash-messages" role="status" aria-live="polite">
+            <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        <span class="alert__icon" aria-hidden="true">🙂</span>
-                        <div class="alert__body">
-                            <strong>{{ category|capitalize }}</strong>
-                            <p>{{ message }}</p>
+                    {% set variant = category %}
+                    {% if variant == 'error' %}{% set variant = 'danger' %}{% endif %}
+                    {% if variant not in ['success', 'danger', 'warning', 'info'] %}{% set variant = 'info' %}{% endif %}
+
+                    <div class="toast toast--{{ variant }}" role="{{ 'alert' if variant in ['danger'] else 'status' }}" data-timeout="4000">
+                        <div class="toast__icon" aria-hidden="true">
+                            {% if variant == 'success' %}
+                                <i class="fa-solid fa-circle-check"></i>
+                            {% elif variant == 'danger' %}
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            {% elif variant == 'warning' %}
+                                <i class="fa-solid fa-circle-exclamation"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-info"></i>
+                            {% endif %}
                         </div>
+                        <div class="toast__body">{{ message }}</div>
+                        <button type="button" class="toast__close" aria-label="Close notification">&times;</button>
                     </div>
                 {% endfor %}
             </div>

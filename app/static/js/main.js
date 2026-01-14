@@ -125,6 +125,56 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 });
 
+// Toast notifications (Flash messages) ------------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+	try {
+		const toasts = Array.from(document.querySelectorAll('.toast'));
+		if (!toasts.length) return;
+
+		function dismissToast(toast) {
+			if (!toast || toast.classList.contains('is-hiding')) return;
+			toast.classList.add('is-hiding');
+			toast.classList.remove('is-visible');
+			toast.addEventListener(
+				'transitionend',
+				function () {
+					toast.remove();
+				},
+				{ once: true }
+			);
+			// Fallback removal in case transitionend doesn't fire.
+			setTimeout(function () {
+				try { toast.remove(); } catch (e) {}
+			}, 700);
+		}
+
+		toasts.forEach(function (toast) {
+			// Animate in.
+			requestAnimationFrame(function () {
+				toast.classList.add('is-visible');
+			});
+
+			// Manual close.
+			const closeBtn = toast.querySelector('.toast__close');
+			if (closeBtn) {
+				closeBtn.addEventListener('click', function () {
+					dismissToast(toast);
+				});
+			}
+
+			// Auto-dismiss.
+			const timeoutMs = parseInt(toast.getAttribute('data-timeout') || '4000', 10);
+			if (!Number.isNaN(timeoutMs) && timeoutMs > 0) {
+				setTimeout(function () {
+					dismissToast(toast);
+				}, timeoutMs);
+			}
+		});
+	} catch (e) {
+		console.warn('Toast enhancement failed', e);
+	}
+});
+
 // Catalog filters + real-time search ------------------------------------
 (function () {
 	const form = document.querySelector('[data-plan-browser]');
