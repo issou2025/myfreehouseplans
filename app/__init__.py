@@ -255,6 +255,19 @@ def create_app(config_name='default'):
     # Register request lifecycle hooks
     register_request_hooks(app)
 
+    @app.teardown_appcontext
+    def _cleanup_appcontext(exc):
+        """Ensure scoped sessions are removed when the app context ends."""
+        try:
+            db.session.remove()
+        except Exception as remove_exc:
+            try:
+                app.logger.error('Session remove during appcontext teardown failed: %s', remove_exc, exc_info=True)
+            except Exception:
+                import traceback
+                print(traceback.format_exc())
+        return None
+
     @app.route('/favicon.ico')
     def favicon_placeholder():  # pragma: no cover - trivial route
         return ('', 204)

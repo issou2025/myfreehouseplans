@@ -12,6 +12,8 @@ from flask_login import UserMixin
 from datetime import datetime
 from slugify import slugify
 from sqlalchemy.orm import synonym
+from sqlalchemy.exc import SQLAlchemyError
+import traceback
 
 
 house_plan_categories = db.Table(
@@ -29,10 +31,38 @@ def load_user(user_id):
     try:
         if user_id is None:
             return None
-        return User.query.get(int(user_id))
-    except Exception:
+        return db.session.get(User, int(user_id))
+    except (ValueError, TypeError):
+        # Malformed session user_id should never crash the request.
+        return None
+    except SQLAlchemyError as exc:
+        # Critical: clear aborted transactions so later template queries don't 500.
+        print(traceback.format_exc())
+        try:
+            current_app.logger.error('User loader DB error for user_id=%s: %s', user_id, exc, exc_info=True)
+        except Exception:
+            pass
         try:
             db.session.rollback()
+        except Exception:
+            print(traceback.format_exc())
+        try:
+            db.session.remove()
+        except Exception:
+            print(traceback.format_exc())
+        return None
+    except Exception as exc:
+        print(traceback.format_exc())
+        try:
+            current_app.logger.error('User loader unexpected error for user_id=%s: %s', user_id, exc, exc_info=True)
+        except Exception:
+            pass
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            db.session.remove()
         except Exception:
             pass
         return None

@@ -641,15 +641,27 @@ def pack_detail(slug):
     This route must never 500 due to missing optional fields or relationships.
     """
 
+    def _rollback_safely(reason: str):
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            current_app.logger.warning('Rolled back session (%s) to clear failed transaction.', reason)
+        except Exception:
+            pass
+
     plan = None
     try:
         # Support legacy /plan/<id> links even though the canonical URL is /plan/<slug>.
         if slug and str(slug).isdigit():
             plan_id = int(slug)
-            plan = HousePlan.query.get_or_404(plan_id)
+            plan = db.session.get(HousePlan, plan_id)
+            if plan is None:
+                abort(404)
         else:
             plan = (
-                HousePlan.query
+                db.session.query(HousePlan)
                 .options(selectinload(HousePlan.categories))
                 .filter_by(slug=slug)
                 .first_or_404()
@@ -668,12 +680,14 @@ def pack_detail(slug):
         try:
             plan.increment_views()
         except Exception as view_exc:
+            _rollback_safely('increment_views')
             current_app.logger.warning('Failed to increment view count for plan id=%s: %s', getattr(plan, 'id', None), view_exc)
 
         similar_plans = []
         try:
             similar_plans = _find_similar_plans(plan, limit=6)
         except Exception as similar_exc:
+            _rollback_safely('similar_plans')
             current_app.logger.warning('Failed to load similar plans for plan id=%s: %s', getattr(plan, 'id', None), similar_exc)
 
         meta = None
@@ -730,6 +744,7 @@ def pack_detail(slug):
                     except Exception:
                         continue
         except Exception as faq_exc:
+            _rollback_safely('faqs')
             current_app.logger.warning('Failed to load FAQs for plan id=%s: %s', getattr(plan, 'id', None), faq_exc)
             faqs = []
             faq_schema = None
@@ -759,16 +774,22 @@ def pack_detail(slug):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as db_exc:
         try:
             db.session.rollback()
-        except Exception:
-            pass
-        import traceback
-        from flask import current_app as app
+        except Exception as rollback_exc:
+            current_app.logger.error('Rollback failed after pack_detail DB error: %s', rollback_exc, exc_info=True)
         print(traceback.format_exc())
-        app.logger.error("DETAILED ERROR: " + traceback.format_exc())
-        raise
+        current_app.logger.error('pack_detail DB error slug=%s: %s', slug, db_exc, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later.', status=503)
+    except Exception as exc:
+        try:
+            db.session.rollback()
+        except Exception as rollback_exc:
+            current_app.logger.error('Rollback failed after pack_detail error: %s', rollback_exc, exc_info=True)
+        print(traceback.format_exc())
+        current_app.logger.error('pack_detail failed slug=%s: %s', slug, exc, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later.', status=503)
 
 
 @main_bp.route('/plan/id/<int:id>')
@@ -779,24 +800,28 @@ def plan_detail_by_id(id: int):
     """
 
     try:
-        plan = (
-            db.session.query(HousePlan)
-            .options(selectinload(HousePlan.categories))
-            .filter_by(id=id)
-            .first_or_404()
-        )
+        plan = db.session.get(HousePlan, id)
+        if plan is None:
+            abort(404)
         return redirect(url_for('main.pack_detail', slug=plan.slug), code=302)
     except HTTPException:
         raise
+    except SQLAlchemyError as db_exc:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(traceback.format_exc())
+        current_app.logger.error('Plan detail DB error for ID %s: %s', id, db_exc, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later.', status=503)
     except Exception as e:
         try:
             db.session.rollback()
         except Exception:
             pass
         print(traceback.format_exc())
-        current_app.logger.error(f'Plan Detail Error for ID {id}: {e}')
-        current_app.logger.error(traceback.format_exc())
-        raise
+        current_app.logger.error('Plan detail error for ID %s: %s', id, e, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later.', status=503)
 
 
 @main_bp.route('/plans/<int:plan_id>')
