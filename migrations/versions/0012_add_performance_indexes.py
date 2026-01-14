@@ -8,6 +8,7 @@ Create Date: 2026-01-13
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.exc import OperationalError
 
 
 # revision identifiers, used by Alembic.
@@ -27,36 +28,48 @@ def upgrade():
     - Search queries (published plans by type)
     """
     # Composite index for published plans sorted by popularity
-    op.create_index(
-        'ix_house_plans_published_views',
-        'house_plans',
-        ['is_published', 'views_count'],
-        unique=False
-    )
+    try:
+        op.create_index(
+            'ix_house_plans_published_views',
+            'house_plans',
+            ['is_published', 'views_count'],
+            unique=False
+        )
+    except OperationalError:
+        pass
     
     # Composite index for published plans sorted by recency
-    op.create_index(
-        'ix_house_plans_published_created',
-        'house_plans',
-        ['is_published', 'created_at'],
-        unique=False
-    )
+    try:
+        op.create_index(
+            'ix_house_plans_published_created',
+            'house_plans',
+            ['is_published', 'created_at'],
+            unique=False
+        )
+    except OperationalError:
+        pass
     
     # Index for plan type filtering
-    op.create_index(
-        'ix_house_plans_plan_type',
-        'house_plans',
-        ['plan_type'],
-        unique=False
-    )
+    try:
+        op.create_index(
+            'ix_house_plans_plan_type',
+            'house_plans',
+            ['plan_type'],
+            unique=False
+        )
+    except OperationalError:
+        pass
     
     # Index for featured plans
-    op.create_index(
-        'ix_house_plans_featured',
-        'house_plans',
-        ['is_featured'],
-        unique=False
-    )
+    try:
+        op.create_index(
+            'ix_house_plans_featured',
+            'house_plans',
+            ['is_featured'],
+            unique=False
+        )
+    except OperationalError:
+        pass
 
 
 def downgrade():

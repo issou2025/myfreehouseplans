@@ -14,7 +14,7 @@ from functools import wraps
 import os
 import traceback
 from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor, house_plan_categories
-from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm
+from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm, StaffCreateForm
 from app.forms import PlanFAQForm
 from app.extensions import db
 from datetime import datetime, date, timedelta
@@ -62,6 +62,19 @@ def admin_required(f):
     return decorated_function
 
 
+def team_required(f):
+    """Decorator to allow owner (superadmin) and staff (assistant) access."""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role not in {'superadmin', 'staff'}:
+            flash('Administrator login required.', 'warning')
+            return redirect(url_for('admin.admin_login', next=request.url))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
     """Private administrator login endpoint."""
@@ -79,13 +92,15 @@ def admin_login():
         current_app.logger.warning('No admin account detected during login attempt; admin provisioning required.')
         # continue to render login form; credential validation will behave normally
 
-    # If a logged-in user is not admin, force logout to enforce policy.
-    if current_user.is_authenticated and current_user.role != 'superadmin':
+    # If a logged-in user is not an allowed admin role, force logout to enforce policy.
+    if current_user.is_authenticated and current_user.role not in {'superadmin', 'staff'}:
         logout_user()
         flash('Admin access only. Please contact support if you need credentials.', 'warning')
 
     if current_user.is_authenticated and current_user.role == 'superadmin':
         return redirect(url_for('admin.dashboard'))
+    if current_user.is_authenticated and current_user.role == 'staff':
+        return redirect(url_for('admin.plans'))
 
     if form.validate_on_submit():
         username = (form.username.data or '').strip()
@@ -104,8 +119,8 @@ def admin_login():
             flash('Database temporarily unavailable. Please try again shortly.', 'danger')
             return render_template('admin/login.html', form=form)
 
-        if not user or user.role != 'superadmin' or not user.check_password(form.password.data):
-            flash('Invalid administrator credentials.', 'danger')
+        if not user or user.role not in {'superadmin', 'staff'} or not user.check_password(form.password.data):
+            flash('Invalid credentials.', 'danger')
             return render_template('admin/login.html', form=form)
 
         if not user.is_active:
@@ -129,7 +144,7 @@ def admin_login():
 
         next_page = request.args.get('next')
         if not next_page or urlparse(next_page).netloc:
-            next_page = url_for('admin.dashboard')
+            next_page = url_for('admin.dashboard') if user.role == 'superadmin' else url_for('admin.plans')
         flash(f'Welcome back, {user.username}.', 'success')
         return redirect(next_page)
     # Render the login form for GET or non-submitting requests
@@ -286,6 +301,79 @@ def dashboard():
                              status_labels={})
 
 
+@admin_bp.route('/team', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_team():
+    """Owner-only team management page."""
+
+    form = StaffCreateForm()
+
+    try:
+        staff_users = (
+            User.query
+            .filter(User.role == 'staff')
+            .order_by(User.created_at.desc(), User.id.desc())
+            .all()
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('Failed to load staff users: %s', exc)
+        staff_users = []
+        flash('Unable to load team list. Please try again.', 'danger')
+
+    if form.validate_on_submit():
+        username = (form.username.data or '').strip()
+        email = (form.email.data or '').strip().lower()
+
+        try:
+            staff = User(username=username, email=email, role='staff', is_active=True)
+            staff.set_password(form.password.data)
+            db.session.add(staff)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Username or email already exists.', 'danger')
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception('Failed to create staff user %s: %s', username, exc)
+            flash('Unable to create staff account. Please try again.', 'danger')
+        else:
+            flash(f'Staff account "{staff.username}" created.', 'success')
+            return redirect(url_for('admin.manage_team'))
+
+    return render_template('admin/manage_team.html', staff_users=staff_users, form=form)
+
+
+@admin_bp.route('/team/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_staff(user_id):
+    """Owner-only: delete a staff account."""
+
+    staff = db.session.get(User, user_id)
+    if not staff or staff.role != 'staff':
+        flash('Staff user not found.', 'warning')
+        return redirect(url_for('admin.manage_team'))
+
+    try:
+        # Keep plans in place but detach author reference.
+        try:
+            HousePlan.query.filter_by(created_by_id=staff.id).update({'created_by_id': None})
+        except Exception as detach_exc:
+            db.session.rollback()
+            current_app.logger.warning('Unable to detach plans for staff user %s: %s', staff.id, detach_exc)
+        db.session.delete(staff)
+        db.session.commit()
+        flash('Staff account deleted.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('Failed to delete staff user %s: %s', user_id, exc)
+        flash('Unable to delete staff account. Please try again.', 'danger')
+
+    return redirect(url_for('admin.manage_team'))
+
+
 @admin_bp.route('/visitors')
 @login_required
 @admin_required
@@ -344,7 +432,7 @@ def admin_index():
 
 @admin_bp.route('/plans')
 @login_required
-@admin_required
+@team_required
 def plans():
     """List all house plans"""
     
@@ -353,6 +441,15 @@ def plans():
     per_page = max(10, min(per_page, 100))
 
     query = HousePlan.query
+
+    # Staff visibility: can see their own plans + all drafts.
+    if current_user.role == 'staff':
+        query = query.filter(
+            or_(
+                HousePlan.created_by_id == current_user.id,
+                HousePlan.is_published.is_(False),
+            )
+        )
 
     search = request.args.get('q', '').strip()
     if search:
@@ -411,11 +508,19 @@ def plans():
     }
 
     categories = Category.query.order_by(Category.name.asc()).all()
+    stats_query = HousePlan.query
+    if current_user.role == 'staff':
+        stats_query = stats_query.filter(
+            or_(
+                HousePlan.created_by_id == current_user.id,
+                HousePlan.is_published.is_(False),
+            )
+        )
     stats = {
-        'total': HousePlan.query.count(),
-        'published': HousePlan.query.filter_by(is_published=True).count(),
-        'draft': HousePlan.query.filter_by(is_published=False).count(),
-        'free': HousePlan.query.filter(HousePlan.free_pdf_file.isnot(None)).count(),
+        'total': stats_query.count(),
+        'published': stats_query.filter_by(is_published=True).count(),
+        'draft': stats_query.filter_by(is_published=False).count(),
+        'free': stats_query.filter(HousePlan.free_pdf_file.isnot(None)).count(),
     }
 
     query_args = request.args.to_dict(flat=True)
@@ -582,7 +687,7 @@ def message_attachment(message_id):
 
 @admin_bp.route('/plans/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@team_required
 def add_plan():
     """Add new house plan"""
     
@@ -590,6 +695,9 @@ def add_plan():
     
     categories = Category.query.order_by(Category.name).all()
     if not categories:
+        if current_user.role == 'staff':
+            flash('No categories exist yet. Ask the Owner to create categories before adding plans.', 'warning')
+            return redirect(url_for('admin.plans'))
         flash('Please create at least one category first.', 'warning')
         return redirect(url_for('admin.categories'))
     form.category_ids.choices = [(c.id, c.name) for c in categories]
@@ -616,6 +724,13 @@ def add_plan():
             is_featured=form.is_featured.data,
             is_published=form.is_published.data
         )
+
+        # Accountability: track who created the plan.
+        plan.created_by_id = current_user.id
+
+        # Staff safety: staff cannot publish.
+        if current_user.role == 'staff':
+            plan.is_published = False
 
         try:
             selected_categories = Category.query.filter(Category.id.in_(form.category_ids.data)).all()
@@ -708,7 +823,7 @@ def add_plan():
 
 @admin_bp.route('/plans/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@team_required
 def edit_plan(id):
     """Edit existing house plan with hardened transaction guarantees."""
 
@@ -764,6 +879,10 @@ def edit_plan(id):
 
         if plan is None:
             flash('House plan not found.', 'warning')
+            return redirect(url_for('admin.plans'))
+
+        if current_user.role == 'staff' and plan.created_by_id != current_user.id:
+            flash('You can only edit plans you created.', 'warning')
             return redirect(url_for('admin.plans'))
 
         form = HousePlanForm(obj=plan)
@@ -839,7 +958,10 @@ def edit_plan(id):
                     plan.categories = selected_categories
 
                 plan.is_featured = form.is_featured.data
-                plan.is_published = form.is_published.data
+                if current_user.role == 'staff':
+                    plan.is_published = False
+                else:
+                    plan.is_published = form.is_published.data
 
                 plan.total_area_m2 = form.total_area_m2.data
                 plan.total_area_sqft = form.total_area_sqft.data
@@ -932,6 +1054,10 @@ def edit_plan(id):
 def delete_plan(id):
     """Delete house plan"""
 
+    if current_user.role != 'superadmin':
+        flash('Only the Owner can delete plans.', 'warning')
+        return redirect(request.referrer or url_for('admin.plans'))
+
     plan = db.session.get(HousePlan, id)
     if not plan:
         flash('Plan not found.', 'warning')
@@ -972,6 +1098,10 @@ def delete_plan(id):
 @admin_required
 def toggle_plan_publish(id):
     """Publish/unpublish a plan (public catalog only shows published plans)."""
+
+    if current_user.role != 'superadmin':
+        flash('Only the Owner can publish plans.', 'warning')
+        return redirect(request.referrer or url_for('admin.plans'))
 
     plan = db.session.get(HousePlan, id)
     if not plan:

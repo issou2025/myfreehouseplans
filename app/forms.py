@@ -27,6 +27,35 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Log In')
 
 
+class StaffCreateForm(FlaskForm):
+    """Owner-only form to create staff (assistant) accounts."""
+
+    username = StringField('Username', validators=[
+        DataRequired(message='Username is required'),
+        Length(min=3, max=80, message='Username must be between 3 and 80 characters'),
+    ])
+    email = StringField('Email', validators=[
+        DataRequired(message='Email is required'),
+        Email(message='Invalid email address'),
+        Length(max=255, message='Must be 255 characters or less'),
+    ])
+    password = PasswordField('Password', validators=[
+        DataRequired(message='Password is required'),
+        Length(min=8, message='Password must be at least 8 characters'),
+    ])
+    submit = SubmitField('Create staff account')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('Username already taken. Please choose a different one.')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('Email already registered. Please use a different one.')
+
+
 class RegistrationForm(FlaskForm):
     """User registration form"""
     

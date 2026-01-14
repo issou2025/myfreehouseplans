@@ -110,6 +110,9 @@
                             <span class="plan-ref__code">{{ p.reference_code }}</span>
                             <div>
                                 <strong>{{ p.title }}</strong>
+                                {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+                                <div class="muted">Created by: {{ p.created_by.username if p.created_by else '—' }}</div>
+                                {% endif %}
                                 <div class="muted">
                                     {% if p.categories %}
                                         {% for category in p.categories %}
@@ -159,7 +162,22 @@
                     </td>
                     <td class="admin-table__actions">
                         <a class="btn btn-soft" href="{{ url_for('admin.edit_plan', id=p.id) }}">Edit</a>
-                        <button type="button" class="btn btn-outline" disabled title="Plan deletion is disabled">Deletion locked</button>
+                        {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+                            <form method="post" action="{{ url_for('admin.toggle_plan_publish', id=p.id) }}" style="display:inline">
+                                {{ csrf_token() if csrf_token is defined else '' }}
+                                {% if p.is_published %}
+                                    <button type="submit" class="btn btn-outline">Unpublish</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline">Publish</button>
+                                {% endif %}
+                            </form>
+                            <form method="post" action="{{ url_for('admin.delete_plan', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
+                                {{ csrf_token() if csrf_token is defined else '' }}
+                                <button type="submit" class="btn btn-outline">Delete</button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="btn btn-outline" disabled title="Only the Owner can publish or delete plans">Owner-only</button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

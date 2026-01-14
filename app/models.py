@@ -109,7 +109,7 @@ class User(UserMixin, db.Model):
     @property
     def is_admin(self):
         """Check if user is admin based on role"""
-        return self.role == 'superadmin'
+        return self.role in {'superadmin', 'staff'}
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -227,6 +227,15 @@ class HousePlan(db.Model):
     is_featured = db.Column(db.Boolean, default=False)
     is_published = db.Column(db.Boolean, default=True)
     views_count = db.Column(db.Integer, default=0)
+
+    # Accountability
+    created_by_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
+    created_by = db.relationship('User', foreign_keys=[created_by_id], lazy='joined')
     
     # Relationships
     categories = db.relationship(

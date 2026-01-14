@@ -107,7 +107,7 @@
                     <div class="nav__group" aria-label="Admin tools">
                         <p class="nav__heading">Admin</p>
                         <div class="nav__stack">
-                            <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                            <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') if current_user.role == 'superadmin' else url_for('admin.plans') }}">
                                 <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                                 <span>Admin</span>
                             </a>

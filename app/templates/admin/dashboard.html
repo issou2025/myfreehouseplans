@@ -22,6 +22,10 @@
                 <span class="btn-admin__icon">📁</span>
                 <span>Manage Categories</span>
             </a>
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.manage_team') }}">
+                <span class="btn-admin__icon">👥</span>
+                <span>Manage Team</span>
+            </a>
             {% endif %}
             <a class="btn-admin btn-admin--primary" href="{{ url_for('admin.add_plan') }}">
                 <span class="btn-admin__icon">✨</span>
@@ -156,6 +160,11 @@
                                     Uncategorized
                                 {% endif %}
                             </div>
+                            {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+                            <div class="muted">
+                                Created by: {{ plan.created_by.username if plan.created_by else '—' }}
+                            </div>
+                            {% endif %}
                         </td>
                         <td>
                             {% if plan.free_pdf_file %}
