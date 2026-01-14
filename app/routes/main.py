@@ -27,6 +27,7 @@ from app.utils.media import is_absolute_url, upload_url
 from app.utils.visitor_tracking import tag_visit_identity
 from werkzeug.exceptions import HTTPException
 import traceback
+from sqlalchemy.exc import SQLAlchemyError
 
 # Create Blueprint
 main_bp = Blueprint('main', __name__)
@@ -831,12 +832,19 @@ def plan_detail(plan_id: int):
 
     except HTTPException:
         raise
-    except Exception as exc:
-        # Any DB failure here must rollback to clear InFailedSqlTransaction.
+    except SQLAlchemyError as db_exc:
         try:
             db.session.rollback()
-        except Exception:
-            pass
+        except Exception as rollback_exc:
+            current_app.logger.error('Rollback failed after plan detail DB error: %s', rollback_exc, exc_info=True)
+        print(traceback.format_exc())
+        current_app.logger.error('Plan detail DB error for id=%s: %s', plan_id, db_exc, exc_info=True)
+        return Response('Plan temporarily unavailable. Please try again later or contact support.', status=503)
+    except Exception as exc:
+        try:
+            db.session.rollback()
+        except Exception as rollback_exc:
+            current_app.logger.error('Rollback failed after plan detail error: %s', rollback_exc, exc_info=True)
         print(traceback.format_exc())
         current_app.logger.error('Plan detail rendering failed for id=%s: %s', plan_id, exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later or contact support.', status=503)

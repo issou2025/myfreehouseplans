@@ -434,6 +434,8 @@ def register_request_hooks(app):
 
     @app.teardown_request
     def _cleanup_sessions(exc):
+        """Guarantee DB sessions are rolled back and removed every request."""
+
         if exc is not None:
             try:
                 db.session.rollback()
@@ -443,6 +445,13 @@ def register_request_hooks(app):
                 except Exception:
                     import traceback
                     print(traceback.format_exc())
+        else:
+            # Even when the request was successful we still clear any pending state.
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
         try:
             db.session.remove()
         except Exception as remove_exc:
