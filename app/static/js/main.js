@@ -1362,3 +1362,348 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 })();
+
+	// Admin dashboard enhancements (client-only, no DB changes)
+	document.addEventListener('DOMContentLoaded', function () {
+		const planRows = Array.from(document.querySelectorAll('[data-plan-row]'));
+		const tools = document.querySelector('[data-admin-tools]');
+		const recentList = document.querySelector('[data-admin-recent]');
+		const healthList = document.querySelector('[data-admin-health]');
+		const previewDialog = document.querySelector('[data-admin-preview-dialog]');
+		const STORAGE_KEY_RECENT = 'adminRecentPlans';
+		const STORAGE_KEY_SEARCH = 'adminQuickSearch';
+		const STORAGE_KEY_SORT = 'adminQuickSort';
+
+		function safeText(value) {
+			return (value || '').toString().trim();
+		}
+
+		function copyText(value) {
+			if (!value) return Promise.resolve(false);
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				return navigator.clipboard.writeText(value).then(() => true).catch(() => false);
+			}
+			const helper = document.createElement('textarea');
+			helper.value = value;
+			helper.style.position = 'fixed';
+			helper.style.opacity = '0';
+			document.body.appendChild(helper);
+			helper.select();
+			try {
+				const ok = document.execCommand('copy');
+				helper.remove();
+				return Promise.resolve(ok);
+			} catch (e) {
+				helper.remove();
+				return Promise.resolve(false);
+			}
+		}
+
+		function updateRecent(plan) {
+			if (!plan || !plan.id) return;
+			const raw = localStorage.getItem(STORAGE_KEY_RECENT);
+			let items = [];
+			try { items = raw ? JSON.parse(raw) : []; } catch (e) { items = []; }
+			items = items.filter((item) => item.id !== plan.id);
+			items.unshift({
+				id: plan.id,
+				title: plan.title,
+				url: plan.url,
+				date: Date.now()
+			});
+			items = items.slice(0, 6);
+			localStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(items));
+		}
+
+		function renderRecent() {
+			if (!recentList) return;
+			const raw = localStorage.getItem(STORAGE_KEY_RECENT);
+			let items = [];
+			try { items = raw ? JSON.parse(raw) : []; } catch (e) { items = []; }
+			recentList.innerHTML = '';
+			if (!items.length) {
+				recentList.innerHTML = '<li class="muted">No recent edits yet.</li>';
+				return;
+			}
+			items.forEach((item) => {
+				const li = document.createElement('li');
+				const link = document.createElement('a');
+				link.href = item.url || '#';
+				link.textContent = item.title || 'Untitled plan';
+				li.appendChild(link);
+				recentList.appendChild(li);
+			});
+		}
+
+		function runHealthChecks() {
+			if (!healthList) return;
+			const jsItem = healthList.querySelector('[data-health="js"]');
+			if (jsItem) {
+				jsItem.classList.add('is-ok');
+				jsItem.querySelector('strong').textContent = 'OK';
+			}
+			const fontsItem = healthList.querySelector('[data-health="fonts"]');
+			if (fontsItem && document.fonts && document.fonts.ready) {
+				document.fonts.ready.then(() => {
+					fontsItem.classList.add('is-ok');
+					fontsItem.querySelector('strong').textContent = 'Loaded';
+				});
+			}
+			const imgItem = healthList.querySelector('[data-health="images"]');
+			if (imgItem) {
+				const images = Array.from(document.images || []);
+				const loaded = images.filter((img) => img.complete && img.naturalWidth > 0).length;
+				const status = images.length ? `${loaded}/${images.length}` : 'OK';
+				imgItem.classList.add('is-ok');
+				imgItem.querySelector('strong').textContent = status;
+			}
+		}
+
+		function bindActionMenus() {
+			const menus = Array.from(document.querySelectorAll('[data-admin-action-menu]'));
+			if (!menus.length) return;
+			function closeAll() {
+				menus.forEach((menu) => {
+					const panel = menu.querySelector('.action-menu__panel');
+					const toggle = menu.querySelector('.action-menu__toggle');
+					if (panel) panel.classList.remove('is-open');
+					if (toggle) toggle.setAttribute('aria-expanded', 'false');
+				});
+			}
+			menus.forEach((menu) => {
+				const toggle = menu.querySelector('.action-menu__toggle');
+				const panel = menu.querySelector('.action-menu__panel');
+				if (!toggle || !panel) return;
+				toggle.addEventListener('click', (event) => {
+					event.stopPropagation();
+					const isOpen = panel.classList.contains('is-open');
+					closeAll();
+					panel.classList.toggle('is-open', !isOpen);
+					toggle.setAttribute('aria-expanded', (!isOpen).toString());
+				});
+			});
+			document.addEventListener('click', closeAll);
+		}
+
+		function bindPreview() {
+			if (!previewDialog) return;
+			const titleEl = previewDialog.querySelector('[data-admin-preview-title]') || previewDialog.querySelector('.admin-preview__title');
+			const refEl = previewDialog.querySelector('[data-admin-preview-ref]');
+			const statusEl = previewDialog.querySelector('[data-admin-preview-status]');
+			const categoriesEl = previewDialog.querySelector('[data-admin-preview-categories]');
+			const viewsEl = previewDialog.querySelector('[data-admin-preview-views]');
+			const linkEl = previewDialog.querySelector('[data-admin-preview-link]');
+			const copyBtn = previewDialog.querySelector('[data-admin-preview-copy]');
+			const closeBtn = previewDialog.querySelector('[data-admin-preview-close]');
+
+			document.querySelectorAll('[data-admin-preview]').forEach((btn) => {
+				btn.addEventListener('click', (event) => {
+					event.preventDefault();
+					const row = btn.closest('[data-plan-row]');
+					if (!row) return;
+					const title = safeText(row.dataset.title);
+					const ref = safeText(row.dataset.ref);
+					const status = safeText(row.dataset.status);
+					const categories = safeText(row.dataset.category) || '—';
+					const views = safeText(row.dataset.views) || '0';
+					const url = safeText(row.dataset.url);
+					if (titleEl) titleEl.textContent = title || 'Plan';
+					if (refEl) refEl.textContent = ref || '—';
+					if (statusEl) statusEl.textContent = status || '—';
+					if (categoriesEl) categoriesEl.textContent = categories;
+					if (viewsEl) viewsEl.textContent = views;
+					if (linkEl) linkEl.href = url || '#';
+					if (copyBtn) copyBtn.setAttribute('data-copy-value', url);
+					if (previewDialog.showModal) previewDialog.showModal();
+				});
+			});
+
+			if (closeBtn) {
+				closeBtn.addEventListener('click', () => {
+					if (previewDialog.close) previewDialog.close();
+				});
+			}
+			if (copyBtn) {
+				copyBtn.addEventListener('click', () => {
+					const url = copyBtn.getAttribute('data-copy-value');
+					copyText(url || '');
+				});
+			}
+		}
+
+		function bindPlanTools() {
+			if (!tools || !planRows.length) return;
+			const searchInput = tools.querySelector('[data-admin-search]');
+			const sortSelect = tools.querySelector('[data-admin-sort]');
+			const countEl = tools.querySelector('[data-admin-count]');
+			const selectAllBtn = tools.querySelector('[data-admin-select-all]');
+			const selectAllCheckbox = document.querySelector('[data-admin-select-all-checkbox]');
+			const exportBtn = tools.querySelector('[data-admin-export]');
+			const copyButtons = Array.from(document.querySelectorAll('[data-admin-copy]'));
+			const copySingleButtons = Array.from(document.querySelectorAll('[data-admin-copy-single]'));
+
+			const storedSearch = localStorage.getItem(STORAGE_KEY_SEARCH) || '';
+			const storedSort = localStorage.getItem(STORAGE_KEY_SORT) || '';
+			if (searchInput && storedSearch) searchInput.value = storedSearch;
+			if (sortSelect && storedSort) sortSelect.value = storedSort;
+
+			function setRowVisibility() {
+				const query = safeText(searchInput ? searchInput.value : '').toLowerCase();
+				let visibleCount = 0;
+				planRows.forEach((row) => {
+					const text = [row.dataset.title, row.dataset.ref, row.dataset.status, row.dataset.category].join(' ').toLowerCase();
+					const matches = !query || text.includes(query);
+					row.hidden = !matches;
+					if (matches) visibleCount += 1;
+				});
+				if (countEl) countEl.textContent = `Showing ${visibleCount} of ${planRows.length}`;
+			}
+
+			function sortRows() {
+				if (!sortSelect) return;
+				const key = sortSelect.value;
+				const tbody = planRows[0] ? planRows[0].parentElement : null;
+				if (!tbody) return;
+				const sorted = planRows.slice().sort((a, b) => {
+					switch (key) {
+						case 'title':
+							return safeText(a.dataset.title).localeCompare(safeText(b.dataset.title));
+						case 'views':
+							return (parseFloat(b.dataset.views || '0') - parseFloat(a.dataset.views || '0'));
+						case 'price':
+							return (parseFloat(a.dataset.price || '0') - parseFloat(b.dataset.price || '0'));
+						case 'status':
+							return safeText(a.dataset.status).localeCompare(safeText(b.dataset.status));
+						case 'ref':
+							return safeText(a.dataset.ref).localeCompare(safeText(b.dataset.ref));
+						case 'updated':
+						default:
+							return (parseFloat(b.dataset.updated || '0') - parseFloat(a.dataset.updated || '0'));
+					}
+				});
+				sorted.forEach((row) => tbody.appendChild(row));
+			}
+
+			function getSelectedRows() {
+				return planRows.filter((row) => {
+					const checkbox = row.querySelector('[data-plan-select]');
+					return checkbox && checkbox.checked && !row.hidden;
+				});
+			}
+
+			function applySelection(selectAll) {
+				planRows.forEach((row) => {
+					if (row.hidden) return;
+					const checkbox = row.querySelector('[data-plan-select]');
+					if (checkbox) checkbox.checked = selectAll;
+				});
+				if (selectAllCheckbox) selectAllCheckbox.checked = selectAll;
+			}
+
+			function gatherValues(type) {
+				const rows = getSelectedRows();
+				const source = rows.length ? rows : planRows.filter((row) => !row.hidden);
+				if (type === 'refs') {
+					return source.map((row) => row.dataset.ref).filter(Boolean).join('\n');
+				}
+				if (type === 'urls') {
+					return source.map((row) => row.dataset.url).filter(Boolean).join('\n');
+				}
+				return '';
+			}
+
+			if (searchInput) {
+				searchInput.addEventListener('input', () => {
+					localStorage.setItem(STORAGE_KEY_SEARCH, searchInput.value || '');
+					setRowVisibility();
+				});
+			}
+
+			if (sortSelect) {
+				sortSelect.addEventListener('change', () => {
+					localStorage.setItem(STORAGE_KEY_SORT, sortSelect.value || '');
+					sortRows();
+				});
+			}
+
+			if (selectAllBtn) {
+				selectAllBtn.addEventListener('click', () => {
+					const next = !(selectAllCheckbox && selectAllCheckbox.checked);
+					applySelection(next);
+				});
+			}
+			if (selectAllCheckbox) {
+				selectAllCheckbox.addEventListener('change', () => {
+					applySelection(selectAllCheckbox.checked);
+				});
+			}
+
+			copyButtons.forEach((btn) => {
+				btn.addEventListener('click', () => {
+					const type = btn.getAttribute('data-copy-type');
+					const payload = gatherValues(type || '');
+					copyText(payload);
+				});
+			});
+
+			copySingleButtons.forEach((btn) => {
+				btn.addEventListener('click', () => {
+					const value = btn.getAttribute('data-copy-value') || '';
+					copyText(value);
+				});
+			});
+
+			if (exportBtn) {
+				exportBtn.addEventListener('click', () => {
+					const rows = planRows.filter((row) => !row.hidden);
+					const header = ['Reference', 'Title', 'Status', 'Updated', 'Views', 'Price', 'Categories', 'URL'];
+					const lines = [header.join(',')];
+					rows.forEach((row) => {
+						const values = [
+							row.dataset.ref,
+							`"${safeText(row.dataset.title).replace(/"/g, '""')}"`,
+							row.dataset.status,
+							row.dataset.updated,
+							row.dataset.views,
+							row.dataset.price,
+							`"${safeText(row.dataset.category).replace(/"/g, '""')}"`,
+							row.dataset.url
+						];
+						lines.push(values.join(','));
+					});
+					const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+					const link = document.createElement('a');
+					link.href = URL.createObjectURL(blob);
+					link.download = 'plans-export.csv';
+					document.body.appendChild(link);
+					link.click();
+					link.remove();
+				});
+			}
+
+			setRowVisibility();
+			sortRows();
+		}
+
+		function bindRecentTracking() {
+			const editLinks = Array.from(document.querySelectorAll('[data-admin-edit]'));
+			if (!editLinks.length) return;
+			editLinks.forEach((link) => {
+				link.addEventListener('click', () => {
+					const plan = {
+						id: link.getAttribute('data-plan-id'),
+						title: link.getAttribute('data-plan-title'),
+						url: link.getAttribute('data-plan-url')
+					};
+					updateRecent(plan);
+				});
+			});
+		}
+
+		bindPlanTools();
+		bindActionMenus();
+		bindPreview();
+		bindRecentTracking();
+		renderRecent();
+		runHealthChecks();
+	});

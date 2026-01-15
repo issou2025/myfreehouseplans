@@ -38,6 +38,17 @@
         </div>
     </header>
 
+    <div class="admin-toolbar" role="region" aria-label="Quick actions">
+        <a class="btn btn-primary" href="{{ url_for('admin.add_plan') }}">Add plan</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.plans') }}">Open plans</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.messages') }}">Inbox</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.visitors') }}">Visitors</a>
+        {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+        <a class="btn btn-soft" href="{{ url_for('admin.manage_categories') }}">Categories</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.manage_team') }}">Team</a>
+        {% endif %}
+    </div>
+
     <section class="admin-metrics" aria-label="Key metrics">
         <article class="metric-card metric-card--slate">
             <div class="metric-card__icon">📮</div>
@@ -217,6 +228,20 @@
     </section>
 
     <div class="admin-split">
+        <section class="admin-panel" aria-labelledby="health-heading">
+            <div class="admin-panel__head">
+                <div>
+                    <p class="eyebrow">System checks</p>
+                    <h2 id="health-heading">Admin UI health</h2>
+                </div>
+            </div>
+            <ul class="admin-health" data-admin-health>
+                <li data-health="js"><span>JavaScript</span><strong>Checking…</strong></li>
+                <li data-health="fonts"><span>Fonts</span><strong>Checking…</strong></li>
+                <li data-health="images"><span>Images</span><strong>Checking…</strong></li>
+            </ul>
+        </section>
+
         <section class="admin-panel" aria-labelledby="orders-heading">
             <div class="admin-panel__head">
                 <div>
@@ -265,6 +290,18 @@
                     </div>
                 </li>
                 {% endfor %}
+            </ul>
+        </section>
+
+        <section class="admin-panel" aria-labelledby="recent-heading">
+            <div class="admin-panel__head">
+                <div>
+                    <p class="eyebrow">Local history</p>
+                    <h2 id="recent-heading">Recently edited</h2>
+                </div>
+            </div>
+            <ul class="admin-list" data-admin-recent>
+                <li class="muted">No recent edits yet.</li>
             </ul>
         </section>
     </div>

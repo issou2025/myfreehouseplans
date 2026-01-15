@@ -90,10 +90,40 @@
         </form>
     </section>
 
+    <section class="admin-quick-tools" aria-label="Quick tools" data-admin-tools>
+        <div class="admin-quick-tools__left">
+            <label class="admin-quick-tools__search">
+                <span>Quick search</span>
+                <input type="text" placeholder="Filter this page" data-admin-search>
+            </label>
+            <div class="admin-quick-tools__meta" data-admin-count>Showing 0 of 0</div>
+        </div>
+        <div class="admin-quick-tools__right">
+            <label class="admin-quick-tools__sort">
+                <span>Sort</span>
+                <select data-admin-sort>
+                    <option value="updated">Updated (newest)</option>
+                    <option value="title">Title A → Z</option>
+                    <option value="views">Most viewed</option>
+                    <option value="price">Price (low → high)</option>
+                    <option value="status">Status</option>
+                    <option value="ref">Reference</option>
+                </select>
+            </label>
+            <button type="button" class="btn btn-soft" data-admin-select-all>Select all</button>
+            <button type="button" class="btn btn-soft" data-admin-copy data-copy-type="refs">Copy refs</button>
+            <button type="button" class="btn btn-soft" data-admin-copy data-copy-type="urls">Copy URLs</button>
+            <button type="button" class="btn btn-primary" data-admin-export>Export CSV</button>
+        </div>
+    </section>
+
     <div class="table-responsive admin-table">
         <table>
             <thead>
                 <tr>
+                    <th class="admin-table__select">
+                        <input type="checkbox" aria-label="Select all plans" data-admin-select-all-checkbox>
+                    </th>
                     <th>Reference</th>
                     <th>Pricing tiers</th>
                     <th>Delivery</th>
@@ -104,7 +134,22 @@
             </thead>
             <tbody>
                 {% for p in plans.items %}
-                <tr>
+                <tr
+                    data-plan-row
+                    data-title="{{ p.title|e }}"
+                    data-ref="{{ p.reference_code|e }}"
+                    data-status="{{ 'published' if p.is_published else 'draft' }}"
+                    data-updated="{{ p.updated_at.timestamp() if p.updated_at else 0 }}"
+                    data-views="{{ p.views_count or 0 }}"
+                    data-price="{{ p.price_pack_1 or 0 }}"
+                    data-url="{{ url_for('main.pack_detail', slug=p.slug) }}"
+                    data-category="{% if p.categories %}{{ p.categories | map(attribute='name') | join(', ') }}{% endif %}"
+                    data-pack2="{{ 1 if p.gumroad_pack_2_url else 0 }}"
+                    data-pack3="{{ 1 if p.gumroad_pack_3_url else 0 }}"
+                >
+                    <td class="admin-table__select">
+                        <input type="checkbox" aria-label="Select {{ p.title }}" data-plan-select>
+                    </td>
                     <td>
                         <div class="plan-ref">
                             <span class="plan-ref__code">{{ p.reference_code }}</span>
@@ -161,23 +206,53 @@
                         <small class="muted">Created {{ p.created_at.strftime('%b %d, %Y') }}</small>
                     </td>
                     <td class="admin-table__actions">
-                        <a class="btn btn-soft" href="{{ url_for('admin.edit_plan', id=p.id) }}">Edit</a>
-                        {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
-                            <form method="post" action="{{ url_for('admin.toggle_plan_publish', id=p.id) }}" style="display:inline">
-                                {{ csrf_token() if csrf_token is defined else '' }}
-                                {% if p.is_published %}
-                                    <button type="submit" class="btn btn-outline">Unpublish</button>
+                        <div class="admin-actions__inline">
+                            <a class="btn btn-soft" href="{{ url_for('admin.edit_plan', id=p.id) }}" data-admin-edit data-plan-id="{{ p.id }}" data-plan-title="{{ p.title|e }}" data-plan-url="{{ url_for('main.pack_detail', slug=p.slug) }}">Edit</a>
+                            <button type="button" class="btn btn-outline" data-admin-preview>Preview</button>
+                            <button type="button" class="btn btn-outline" data-admin-copy-single data-copy-type="ref" data-copy-value="{{ p.reference_code }}">Copy ref</button>
+                            <button type="button" class="btn btn-outline" data-admin-copy-single data-copy-type="url" data-copy-value="{{ url_for('main.pack_detail', slug=p.slug) }}">Copy URL</button>
+                            {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+                                <form method="post" action="{{ url_for('admin.toggle_plan_publish', id=p.id) }}" style="display:inline">
+                                    {{ csrf_token() if csrf_token is defined else '' }}
+                                    {% if p.is_published %}
+                                        <button type="submit" class="btn btn-outline">Unpublish</button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-outline">Publish</button>
+                                    {% endif %}
+                                </form>
+                                <form method="post" action="{{ url_for('admin.delete_plan', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
+                                    {{ csrf_token() if csrf_token is defined else '' }}
+                                    <button type="submit" class="btn btn-outline">Delete</button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-outline" disabled title="Only the Owner can publish or delete plans">Owner-only</button>
+                            {% endif %}
+                        </div>
+                        <div class="admin-actions__menu" data-admin-action-menu>
+                            <button type="button" class="action-menu__toggle" aria-expanded="false" aria-label="Open actions">⋮</button>
+                            <div class="action-menu__panel" role="menu">
+                                <a class="action-menu__item" role="menuitem" href="{{ url_for('admin.edit_plan', id=p.id) }}" data-admin-edit data-plan-id="{{ p.id }}" data-plan-title="{{ p.title|e }}" data-plan-url="{{ url_for('main.pack_detail', slug=p.slug) }}">Edit</a>
+                                <button type="button" class="action-menu__item" role="menuitem" data-admin-preview>Preview</button>
+                                <button type="button" class="action-menu__item" role="menuitem" data-admin-copy-single data-copy-type="ref" data-copy-value="{{ p.reference_code }}">Copy ref</button>
+                                <button type="button" class="action-menu__item" role="menuitem" data-admin-copy-single data-copy-type="url" data-copy-value="{{ url_for('main.pack_detail', slug=p.slug) }}">Copy URL</button>
+                                {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+                                    <form method="post" action="{{ url_for('admin.toggle_plan_publish', id=p.id) }}" style="display:inline">
+                                        {{ csrf_token() if csrf_token is defined else '' }}
+                                        {% if p.is_published %}
+                                            <button type="submit" class="action-menu__item" role="menuitem">Unpublish</button>
+                                        {% else %}
+                                            <button type="submit" class="action-menu__item" role="menuitem">Publish</button>
+                                        {% endif %}
+                                    </form>
+                                    <form method="post" action="{{ url_for('admin.delete_plan', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
+                                        {{ csrf_token() if csrf_token is defined else '' }}
+                                        <button type="submit" class="action-menu__item action-menu__item--danger" role="menuitem">Delete</button>
+                                    </form>
                                 {% else %}
-                                    <button type="submit" class="btn btn-outline">Publish</button>
+                                    <button type="button" class="action-menu__item" role="menuitem" disabled>Owner-only</button>
                                 {% endif %}
-                            </form>
-                            <form method="post" action="{{ url_for('admin.delete_plan', id=p.id) }}" style="display:inline" onsubmit="return confirm('Delete this plan? This action cannot be undone.');">
-                                {{ csrf_token() if csrf_token is defined else '' }}
-                                <button type="submit" class="btn btn-outline">Delete</button>
-                            </form>
-                        {% else %}
-                            <button type="button" class="btn btn-outline" disabled title="Only the Owner can publish or delete plans">Owner-only</button>
-                        {% endif %}
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -190,6 +265,28 @@
         </div>
         {% endif %}
     </div>
+
+    <dialog class="admin-preview" data-admin-preview-dialog>
+        <div class="admin-preview__header">
+            <div>
+                <p class="eyebrow">Plan preview</p>
+                <h3 class="admin-preview__title">Plan</h3>
+            </div>
+            <button type="button" class="btn btn-soft" data-admin-preview-close>Close</button>
+        </div>
+        <div class="admin-preview__body">
+            <div class="admin-preview__meta">
+                <p><strong>Reference:</strong> <span data-admin-preview-ref>—</span></p>
+                <p><strong>Status:</strong> <span data-admin-preview-status>—</span></p>
+                <p><strong>Categories:</strong> <span data-admin-preview-categories>—</span></p>
+                <p><strong>Views:</strong> <span data-admin-preview-views>—</span></p>
+            </div>
+            <div class="admin-preview__actions">
+                <a class="btn btn-primary" data-admin-preview-link href="#" target="_blank" rel="noopener">Open public page</a>
+                <button type="button" class="btn btn-soft" data-admin-preview-copy>Copy link</button>
+            </div>
+        </div>
+    </dialog>
 
     <nav class="pagination" aria-label="Pagination">
         {% if plans.has_prev %}
