@@ -154,10 +154,18 @@
                 <h2 class="form-card__title">Files & Media</h2>
             </div>
             <div class="form-grid form-grid--2">
-                <div class="form-group">
+                <div class="form-group image-cropper" data-cropper data-input-id="cover_image" data-preview-id="cover_image_preview">
                     {{ form.cover_image.label(class="form-label") }}
-                    {{ form.cover_image(class="form-input") }}
+                    {{ form.cover_image(class="form-input", id="cover_image", accept="image/*") }}
                     <p class="form-help">Main image shown on the website to represent the plan.</p>
+                    <div class="image-cropper__controls">
+                        <button type="button" class="btn btn-soft" data-crop-open>Crop image</button>
+                        <button type="button" class="btn btn-ghost" data-crop-reset>Reset</button>
+                    </div>
+                    <div class="image-cropper__preview">
+                        <img id="cover_image_preview" data-initial-src="" alt="Cover preview" loading="lazy" decoding="async">
+                        <div class="image-cropper__preview-meta">Desktop and mobile previews update after cropping.</div>
+                    </div>
                     {% for err in form.cover_image.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
                 </div>
                 <div class="form-group">
@@ -354,5 +362,189 @@
             </div>
         </div>
     </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" referrerpolicy="no-referrer">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js" referrerpolicy="no-referrer"></script>
+<script>
+    (function () {
+        function initCropperField(wrapper) {
+            const inputId = wrapper.getAttribute('data-input-id');
+            const previewId = wrapper.getAttribute('data-preview-id');
+            const fileInput = document.getElementById(inputId);
+            const previewImg = document.getElementById(previewId);
+            const openBtn = wrapper.querySelector('[data-crop-open]');
+            const resetBtn = wrapper.querySelector('[data-crop-reset]');
+
+            if (!fileInput || !previewImg || !openBtn || !resetBtn) return;
+
+            let originalFile = null;
+            let originalSrc = previewImg.dataset.initialSrc || '';
+            if (originalSrc) {
+                setPreview(originalSrc);
+            }
+            let cropper = null;
+
+            function setPreview(src) {
+                if (!src) {
+                    previewImg.removeAttribute('src');
+                    return;
+                }
+                previewImg.src = src;
+            }
+
+            function openModal() {
+                const modal = document.querySelector('[data-crop-modal]');
+                if (!modal) return;
+                const modalImage = modal.querySelector('[data-crop-image]');
+                const previewDesktop = modal.querySelector('[data-crop-preview-desktop]');
+                const previewMobile = modal.querySelector('[data-crop-preview-mobile]');
+                const activeSrc = previewImg.getAttribute('src') || '';
+                if (!activeSrc) return;
+
+                modalImage.src = activeSrc;
+                modalImage.crossOrigin = 'anonymous';
+                modal.removeAttribute('hidden');
+                document.body.classList.add('cropper-open');
+
+                cropper = new Cropper(modalImage, {
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                    responsive: true,
+                    background: false,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: false,
+                    scalable: false,
+                    preview: [previewDesktop, previewMobile],
+                });
+            }
+
+            function closeModal() {
+                const modal = document.querySelector('[data-crop-modal]');
+                if (!modal) return;
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                modal.setAttribute('hidden', 'hidden');
+                document.body.classList.remove('cropper-open');
+            }
+
+            function applyCrop() {
+                if (!cropper) return;
+                const canvas = cropper.getCroppedCanvas({
+                    maxWidth: 1600,
+                    maxHeight: 1200,
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                });
+                if (!canvas) {
+                    closeModal();
+                    return;
+                }
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        closeModal();
+                        return;
+                    }
+                    const fileName = (originalFile && originalFile.name) ? originalFile.name.replace(/\.(\w+)$/, '-crop.$1') : 'cover-crop.jpg';
+                    const croppedFile = new File([blob], fileName, { type: blob.type });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(croppedFile);
+                    fileInput.files = dataTransfer.files;
+                    setPreview(URL.createObjectURL(croppedFile));
+                    closeModal();
+                }, 'image/jpeg', 0.9);
+            }
+
+            fileInput.addEventListener('change', function () {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                originalFile = file;
+                originalSrc = URL.createObjectURL(file);
+                setPreview(originalSrc);
+            });
+
+            openBtn.addEventListener('click', function () {
+                openModal();
+            });
+
+            resetBtn.addEventListener('click', function () {
+                if (originalSrc) {
+                    setPreview(originalSrc);
+                    if (originalFile) {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(originalFile);
+                        fileInput.files = dataTransfer.files;
+                    }
+                } else {
+                    fileInput.value = '';
+                    setPreview('');
+                }
+            });
+
+            document.addEventListener('click', function (e) {
+                const target = e.target;
+                if (!(target instanceof HTMLElement)) return;
+                if (target.matches('[data-crop-cancel], [data-crop-close]')) {
+                    e.preventDefault();
+                    closeModal();
+                }
+                if (target.matches('[data-crop-apply]')) {
+                    e.preventDefault();
+                    applyCrop();
+                }
+                if (target.matches('[data-aspect]') && cropper) {
+                    e.preventDefault();
+                    const ratio = target.getAttribute('data-aspect');
+                    const value = ratio === 'free' ? NaN : Number(ratio);
+                    cropper.setAspectRatio(value);
+                    target.closest('.cropper-modal__ratios')?.querySelectorAll('button').forEach(btn => btn.classList.remove('is-active'));
+                    target.classList.add('is-active');
+                }
+            });
+        }
+
+        document.querySelectorAll('[data-cropper]').forEach(initCropperField);
+    })();
+</script>
+
+<div class="cropper-modal" data-crop-modal hidden>
+    <div class="cropper-modal__backdrop" data-crop-close></div>
+    <div class="cropper-modal__panel" role="dialog" aria-modal="true" aria-label="Crop image">
+        <header class="cropper-modal__header">
+            <h3>Crop image</h3>
+            <button type="button" class="btn btn-ghost" data-crop-close>Close</button>
+        </header>
+        <div class="cropper-modal__body">
+            <div class="cropper-modal__image">
+                <img data-crop-image alt="Cropper preview">
+            </div>
+            <aside class="cropper-modal__preview">
+                <p class="muted">Desktop preview</p>
+                <div class="cropper-preview cropper-preview--desktop" data-crop-preview-desktop></div>
+                <p class="muted">Mobile preview</p>
+                <div class="cropper-preview cropper-preview--mobile" data-crop-preview-mobile></div>
+            </aside>
+        </div>
+        <div class="cropper-modal__controls">
+            <div class="cropper-modal__ratios" role="group" aria-label="Aspect ratios">
+                <button type="button" class="btn btn-ghost is-active" data-aspect="free">Free</button>
+                <button type="button" class="btn btn-ghost" data-aspect="1">1:1</button>
+                <button type="button" class="btn btn-ghost" data-aspect="1.3333">4:3</button>
+                <button type="button" class="btn btn-ghost" data-aspect="1.7778">16:9</button>
+            </div>
+            <div class="cropper-modal__actions">
+                <button type="button" class="btn btn-soft" data-crop-cancel>Cancel</button>
+                <button type="button" class="btn btn-primary" data-crop-apply>Apply crop</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
