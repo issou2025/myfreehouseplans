@@ -74,6 +74,279 @@ html, body {
     box-sizing: border-box;
 }
 
+/* ==========================================================================
+   GLOBAL IMAGE RULES – Responsive, Layout-Safe, Device-Adaptive
+   ==========================================================================
+   These rules ensure all images display correctly across mobile, tablet, and
+   desktop without overflow, stretching, or layout shifts. No database access.
+   ========================================================================== */
+
+/* Base image defaults – prevent overflow and maintain proportions */
+img,
+picture,
+video,
+canvas,
+svg {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+/* Prevent images from causing horizontal scroll */
+img {
+	max-width: 100%;
+	width: auto;
+	object-fit: cover;
+}
+
+/* Picture element normalization */
+picture {
+	display: block;
+	width: 100%;
+}
+
+picture img {
+	width: 100%;
+	height: auto;
+}
+
+/* Responsive image containers – lock aspect ratio to prevent CLS */
+.img-container,
+.image-wrapper,
+[class*="__media"],
+[class*="__image"] {
+	position: relative;
+	overflow: hidden;
+	max-width: 100%;
+}
+
+/* Standard aspect ratio presets for common image contexts */
+.aspect-16-9 { aspect-ratio: 16 / 9; }
+.aspect-16-10 { aspect-ratio: 16 / 10; }
+.aspect-4-3 { aspect-ratio: 4 / 3; }
+.aspect-3-2 { aspect-ratio: 3 / 2; }
+.aspect-1-1 { aspect-ratio: 1 / 1; }
+.aspect-4-5 { aspect-ratio: 4 / 5; }
+.aspect-hero { aspect-ratio: 21 / 9; }
+
+/* Fill container for images inside aspect-ratio containers */
+.aspect-16-9 > img,
+.aspect-16-10 > img,
+.aspect-4-3 > img,
+.aspect-3-2 > img,
+.aspect-1-1 > img,
+.aspect-4-5 > img,
+.aspect-hero > img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* Object-fit utility classes */
+.object-cover { object-fit: cover; }
+.object-contain { object-fit: contain; }
+.object-fill { object-fit: fill; }
+.object-scale-down { object-fit: scale-down; }
+.object-none { object-fit: none; }
+
+/* Object position utilities */
+.object-center { object-position: center; }
+.object-top { object-position: top; }
+.object-bottom { object-position: bottom; }
+.object-left { object-position: left; }
+.object-right { object-position: right; }
+
+/* Lazy loading visual feedback – hide until loaded */
+img[loading="lazy"] {
+	background: linear-gradient(135deg, var(--color-surface-alt) 0%, var(--color-surface) 100%);
+}
+
+/* Image loading states */
+img.is-loading {
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+img.is-loaded {
+	opacity: 1;
+}
+
+/* Prevent layout shift from images with known dimensions */
+img[width][height] {
+	height: auto;
+	max-width: 100%;
+}
+
+/* ==========================================================================
+   RESPONSIVE IMAGE BREAKPOINTS
+   ========================================================================== */
+
+/* Mobile-first: constrain images on small screens */
+@media (max-width: 639px) {
+	img {
+		max-height: 60vh; /* Prevent massive images from dominating viewport */
+	}
+	
+	/* Card images on mobile */
+	[class*="card__media"] {
+		min-height: 160px;
+		max-height: 280px;
+	}
+	
+	/* Hero images on mobile */
+	[class*="hero__media"],
+	[class*="hero__image"] {
+		max-height: 40vh;
+	}
+	
+	/* Thumbnail scaling */
+	[class*="thumb"] img,
+	[class*="thumbnail"] img {
+		max-width: 80px;
+		max-height: 80px;
+	}
+}
+
+/* Tablet adjustments */
+@media (min-width: 640px) and (max-width: 1023px) {
+	[class*="card__media"] {
+		min-height: 180px;
+		max-height: 320px;
+	}
+	
+	[class*="hero__media"],
+	[class*="hero__image"] {
+		max-height: 50vh;
+	}
+	
+	[class*="thumb"] img,
+	[class*="thumbnail"] img {
+		max-width: 100px;
+		max-height: 100px;
+	}
+}
+
+/* Desktop: allow larger images but still constrain */
+@media (min-width: 1024px) {
+	[class*="card__media"] {
+		min-height: 200px;
+		max-height: 400px;
+	}
+	
+	[class*="hero__media"],
+	[class*="hero__image"] {
+		max-height: 60vh;
+	}
+	
+	[class*="thumb"] img,
+	[class*="thumbnail"] img {
+		max-width: 120px;
+		max-height: 120px;
+	}
+}
+
+/* ==========================================================================
+   GALLERY & GRID IMAGE CONSISTENCY
+   ========================================================================== */
+
+/* Grid images should fill their cells consistently */
+.plan-grid img,
+.bento-grid img,
+.favorites-grid img,
+.experience-grid img,
+.insights-grid img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* Prevent grids from having uneven rows due to image sizing */
+.plan-grid [class*="__media"],
+.bento-grid [class*="__media"],
+.favorites-grid [class*="__media"] {
+	aspect-ratio: 16 / 10;
+}
+
+/* ==========================================================================
+   THUMBNAIL SPECIFIC RULES
+   ========================================================================== */
+
+.plan-thumb,
+.gallery-thumb,
+[class*="thumb"] {
+	overflow: hidden;
+	border-radius: 8px;
+}
+
+.plan-thumb img,
+.gallery-thumb img,
+[class*="thumb"] img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.3s ease;
+}
+
+.plan-thumb:hover img,
+.gallery-thumb:hover img,
+[class*="thumb"]:hover img {
+	transform: scale(1.05);
+}
+
+/* ==========================================================================
+   HERO & FEATURED IMAGE CONSTRAINTS
+   ========================================================================== */
+
+.hero img,
+.plan-hero img,
+.plan-tech__main img {
+	width: 100%;
+	height: auto;
+	max-height: 70vh;
+	object-fit: cover;
+	object-position: center;
+}
+
+/* Main gallery image should respect container */
+.plan-tech__main {
+	aspect-ratio: 16 / 10;
+	overflow: hidden;
+	border-radius: var(--radius-md);
+	background: var(--color-surface-alt);
+}
+
+.plan-tech__main img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* ==========================================================================
+   PRINT & ACCESSIBILITY
+   ========================================================================== */
+
+@media print {
+	img {
+		max-width: 100% !important;
+		page-break-inside: avoid;
+	}
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+	img {
+		transition: none;
+	}
+	
+	[class*="thumb"]:hover img {
+		transform: none;
+	}
+}
+
+/* End of Global Image Rules */
+
 body {
 	margin: 0;
 	min-height: 100%;
@@ -1243,7 +1516,8 @@ body.cropper-open { overflow: hidden; }
 
 .toggle input {
 	position: absolute;
-	op: -9999px;
+	top: -9999px;
+	left: -9999px;
 }
 
 .toggle__track {

@@ -67,21 +67,33 @@
 document.addEventListener('DOMContentLoaded', function () {
 	function bindImage(img) {
 		try {
-			const parent = img.closest('.plan-card__media');
+			const parent = img.closest('.plan-card__media, [class*="__media"], [class*="__image"]');
 			if (!parent) return;
 			if (img.complete && img.naturalWidth > 0) {
 				parent.classList.add('is-loaded');
+				img.classList.add('is-loaded');
+				img.classList.remove('is-loading');
 				return;
 			}
-			img.addEventListener('load', function () { parent.classList.add('is-loaded'); });
-			img.addEventListener('error', function () { parent.classList.add('is-loaded'); });
+			img.classList.add('is-loading');
+			img.addEventListener('load', function () {
+				parent.classList.add('is-loaded');
+				img.classList.add('is-loaded');
+				img.classList.remove('is-loading');
+			});
+			img.addEventListener('error', function () {
+				parent.classList.add('is-loaded');
+				img.classList.add('is-loaded');
+				img.classList.remove('is-loading');
+			});
 		} catch (e) {
 			// Defensive: never throw in UI enhancement
 			console.warn('bindImage error', e);
 		}
 	}
 
-	document.querySelectorAll('img.js-lazy-img').forEach(bindImage);
+	// Bind all images in media containers for skeleton handling
+	document.querySelectorAll('img.js-lazy-img, [class*="__media"] img, [class*="__image"] img').forEach(bindImage);
 
 	// Handle images added via fetch (infinite scroll / load more)
 	const grid = document.getElementById('planGrid');
@@ -90,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			mutations.forEach(function (m) {
 				m.addedNodes.forEach(function (n) {
 					if (!(n instanceof HTMLElement)) return;
-					n.querySelectorAll && n.querySelectorAll('img.js-lazy-img').forEach(bindImage);
+					n.querySelectorAll && n.querySelectorAll('img.js-lazy-img, [class*="__media"] img').forEach(bindImage);
 				});
 			});
 		});
@@ -1289,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			article.className = 'favorite-card';
 			article.innerHTML = `
 				<div class="favorite-card__media">
-					${fav.thumb ? `<img src="${fav.thumb}" alt="${fav.title}">` : '<div class="plan-card__placeholder">Preview coming soon</div>'}
+					${fav.thumb ? `<img src="${fav.thumb}" alt="${fav.title}" loading="lazy" decoding="async">` : '<div class="plan-card__placeholder">Preview coming soon</div>'}
 				</div>
 				<div class="favorite-card__body">
 					<h3>${fav.title}</h3>
