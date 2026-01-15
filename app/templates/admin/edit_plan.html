@@ -145,6 +145,7 @@
                     {{ form.total_area_m2.label(class="form-label") }}
                     {{ form.total_area_m2(class="form-input", type="number", step="0.1", placeholder="150.5") }}
                     <p class="form-help">Total built area in square meters (m²).</p>
+                    <p class="form-help form-help--muted" data-imperial-output="total_area_m2"></p>
                 </div>
                 <div class="form-group">
                     {{ form.total_area_sqft.label(class="form-label") }}
@@ -290,11 +291,14 @@
                     {{ form.building_width.label(class="form-label") }}
                     {{ form.building_width(class="form-input", type="number", step="0.1") }}
                     <p class="form-help">Building width in meters.</p>
+                    <p class="form-help form-help--muted" data-imperial-output="building_width"></p>
                 </div>
                 <div class="form-group">
                     {{ form.building_length.label(class="form-label") }}
                     {{ form.building_length(class="form-input", type="number", step="0.1") }}
                     <p class="form-help">Building length in meters.</p>
+                    <p class="form-help form-help--muted" data-imperial-output="building_length"></p>
+                    <p class="form-help form-help--muted" data-imperial-footprint></p>
                 </div>
                 <div class="form-group">
                     {{ form.ceiling_height.label(class="form-label") }}
@@ -542,6 +546,79 @@
         }
 
         document.querySelectorAll('[data-cropper]').forEach(initCropperField);
+
+        function parseNumber(value) {
+            const num = Number.parseFloat(value);
+            return Number.isFinite(num) ? num : null;
+        }
+
+        function formatFeetInches(meters) {
+            if (meters === null || meters === undefined) return '';
+            const totalInches = meters * 39.3700787;
+            let feet = Math.floor(totalInches / 12);
+            let inches = Math.round(totalInches - (feet * 12));
+            if (inches === 12) {
+                feet += 1;
+                inches = 0;
+            }
+            return `${feet} ft ${inches} in`;
+        }
+
+        function formatSqFt(squareMeters) {
+            const sqft = squareMeters * 10.7639;
+            return Math.round(sqft).toLocaleString();
+        }
+
+        function initMetricImperialPreview() {
+            const widthInput = document.getElementById('building_width');
+            const lengthInput = document.getElementById('building_length');
+            const areaInput = document.getElementById('total_area_m2');
+
+            const widthOutput = document.querySelector('[data-imperial-output="building_width"]');
+            const lengthOutput = document.querySelector('[data-imperial-output="building_length"]');
+            const areaOutput = document.querySelector('[data-imperial-output="total_area_m2"]');
+            const footprintOutput = document.querySelector('[data-imperial-footprint]');
+
+            if (!widthInput && !lengthInput && !areaInput) return;
+
+            function update() {
+                const width = widthInput ? parseNumber(widthInput.value) : null;
+                const length = lengthInput ? parseNumber(lengthInput.value) : null;
+                const areaM2 = areaInput ? parseNumber(areaInput.value) : null;
+                const computedAreaM2 = (width !== null && length !== null) ? width * length : null;
+                const displayAreaM2 = areaM2 !== null ? areaM2 : computedAreaM2;
+
+                if (widthOutput) {
+                    widthOutput.textContent = width !== null ? `≈ ${formatFeetInches(width)}` : '';
+                }
+                if (lengthOutput) {
+                    lengthOutput.textContent = length !== null ? `≈ ${formatFeetInches(length)}` : '';
+                }
+                if (footprintOutput) {
+                    footprintOutput.textContent = (width !== null && length !== null)
+                        ? `≈ ${formatFeetInches(width)} × ${formatFeetInches(length)}`
+                        : '';
+                }
+                if (areaOutput) {
+                    if (displayAreaM2 !== null) {
+                        const suffix = areaM2 !== null ? '' : ' (from width × length)';
+                        areaOutput.textContent = `≈ ${formatSqFt(displayAreaM2)} sq ft${suffix}`;
+                    } else {
+                        areaOutput.textContent = '';
+                    }
+                }
+            }
+
+            [widthInput, lengthInput, areaInput].forEach((input) => {
+                if (!input) return;
+                input.addEventListener('input', update);
+                input.addEventListener('change', update);
+            });
+
+            update();
+        }
+
+        initMetricImperialPreview();
     })();
 </script>
 
