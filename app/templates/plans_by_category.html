@@ -35,7 +35,7 @@
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
-                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" itemprop="image" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder.svg') }}';">
+                        {{ picture_tag(card_image, alt=plan.title, preset=CARD_PRESET, variant='base', loading='lazy', decoding='async', itemprop='image') }}
                     {% else %}
                         <div class="plan-card__placeholder">Visual coming soon</div>
                     {% endif %}

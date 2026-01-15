@@ -43,6 +43,34 @@ def _srcset(original_rel: str, variant: str, widths: Iterable[int], fmt: str) ->
     return ", ".join(parts)
 
 
+def _variants_available(original_rel: str, variant: str, width: int, fmt: str) -> bool:
+    try:
+        static_folder = current_app.static_folder
+        if not static_folder:
+            return False
+        static_root = Path(static_folder).resolve()
+        probe = _variant_relpath(original_rel, variant=variant, width=width, fmt=fmt)
+        return (static_root / probe).exists()
+    except Exception:
+        return False
+
+
+def srcset_for(
+    value: str | None,
+    *,
+    preset: ResponsivePreset = CARD_PRESET,
+    variant: str = "base",
+    fmt: str = "webp",
+) -> str:
+    """Return a srcset string for local uploads, or empty string if unavailable."""
+    if not value or is_absolute_url(value):
+        return ""
+    original_rel = value
+    if not _variants_available(original_rel, variant=variant, width=preset.widths[0], fmt=fmt):
+        return ""
+    return _srcset(original_rel, variant=variant, widths=preset.widths, fmt=fmt)
+
+
 def picture_tag(
     value: str | None,
     *,
@@ -86,15 +114,7 @@ def picture_tag(
     # tags or srcset pointing at missing files. Some browsers will select a
     # missing srcset candidate and render a broken image even though the
     # original upload exists. For admin uploads this is common (new files).
-    variants_available = False
-    try:
-        static_folder = current_app.static_folder
-        if static_folder:
-            static_root = Path(static_folder).resolve()
-            probe = _variant_relpath(original_rel, variant=variant, width=preset.widths[0], fmt="webp")
-            variants_available = (static_root / probe).exists()
-    except Exception:
-        variants_available = False
+    variants_available = _variants_available(original_rel, variant=variant, width=preset.widths[0], fmt="webp")
 
     if not variants_available:
         attrs = []

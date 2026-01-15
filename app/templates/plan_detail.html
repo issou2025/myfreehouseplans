@@ -12,6 +12,9 @@
 {% set cover_src = upload_url(cover_value) if cover_value else placeholder %}
 {% set floor_src = upload_url(floor_value) if floor_value else '' %}
 {% set alt_src = upload_url(alt_value) if alt_value else '' %}
+{% set cover_srcset = srcset_for(cover_value, preset=HERO_PRESET, variant='base') %}
+{% set floor_srcset = srcset_for(floor_value, preset=HERO_PRESET, variant='base') %}
+{% set alt_srcset = srcset_for(alt_value, preset=HERO_PRESET, variant='base') %}
 
 {% set area_m2 = plan.area_m2 if plan.area_m2 else None %}
 {% set area_sqft = plan.area_sqft if plan.area_sqft else None %}
@@ -52,21 +55,21 @@
   <section class="plan-tech__hero" aria-label="Gallery and key specs">
     <div class="plan-tech__gallery">
       <figure class="plan-tech__main" aria-label="Main image">
-        <img id="planMainImage" src="{{ cover_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+        <img id="planMainImage" src="{{ cover_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" {% if cover_srcset %}srcset="{{ cover_srcset }}" sizes="{{ HERO_PRESET.sizes }}"{% endif %} onerror="this.onerror=null;this.src='{{ placeholder }}';">
       </figure>
 
       <div class="plan-tech__thumbs" aria-label="Gallery thumbnails">
-        <button class="plan-thumb is-active" type="button" data-src="{{ cover_src }}" aria-label="View cover image">
-          <img src="{{ cover_src }}" alt="Cover thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+        <button class="plan-thumb is-active" type="button" data-src="{{ cover_src }}" data-srcset="{{ cover_srcset }}" data-sizes="{{ HERO_PRESET.sizes }}" aria-label="View cover image">
+          <img src="{{ cover_src }}" alt="Cover thumbnail" loading="lazy" decoding="async" {% if cover_srcset %}srcset="{{ cover_srcset }}" sizes="{{ HERO_PRESET.sizes }}"{% endif %} onerror="this.onerror=null;this.src='{{ placeholder }}';">
         </button>
         {% if floor_src and floor_src != cover_src %}
-          <button class="plan-thumb" type="button" data-src="{{ floor_src }}" aria-label="View floor plan">
-            <img src="{{ floor_src }}" alt="Floor plan thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+          <button class="plan-thumb" type="button" data-src="{{ floor_src }}" data-srcset="{{ floor_srcset }}" data-sizes="{{ HERO_PRESET.sizes }}" aria-label="View floor plan">
+            <img src="{{ floor_src }}" alt="Floor plan thumbnail" loading="lazy" decoding="async" {% if floor_srcset %}srcset="{{ floor_srcset }}" sizes="{{ HERO_PRESET.sizes }}"{% endif %} onerror="this.onerror=null;this.src='{{ placeholder }}';">
           </button>
         {% endif %}
         {% if alt_src and alt_src != cover_src and alt_src != floor_src %}
-          <button class="plan-thumb" type="button" data-src="{{ alt_src }}" aria-label="View alternate image">
-            <img src="{{ alt_src }}" alt="Alternate thumbnail" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ placeholder }}';">
+          <button class="plan-thumb" type="button" data-src="{{ alt_src }}" data-srcset="{{ alt_srcset }}" data-sizes="{{ HERO_PRESET.sizes }}" aria-label="View alternate image">
+            <img src="{{ alt_src }}" alt="Alternate thumbnail" loading="lazy" decoding="async" {% if alt_srcset %}srcset="{{ alt_srcset }}" sizes="{{ HERO_PRESET.sizes }}"{% endif %} onerror="this.onerror=null;this.src='{{ placeholder }}';">
           </button>
         {% endif %}
       </div>
@@ -272,8 +275,19 @@
     thumbs.forEach(btn => {
       btn.addEventListener('click', function () {
         const src = btn.getAttribute('data-src');
+        const srcset = btn.getAttribute('data-srcset');
+        const sizes = btn.getAttribute('data-sizes');
         if (!src) return;
         main.setAttribute('src', src);
+        if (srcset) {
+          main.setAttribute('srcset', srcset);
+          if (sizes) {
+            main.setAttribute('sizes', sizes);
+          }
+        } else {
+          main.removeAttribute('srcset');
+          main.removeAttribute('sizes');
+        }
         thumbs.forEach(t => t.classList.remove('is-active'));
         btn.classList.add('is-active');
       });

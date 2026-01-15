@@ -381,9 +381,9 @@ def register_template_processors(app):
     def inject_site_config():
         """Inject site configuration into all templates"""
         from app.utils.media import upload_url
-        from app.utils.responsive_media import picture_tag, CARD_PRESET, HERO_PRESET
+        from app.utils.responsive_media import picture_tag, srcset_for, CARD_PRESET, HERO_PRESET
         from flask import request
-        from app.utils.geoip import get_country_for_ip
+        from app.utils.geoip import get_country_for_ip, resolve_client_ip
 
         def query_args(exclude=None):
             exclude = set(exclude or [])
@@ -393,10 +393,7 @@ def register_template_processors(app):
             return args
 
         def client_ip():
-            forwarded = request.headers.get('X-Forwarded-For', '')
-            if forwarded:
-                return forwarded.split(',')[0].strip()
-            return request.remote_addr or '0.0.0.0'
+            return resolve_client_ip(request.headers, request.remote_addr) or '0.0.0.0'
 
         visitor_ip = client_ip()
         visitor_country = get_country_for_ip(visitor_ip)
@@ -408,6 +405,7 @@ def register_template_processors(app):
             'picture_tag': picture_tag,
             'CARD_PRESET': CARD_PRESET,
             'HERO_PRESET': HERO_PRESET,
+            'srcset_for': srcset_for,
             'query_args': query_args,
             'client_ip': visitor_ip,
             'visitor_country': visitor_country,
@@ -457,10 +455,8 @@ def register_request_hooks(app):
     from flask_login import current_user
 
     def _client_ip():
-        forwarded = request.headers.get('X-Forwarded-For', '')
-        if forwarded:
-            return forwarded.split(',')[0].strip()
-        return request.remote_addr or '0.0.0.0'
+        from app.utils.geoip import resolve_client_ip
+        return resolve_client_ip(request.headers, request.remote_addr) or '0.0.0.0'
 
     @app.before_request
     def _prepare_visit_tracking():

@@ -2351,6 +2351,7 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 .plan-card__media {
 	position: relative;
 	display: block;
+	max-width: 100%;
 	min-height: 200px;
 	/* Reserve a consistent aspect ratio to avoid CLS */
 	aspect-ratio: 16 / 10;
@@ -2368,7 +2369,9 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 	.plan-card__media { min-height: 220px; }
 }
 
-.plan-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plan-card__media picture { display: block; width: 100%; height: 100%; }
+.plan-card__media img,
+.plan-card__media picture img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Skeleton placeholder shown until image loads (prevents layout shift and provides perceived performance)
    Uses a light shimmer and is removed when the image finishes loading via JS. */
@@ -3070,14 +3073,20 @@ textarea { min-height: 120px; resize: vertical; }
 	overflow: hidden;
 	box-shadow: var(--shadow-sm);
 	aspect-ratio: 16 / 10;
-	max-height: min(42vh, 360px);
+	max-width: 100%;
+	max-height: min(48vh, 420px);
 }
-.plan-hero__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plan-hero__media picture { display: block; width: 100%; height: 100%; }
+.plan-hero__media img,
+.plan-hero__media picture img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .plan-hero__media figcaption { font-size: 0.85rem; color: var(--color-muted); padding: 10px 12px; background: rgba(255,255,255,0.95); }
 
 @media (max-width: 719px) {
 	.plan-hero__media figcaption { display: none; }
+}
+@media (max-width: 719px) {
+	.plan-hero__media figure { max-height: 300px; }
 }
 .plan-hero__tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
@@ -3700,14 +3709,20 @@ textarea { min-height: 120px; resize: vertical; }
 	margin: 0;
 	position: relative;
 	background: #ffffff;
+	aspect-ratio: 16 / 10;
+	max-width: 100%;
+	max-height: min(52vh, 440px);
+	overflow: hidden;
 }
 
 .plan-tech__main img {
 	width: 100%;
-	height: auto;
+	height: 100%;
 	display: block;
-	aspect-ratio: 16 / 10;
 	object-fit: cover;
+}
+@media (max-width: 720px) {
+	.plan-tech__main { max-height: 320px; }
 }
 
 .plan-tech__thumbs {
