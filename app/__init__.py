@@ -384,6 +384,7 @@ def register_template_processors(app):
         from app.utils.responsive_media import picture_tag, srcset_for, CARD_PRESET, HERO_PRESET
         from flask import request
         from app.utils.geoip import get_country_for_ip, resolve_client_ip
+        from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers, visible_starting_price
 
         def query_args(exclude=None):
             exclude = set(exclude or [])
@@ -397,6 +398,7 @@ def register_template_processors(app):
 
         visitor_ip = client_ip()
         visitor_country = get_country_for_ip(visitor_ip)
+        pack_visibility = load_pack_visibility()
         return {
             'site_name': app.config['SITE_NAME'],
             'site_description': app.config['SITE_DESCRIPTION'],
@@ -406,6 +408,9 @@ def register_template_processors(app):
             'CARD_PRESET': CARD_PRESET,
             'HERO_PRESET': HERO_PRESET,
             'srcset_for': srcset_for,
+            'pack_visibility': pack_visibility,
+            'filter_pack_tiers': filter_pack_tiers,
+            'visible_starting_price': visible_starting_price,
             'query_args': query_args,
             'client_ip': visitor_ip,
             'visitor_country': visitor_country,

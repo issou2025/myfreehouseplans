@@ -210,8 +210,10 @@
       <p>Pricing packs are shown after the technical description — pick the level that matches your build stage.</p>
     </header>
 
+    {% set visible_tiers = filter_pack_tiers(plan.pricing_tiers, pack_visibility) %}
+    {% if visible_tiers %}
     <div class="pricing-grid">
-      {% for tier in plan.pricing_tiers %}
+      {% for tier in visible_tiers %}
         {% set is_recommended = (tier.pack == 2) %}
         <article class="pricing-card {% if is_recommended %}is-recommended{% endif %}">
           <div class="pricing-card__top">
@@ -261,6 +263,9 @@
         </article>
       {% endfor %}
     </div>
+    {% else %}
+    <p class="muted">Packs are temporarily hidden. Please check back later or contact support.</p>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

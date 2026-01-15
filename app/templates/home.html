@@ -107,8 +107,10 @@
                         {% if plan.bathrooms_count %}<li><i class="fa-solid fa-bath" aria-hidden="true"></i>{{ plan.bathrooms_count }} baths</li>{% endif %}
                         {% if plan.floors_count %}<li><i class="fa-solid fa-building" aria-hidden="true"></i>{{ plan.floors_count }} floors</li>{% endif %}
                     </ul>
+                    {% set visible_tiers = filter_pack_tiers(plan.pricing_tiers, pack_visibility) %}
+                    {% if visible_tiers %}
                     <div class="plan-card__tiers" aria-label="Pack pricing overview">
-                        {% for tier in plan.pricing_tiers %}
+                        {% for tier in visible_tiers %}
                         <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
                             <span><i class="fa-solid fa-box" aria-hidden="true"></i> Pack 0{{ tier.pack }}</span>
                             <span>
@@ -123,11 +125,13 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% endif %}
+                    {% set visible_paid_price = visible_starting_price(plan.pricing_tiers, pack_visibility) %}
                     <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                         <div class="plan-card__price">
                             <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.reference_code }}</span>
-                            {% if plan.starting_paid_price %}
-                                <span class="price" itemprop="price">From ${{ plan.starting_paid_price|round(0)|int }}</span>
+                            {% if visible_paid_price %}
+                                <span class="price" itemprop="price">From ${{ visible_paid_price|round(0)|int }}</span>
                             {% else %}
                                 <span class="price" itemprop="price">Free</span>
                             {% endif %}

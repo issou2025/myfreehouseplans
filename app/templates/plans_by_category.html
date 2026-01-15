@@ -62,8 +62,10 @@
                         {% if plan.bathrooms_count %}<div><dt>Baths</dt><dd>{{ plan.bathrooms_count }}</dd></div>{% endif %}
                         {% if plan.floors_count %}<div><dt>Levels</dt><dd>{{ plan.floors_count }}</dd></div>{% endif %}
                     </dl>
+                    {% set visible_tiers = filter_pack_tiers(plan.pricing_tiers, pack_visibility) %}
+                    {% if visible_tiers %}
                     <div class="plan-card__tiers" aria-label="Pack pricing overview">
-                        {% for tier in plan.pricing_tiers %}
+                        {% for tier in visible_tiers %}
                         <div class="plan-card__tier {% if not tier.available %}plan-card__tier--muted{% endif %}">
                             <span>Pack 0{{ tier.pack }}</span>
                             <span>
@@ -78,6 +80,7 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% endif %}
                     <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                         <div class="plan-card__price">
                             {% if plan.is_on_sale %}

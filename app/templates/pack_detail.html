@@ -76,7 +76,7 @@
                 <p class="plan-hero__lead" itemprop="description">{{ plan.architectural_summary if plan.architectural_summary else 'A thoughtfully designed house plan.' }}</p>
                 <div class="plan-meta-bar">
                     <span class="badge badge--ghost">Ref {{ plan_ref }}</span>
-                    {% if plan.has_free_download %}
+                    {% if pack_visibility.get(1) and plan.has_free_download %}
                         <span class="badge badge--soft">Free pack ready</span>
                     {% else %}
                         <span class="badge badge--outline">Free preview coming soon</span>
@@ -309,9 +309,15 @@
             <div class="decision-guide" aria-label="Guidance">
                 <p class="decision-guide__title">Not sure which one to choose?</p>
                 <ul class="decision-guide__list">
+                    {% if pack_visibility.get(1) %}
                     <li><strong>Pack 1</strong> is best for quick viewing and sharing.</li>
+                    {% endif %}
+                    {% if pack_visibility.get(2) %}
                     <li><strong>Pack 2</strong> is best when you need the full PDF set.</li>
+                    {% endif %}
+                    {% if pack_visibility.get(3) %}
                     <li><strong>Pack 3</strong> is best when you need editable CAD or BIM files (DWG / RVT / IFC).</li>
+                    {% endif %}
                 </ul>
                 <p class="microcopy">Your files stay available after updates. You can re-download your packs anytime.</p>
             </div>
@@ -349,8 +355,10 @@
                     'button_class': 'package-button--cad'
                 }
             } %}
+            {% set visible_tiers = filter_pack_tiers(plan.pricing_tiers, pack_visibility) %}
+            {% if visible_tiers %}
             <div class="pack-comparison__grid">
-                {% for tier in plan.pricing_tiers %}
+                {% for tier in visible_tiers %}
                     {% set meta = package_meta.get(tier.pack, package_meta_default) %}
                     <article class="package-card package-card--{{ meta.card_class }}" aria-label="{{ meta.name }}">
                         <header class="package-card__header">
@@ -402,10 +410,14 @@
                     </article>
                 {% endfor %}
             </div>
+            {% else %}
+            <p class="muted">Packs are temporarily hidden. Please check back later or contact support.</p>
+            {% endif %}
             <p class="package-note">Need licensing help? <a href="{{ url_for('main.contact') }}">Email entreprise2rc@gmail.com</a> or <a href="https://wa.me/22796380877" target="_blank" rel="noopener">message us on WhatsApp</a>.</p>
+            {% set visible_paid_price = visible_starting_price(plan.pricing_tiers, pack_visibility) %}
             <meta itemprop="priceCurrency" content="USD">
-            <meta itemprop="lowPrice" content="{{ plan.starting_paid_price or 0 }}">
-            <meta itemprop="offerCount" content="{{ plan.pricing_tiers|length }}">
+            <meta itemprop="lowPrice" content="{{ visible_paid_price or 0 }}">
+            <meta itemprop="offerCount" content="{{ visible_tiers|length }}">
         </section>
 
         <section class="plan-panels" aria-label="Plan insights">
@@ -576,10 +588,10 @@
 
         {% set sticky_primary_url = None %}
         {% set sticky_primary_label = None %}
-        {% if plan.gumroad_pack_2_url %}
+        {% if pack_visibility.get(2) and plan.gumroad_pack_2_url %}
             {% set sticky_primary_url = url_for('main.gumroad_redirect', slug=plan_slug, pack=2) %}
             {% set sticky_primary_label = 'Buy Pack 02' %}
-        {% elif plan.gumroad_pack_3_url %}
+        {% elif pack_visibility.get(3) and plan.gumroad_pack_3_url %}
             {% set sticky_primary_url = url_for('main.gumroad_redirect', slug=plan_slug, pack=3) %}
             {% set sticky_primary_label = 'Buy Pack 03' %}
         {% endif %}
@@ -589,7 +601,7 @@
                 <span class="muted">Ref {{ plan_ref }}</span>
             </div>
             <div class="sticky-cta__actions">
-                {% if plan.has_free_download %}
+                {% if pack_visibility.get(1) and plan.has_free_download %}
                     <a class="btn btn-outline" href="{{ url_for('main.download_free', plan_id=plan.id) }}">Free PDF</a>
                 {% endif %}
                 {% if sticky_primary_url %}

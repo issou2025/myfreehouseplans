@@ -145,6 +145,43 @@
                 <span>Add Plan</span>
             </a>
         </div>
+        <form class="pack-visibility" method="post" action="{{ url_for('admin.update_pack_visibility') }}" aria-label="Pack visibility settings">
+            {{ csrf_token() if csrf_token is defined else '' }}
+            <div class="pack-visibility__header">
+                <div>
+                    <p class="eyebrow">Pack visibility</p>
+                    <h3>Enable or hide packs</h3>
+                    <p class="muted">Disabled packs are hidden across listings, detail pages, and CTAs.</p>
+                </div>
+                <button type="submit" class="btn-admin btn-admin--ghost">Save visibility</button>
+            </div>
+            <div class="pack-visibility__grid">
+                <label class="toggle">
+                    <input type="checkbox" name="pack_1" {% if pack_visibility and pack_visibility.get(1) %}checked{% endif %}>
+                    <span class="toggle__track" aria-hidden="true"></span>
+                    <span class="toggle__label">
+                        <strong>Pack 1</strong>
+                        <small>{{ 'Enabled' if pack_visibility and pack_visibility.get(1) else 'Disabled' }}</small>
+                    </span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" name="pack_2" {% if pack_visibility and pack_visibility.get(2) %}checked{% endif %}>
+                    <span class="toggle__track" aria-hidden="true"></span>
+                    <span class="toggle__label">
+                        <strong>Pack 2</strong>
+                        <small>{{ 'Enabled' if pack_visibility and pack_visibility.get(2) else 'Disabled' }}</small>
+                    </span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" name="pack_3" {% if pack_visibility and pack_visibility.get(3) %}checked{% endif %}>
+                    <span class="toggle__track" aria-hidden="true"></span>
+                    <span class="toggle__label">
+                        <strong>Pack 3</strong>
+                        <small>{{ 'Enabled' if pack_visibility and pack_visibility.get(3) else 'Disabled' }}</small>
+                    </span>
+                </label>
+            </div>
+        </form>
         <div class="admin-table-wrapper">
             <table class="admin-table">
                 <thead>

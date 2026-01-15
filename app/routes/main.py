@@ -24,6 +24,7 @@ import mimetypes
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.utils.media import is_absolute_url, upload_url
+from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers
 from app.utils.visitor_tracking import tag_visit_identity
 from werkzeug.exceptions import HTTPException
 import traceback
@@ -928,10 +929,12 @@ def compare_data():
         .all()
     )
 
+    pack_visibility = load_pack_visibility()
+
     plan_lookup = {}
     for plan in plans:
         tiers = []
-        for tier in plan.pricing_tiers:
+        for tier in filter_pack_tiers(plan.pricing_tiers, pack_visibility):
             price = tier.get('price')
             try:
                 normalized_price = float(price) if price is not None else None
