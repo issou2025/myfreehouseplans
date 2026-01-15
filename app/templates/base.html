@@ -39,6 +39,7 @@
     <meta name="color-scheme" content="light dark">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -47,7 +48,7 @@
     {# Structured Data #}
     {% block structured_data %}{% endblock %}
 </head>
-<body class="site-body theme-lux">
+<body class="site-body theme-lux" data-img-fallback="{{ url_for('static', filename='images/placeholder.svg') }}">
     {# Header / Navigation #}
     <header class="site-header glass" role="banner">
         <div class="shell site-header__inner">

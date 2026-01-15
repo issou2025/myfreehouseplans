@@ -98,6 +98,57 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 });
 
+// Global image fallback + unit toggles ---------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+	const fallback = document.body ? document.body.getAttribute('data-img-fallback') : '';
+	if (fallback) {
+		document.querySelectorAll('img').forEach((img) => {
+			if (img.getAttribute('data-fallback-bound') === 'true') return;
+			img.setAttribute('data-fallback-bound', 'true');
+			img.addEventListener('error', () => {
+				if (!img.src || img.src === fallback) return;
+				img.src = fallback;
+			});
+		});
+	}
+
+	function applyUnit(unit) {
+		document.querySelectorAll('[data-unitable]').forEach((el) => {
+			const sqft = el.getAttribute('data-sqft');
+			const m2 = el.getAttribute('data-m2');
+			const target = el.classList.contains('unit-value') ? el : el.querySelector('.unit-value');
+			if (!target) return;
+			if (unit === 'm2' && m2) {
+				target.textContent = `${m2} m²`;
+			} else if (unit === 'sqft' && sqft) {
+				target.textContent = `${sqft} sq ft`;
+			} else if (sqft) {
+				target.textContent = `${sqft} sq ft`;
+			} else if (m2) {
+				target.textContent = `${m2} m²`;
+			} else {
+				target.textContent = '—';
+			}
+		});
+	}
+
+	document.querySelectorAll('[data-unit-toggle]').forEach((group) => {
+		group.addEventListener('click', (event) => {
+			const btn = event.target instanceof HTMLElement ? event.target.closest('[data-unit]') : null;
+			if (!btn) return;
+			event.preventDefault();
+			const unit = btn.getAttribute('data-unit');
+			if (!unit) return;
+			group.querySelectorAll('[data-unit]').forEach((el) => {
+				el.classList.toggle('is-active', el === btn);
+			});
+			applyUnit(unit);
+		});
+	});
+
+	applyUnit('sqft');
+});
+
 // FAQ accordion progressive enhancement
 document.addEventListener('DOMContentLoaded', function () {
 	try {

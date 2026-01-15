@@ -82,7 +82,7 @@
             <article class="plan-card plan-card--bento {% if loop.index == 1 %}span-2{% elif loop.index == 2 %}span-tall{% else %}span-1{% endif %}" itemscope itemtype="https://schema.org/Product">
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
                     {% if card_image %}
-                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" itemprop="image" loading="lazy">
+                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" itemprop="image" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder.svg') }}';">
                     {% else %}
                         <div class="plan-card__placeholder">Rendering in progress</div>
                     {% endif %}
@@ -162,7 +162,7 @@
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
-                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}">
+                        <img src="{{ upload_url(card_image) }}" alt="{{ plan.title }}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder.svg') }}';">
                     {% else %}
                         <div class="plan-card__placeholder">Visual coming soon</div>
                     {% endif %}

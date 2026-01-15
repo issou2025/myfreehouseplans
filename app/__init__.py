@@ -297,6 +297,28 @@ def create_app(config_name='default'):
     # Register request lifecycle hooks
     register_request_hooks(app)
 
+    @app.after_request
+    def _apply_security_headers(response):
+        """Apply safe security headers without affecting app logic."""
+        csp = (
+            "default-src 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self' https://wa.me https://gumroad.com https://gum.co; "
+            "frame-ancestors 'none'; "
+            "img-src 'self' data: https:; "
+            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            "connect-src 'self';"
+        )
+        response.headers.setdefault('Content-Security-Policy', csp)
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+        response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-site')
+        return response
+
     @app.teardown_appcontext
     def _cleanup_appcontext(exc):
         """Ensure scoped sessions are removed when the app context ends."""
