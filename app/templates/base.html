@@ -49,6 +49,7 @@
     {% block structured_data %}{% endblock %}
 </head>
 <body class="site-body theme-lux" data-img-fallback="{{ url_for('static', filename='images/placeholder.svg') }}">
+    <a class="skip-link" href="#main">Skip to content</a>
     {# Header / Navigation #}
     <header class="site-header glass" role="banner">
         <div class="shell site-header__inner">
@@ -64,15 +65,15 @@
                 <div class="nav__group" aria-label="Browse">
                     <p class="nav__heading">Browse</p>
                     <div class="nav__stack">
-                        <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}">
+                        <a class="nav-link {% if current_endpoint == 'main.index' %}is-active{% endif %}" href="{{ url_for('main.index') }}" {% if current_endpoint == 'main.index' %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-house" aria-hidden="true"></i>
                             <span>Home</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}">
+                        <a class="nav-link {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}is-active{% endif %}" href="{{ url_for('main.packs') }}" {% if current_endpoint in ['main.packs', 'main.pack_detail', 'main.plans_by_category'] %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
                             <span>Plans</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}">
+                        <a class="nav-link {% if current_endpoint == 'main.insight_page' %}is-active{% endif %}" href="{{ url_for('main.insight_page', slug='choose-family-plan') }}" {% if current_endpoint == 'main.insight_page' %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                             <span>Guides</span>
                         </a>
@@ -81,11 +82,11 @@
                 <div class="nav__group" aria-label="Tools">
                     <p class="nav__heading">Tools</p>
                     <div class="nav__stack">
-                        <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}">
+                        <a class="nav-link {% if current_endpoint == 'main.favorites' %}is-active{% endif %}" href="{{ url_for('main.favorites') }}" {% if current_endpoint == 'main.favorites' %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-heart" aria-hidden="true"></i>
                             <span>Favorites</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}">
+                        <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}" {% if current_endpoint in ['main.compare'] %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                             <span>Compare</span>
                         </a>
@@ -94,11 +95,11 @@
                 <div class="nav__group" aria-label="Company">
                     <p class="nav__heading">Company</p>
                     <div class="nav__stack">
-                        <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}">
+                        <a class="nav-link {% if current_endpoint == 'main.about' %}is-active{% endif %}" href="{{ url_for('main.about') }}" {% if current_endpoint == 'main.about' %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                             <span>About</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}">
+                        <a class="nav-link {% if current_endpoint == 'main.contact' %}is-active{% endif %}" href="{{ url_for('main.contact') }}" {% if current_endpoint == 'main.contact' %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
                             <span>Contact</span>
                         </a>
@@ -108,11 +109,11 @@
                     <div class="nav__group" aria-label="Admin tools">
                         <p class="nav__heading">Admin</p>
                         <div class="nav__stack">
-                            <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') if current_user.role == 'superadmin' else url_for('admin.plans') }}">
+                            <a class="nav-link {% if current_endpoint and current_endpoint.startswith('admin.') %}is-active{% endif %}" href="{{ url_for('admin.dashboard') if current_user.role == 'superadmin' else url_for('admin.plans') }}" {% if current_endpoint and current_endpoint.startswith('admin.') %}aria-current="page"{% endif %}>
                                 <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                                 <span>Admin</span>
                             </a>
-                            <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}">
+                            <a class="nav-link {% if current_endpoint == 'auth.profile' %}is-active{% endif %}" href="{{ url_for('auth.profile') }}" {% if current_endpoint == 'auth.profile' %}aria-current="page"{% endif %}>
                                 <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
                                 <span>Account</span>
                             </a>
