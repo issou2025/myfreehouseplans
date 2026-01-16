@@ -182,6 +182,31 @@
                 </label>
             </div>
         </form>
+        <form class="pack-visibility" method="post" action="{{ url_for('admin.update_site_notice') }}" aria-label="Site notice settings">
+            {{ csrf_token() if csrf_token is defined else '' }}
+            <div class="pack-visibility__header">
+                <div>
+                    <p class="eyebrow">Temporary notice</p>
+                    <h3>Show a temporary message</h3>
+                    <p class="muted">Displayed site-wide near the top of every page. Disable it anytime.</p>
+                </div>
+                <button type="submit" class="btn-admin btn-admin--ghost">Save notice</button>
+            </div>
+            <div class="pack-visibility__grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+                <label class="toggle">
+                    <input type="checkbox" name="notice_enabled" {% if site_notice and site_notice.enabled %}checked{% endif %}>
+                    <span class="toggle__track" aria-hidden="true"></span>
+                    <span class="toggle__label">
+                        <strong>Notice enabled</strong>
+                        <small>{{ 'Enabled' if site_notice and site_notice.enabled else 'Disabled' }}</small>
+                    </span>
+                </label>
+                <label class="form-field" style="grid-column: 1 / -1;">
+                    <span class="form-label">Notice message</span>
+                    <textarea class="form-textarea" name="notice_message" rows="3" placeholder="Short, professional message">{{ site_notice.message if site_notice else '' }}</textarea>
+                </label>
+            </div>
+        </form>
         <div class="admin-table-wrapper">
             <table class="admin-table">
                 <thead>
