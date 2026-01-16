@@ -259,11 +259,28 @@ def create_app(config_name='default'):
     # GeoIP (read-only) initialization
     project_root = os.path.abspath(os.path.join(app.root_path, os.pardir))
     app.config.setdefault('GEOIP_DB_PATH', os.path.join(project_root, 'GeoLite2-Country.mmdb'))
+    app.config.setdefault('GEOIP_TRUSTED_PROXY_CIDRS', os.environ.get('GEOIP_TRUSTED_PROXY_CIDRS', ''))
+    app.config.setdefault('GEOIP_FALLBACK_ENABLED', os.environ.get('GEOIP_FALLBACK_ENABLED', 'true').lower() == 'true')
+    app.config.setdefault('GEOIP_FALLBACK_URL', os.environ.get('GEOIP_FALLBACK_URL', 'https://ipapi.co/{ip}/json/'))
+    app.config.setdefault('GEOIP_FALLBACK_TIMEOUT', float(os.environ.get('GEOIP_FALLBACK_TIMEOUT', '0.6')))
+    app.config.setdefault('GEOIP_CACHE_TTL_SECONDS', int(os.environ.get('GEOIP_CACHE_TTL_SECONDS', '86400')))
+    app.config.setdefault('GEOIP_NEGATIVE_CACHE_TTL_SECONDS', int(os.environ.get('GEOIP_NEGATIVE_CACHE_TTL_SECONDS', '900')))
     try:
-        from app.utils.geoip import init_geoip_reader
+        from app.utils.geoip import init_geoip_reader, init_geoip_settings, parse_trusted_proxies
         init_geoip_reader(app.config.get('GEOIP_DB_PATH'), app.logger)
+        init_geoip_settings(
+            fallback_enabled=app.config.get('GEOIP_FALLBACK_ENABLED'),
+            fallback_url_template=app.config.get('GEOIP_FALLBACK_URL'),
+            fallback_timeout=app.config.get('GEOIP_FALLBACK_TIMEOUT'),
+            cache_ttl_seconds=app.config.get('GEOIP_CACHE_TTL_SECONDS'),
+            negative_cache_ttl_seconds=app.config.get('GEOIP_NEGATIVE_CACHE_TTL_SECONDS'),
+        )
+        app.config['GEOIP_TRUSTED_PROXIES'] = parse_trusted_proxies(
+            app.config.get('GEOIP_TRUSTED_PROXY_CIDRS')
+        )
     except Exception:
         # GeoIP is optional and must never break startup.
+        app.config['GEOIP_TRUSTED_PROXIES'] = []
         pass
     
     # Initialize extensions
@@ -394,7 +411,11 @@ def register_template_processors(app):
             return args
 
         def client_ip():
-            return resolve_client_ip(request.headers, request.remote_addr) or '0.0.0.0'
+            return resolve_client_ip(
+                request.headers,
+                request.remote_addr,
+                trusted_proxies=app.config.get('GEOIP_TRUSTED_PROXIES'),
+            ) or '0.0.0.0'
 
         visitor_ip = client_ip()
         visitor_country = get_country_for_ip(visitor_ip)
@@ -461,7 +482,11 @@ def register_request_hooks(app):
 
     def _client_ip():
         from app.utils.geoip import resolve_client_ip
-        return resolve_client_ip(request.headers, request.remote_addr) or '0.0.0.0'
+        return resolve_client_ip(
+            request.headers,
+            request.remote_addr,
+            trusted_proxies=app.config.get('GEOIP_TRUSTED_PROXIES'),
+        ) or '0.0.0.0'
 
     @app.before_request
     def _prepare_visit_tracking():
