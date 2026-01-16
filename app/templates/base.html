@@ -160,17 +160,6 @@
     </header>
     <div class="nav-overlay" id="nav-overlay"></div>
 
-    {% if site_notice and site_notice.enabled and site_notice.message %}
-        <section class="site-notice" role="status" aria-live="polite">
-            <div class="shell site-notice__inner">
-                <div class="site-notice__icon" aria-hidden="true">
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
-                <p class="site-notice__message">{{ site_notice.message | e }}</p>
-            </div>
-        </section>
-    {% endif %}
-
     {# Toast Notifications (Flash Messages) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

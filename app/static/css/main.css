@@ -4571,39 +4571,6 @@ textarea { min-height: 120px; resize: vertical; }
 	gap: 10px;
 }
 
-/* Site notice banner ----------------------------------------------------- */
-.site-notice {
-	background: rgba(255, 255, 255, 0.85);
-	border-bottom: 1px solid rgba(16, 24, 40, 0.08);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-}
-
-.site-notice__inner {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 0;
-}
-
-.site-notice__icon {
-	width: 36px;
-	height: 36px;
-	border-radius: 12px;
-	background: rgba(31, 76, 228, 0.12);
-	color: var(--color-primary);
-	display: grid;
-	place-items: center;
-	flex: 0 0 auto;
-}
-
-.site-notice__message {
-	margin: 0;
-	color: var(--color-text);
-	font-size: 0.98rem;
-	line-height: 1.5;
-}
-
 /* Toast notifications (Flash messages) ----------------------------------- */
 .toast-container {
 	position: fixed;

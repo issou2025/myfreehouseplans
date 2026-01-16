@@ -26,7 +26,6 @@ from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
 from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
 from app.utils.pack_visibility import load_pack_visibility, save_pack_visibility
-from app.utils.site_notice import load_site_notice, save_site_notice
 from app.models import PlanFAQ
 from werkzeug.security import generate_password_hash
 from app.utils.db_resilience import with_db_resilience, safe_db_query
@@ -300,7 +299,6 @@ def dashboard():
         status_labels = dict(ContactMessage.STATUS_CHOICES)
 
         pack_visibility = load_pack_visibility()
-        site_notice = load_site_notice()
         return render_template('admin/dashboard.html',
                              stats=stats,
                              recent_orders=recent_orders,
@@ -309,7 +307,6 @@ def dashboard():
                              recent_messages=recent_messages,
                              inbox_counts=inbox_counts,
                              pack_visibility=pack_visibility,
-                             site_notice=site_notice,
                          inquiry_labels=INQUIRY_LABELS,
                          status_labels=status_labels)
     except Exception as e:
@@ -319,8 +316,7 @@ def dashboard():
         if len(detail) > 300:
             detail = detail[:300] + '…'
         flash(f'Dashboard query failed (SQL error): {detail}', 'warning')
-          pack_visibility = load_pack_visibility()
-          site_notice = load_site_notice()
+        pack_visibility = load_pack_visibility()
         return render_template('admin/dashboard.html',
                              stats={'total_plans': 0, 'published_plans': 0, 'total_orders': 0,
                                    'completed_orders': 0, 'total_users': 0, 'total_categories': 0,
@@ -332,7 +328,6 @@ def dashboard():
                              recent_messages=[],
                              inbox_counts={'total': 0, 'new': 0, 'open': 0, 'responded': 0},
                              pack_visibility=pack_visibility,
-                         site_notice=site_notice,
                              inquiry_labels=INQUIRY_LABELS,
                              status_labels={})
 
@@ -352,21 +347,6 @@ def update_pack_visibility():
     except Exception as exc:
         current_app.logger.error('Failed to save pack visibility: %s', exc, exc_info=True)
         flash('Unable to update pack visibility right now.', 'danger')
-    return redirect(url_for('admin.dashboard'))
-
-
-@admin_bp.route('/dashboard/site-notice', methods=['POST'])
-@login_required
-@admin_required
-def update_site_notice():
-    enabled = bool(request.form.get('notice_enabled'))
-    message = (request.form.get('notice_message') or '').strip()
-    try:
-        save_site_notice(enabled=enabled, message=message)
-        flash('Site notice updated.', 'success')
-    except Exception as exc:
-        current_app.logger.error('Failed to save site notice: %s', exc, exc_info=True)
-        flash('Unable to update site notice right now.', 'danger')
     return redirect(url_for('admin.dashboard'))
 
 

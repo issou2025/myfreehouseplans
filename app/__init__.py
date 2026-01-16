@@ -385,7 +385,6 @@ def register_template_processors(app):
         from flask import request
         from app.utils.geoip import get_country_for_ip, resolve_client_ip
         from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers, visible_starting_price
-        from app.utils.site_notice import load_site_notice
 
         def query_args(exclude=None):
             exclude = set(exclude or [])
@@ -400,7 +399,6 @@ def register_template_processors(app):
         visitor_ip = client_ip()
         visitor_country = get_country_for_ip(visitor_ip)
         pack_visibility = load_pack_visibility()
-        site_notice = load_site_notice()
         return {
             'site_name': app.config['SITE_NAME'],
             'site_description': app.config['SITE_DESCRIPTION'],
@@ -417,7 +415,6 @@ def register_template_processors(app):
             'client_ip': visitor_ip,
             'visitor_country': visitor_country,
             'geoip_country': get_country_for_ip,
-            'site_notice': site_notice,
         }
 
 
