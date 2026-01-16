@@ -1,0 +1,42 @@
+{% for message in messages %}
+{% set status_class = 'published' if message.status in ['new', 'in_progress'] else ('success' if message.status == 'responded' else 'neutral') %}
+<tr data-message-row="{{ message.id }}">
+  <td class="select-col">
+    <input type="checkbox" class="msg-select" value="{{ message.id }}" aria-label="Select message {{ message.id }}">
+  </td>
+  <td class="inbox-table__subject">
+    <a href="{{ url_for('admin.message_detail', message_id=message.id) }}{% if query_args %}?{{ query_args|urlencode }}{% endif %}">
+      {{ (message.subject or '(No subject)')|e }}
+    </a>
+    <div class="inbox-flags">
+      {% if important_predicate and important_predicate(message) %}<span class="attachment-chip attachment-chip--accent">⚑ Important</span>{% endif %}
+      {% if message.has_attachment %}<span class="attachment-chip">📎 Attachment</span>{% endif %}
+      {% if message.subscribe %}<span class="attachment-chip attachment-chip--accent">📬 Opt-in</span>{% endif %}
+      {% if message.reference_code %}<span class="attachment-chip">Ref: {{ message.reference_code|e }}</span>{% endif %}
+    </div>
+  </td>
+  <td>
+    <strong>{{ (message.name or 'Unknown')|e }}</strong>
+    {% if message.email %}<p>{{ message.email|e }}</p>{% endif %}
+    {% if message.phone %}<p>{{ message.phone|e }}</p>{% endif %}
+  </td>
+  <td>
+    {% if message.inquiry_type %}
+      <span class="badge badge--outline">{{ inquiry_labels.get(message.inquiry_type, message.inquiry_type|capitalize)|e }}</span>
+    {% endif %}
+  </td>
+  <td>
+    <span class="status-badge status-badge--{{ status_class }}">{{ status_labels.get(message.status, message.status)|e }}</span>
+  </td>
+  <td>
+    <time datetime="{{ message.created_at.isoformat() if message.created_at }}">{{ message.created_at.strftime('%b %d, %Y · %H:%M UTC') if message.created_at else '—' }}</time>
+  </td>
+  <td class="inbox-actions">
+    <a class="btn-action btn-action--edit" href="{{ url_for('admin.message_detail', message_id=message.id) }}">Open</a>
+  </td>
+</tr>
+{% endfor %}
+
+<tr class="fragment-meta" hidden>
+  <td colspan="7" data-pages="{{ pagination.pages }}" data-page="{{ pagination.page }}" data-total="{{ pagination.total }}"></td>
+</tr>

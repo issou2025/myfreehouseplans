@@ -32,7 +32,7 @@
         </div>
     </section>
 
-    <form method="get" class="inbox-filters" aria-label="Filter messages">
+    <form class="admin-filters" method="get" action="{{ url_for('admin.messages') }}" id="inbox-filters" data-fragment-url="{{ url_for('admin.messages_fragment') }}">
         <label>
             <span>Status</span>
             <select name="status">
@@ -54,6 +54,24 @@
             <input type="search" name="q" placeholder="Subject, email, reference" value="{{ filters.q }}">
         </label>
         <label>
+            Sort
+            <select name="sort">
+                <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>Newest</option>
+                <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>Oldest</option>
+                <option value="status_date_desc" {% if filters.sort == 'status_date_desc' %}selected{% endif %}>Status + Newest</option>
+                <option value="sender_asc" {% if filters.sort == 'sender_asc' %}selected{% endif %}>Sender A→Z</option>
+                <option value="sender_desc" {% if filters.sort == 'sender_desc' %}selected{% endif %}>Sender Z→A</option>
+            </select>
+        </label>
+        <label>
+            Important
+            <select name="important">
+                <option value="" {% if not filters.important %}selected{% endif %}>All</option>
+                <option value="1" {% if filters.important == '1' %}selected{% endif %}>Important only</option>
+                <option value="0" {% if filters.important == '0' %}selected{% endif %}>Not important</option>
+            </select>
+        </label>
+        <label>
             <span>Per page</span>
             <select name="per_page">
                 {% for size in [20, 40, 80] %}
@@ -65,7 +83,57 @@
             <button type="submit" class="btn-admin btn-admin--secondary">Apply filters</button>
             <a href="{{ url_for('admin.messages') }}" class="link-reset">Reset</a>
         </div>
+        <details class="filters-advanced" {% if filters.sender or filters.subject or filters.from or filters.to or filters.body %}open{% endif %}>
+            <summary>Advanced filters</summary>
+            <div class="filters-row">
+                <label class="grow">
+                    Sender
+                    <input type="text" name="sender" value="{{ filters.sender }}" placeholder="Name or email contains…">
+                </label>
+                <label class="grow">
+                    Subject
+                    <input type="text" name="subject" value="{{ filters.subject }}" placeholder="Subject contains…">
+                </label>
+                <label>
+                    From
+                    <input type="date" name="from" value="{{ filters.from }}">
+                </label>
+                <label>
+                    To
+                    <input type="date" name="to" value="{{ filters.to }}">
+                </label>
+                <label>
+                    Body search
+                    <select name="body">
+                        <option value="" {% if not filters.body %}selected{% endif %}>Off (faster)</option>
+                        <option value="1" {% if filters.body == '1' %}selected{% endif %}>On (slower)</option>
+                    </select>
+                </label>
+            </div>
+        </details>
     </form>
+
+    <div class="inbox-actions" id="inbox-actions">
+        <div class="left">
+            <label class="muted">
+                <input type="checkbox" id="select-all"> Select all on page
+            </label>
+            <span class="muted" id="selected-count" aria-live="polite">0 selected</span>
+        </div>
+        <div class="right">
+            <select id="bulk-action">
+                <option value="">Bulk action…</option>
+                <option value="new">Mark as New</option>
+                <option value="in_progress">Mark In Progress</option>
+                <option value="responded">Mark Responded</option>
+                <option value="archived">Archive</option>
+                <option value="important_on">Mark Important</option>
+                <option value="important_off">Unmark Important</option>
+                <option value="delete">Delete</option>
+            </select>
+            <button class="btn" type="button" id="apply-bulk" disabled>Apply</button>
+        </div>
+    </div>
 
     <section class="admin-panel" aria-label="Messages table">
         <div class="admin-panel__header">
@@ -79,9 +147,10 @@
             </div>
         </div>
         <div class="admin-table-wrapper">
-            <table class="inbox-table">
+            <table class="inbox-table" id="inbox-table">
                 <thead>
                     <tr>
+                        <th class="select-col"></th>
                         <th>Subject</th>
                         <th>Sender</th>
                         <th>Topic</th>
@@ -91,43 +160,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for m in messages %}
-                    {% set status_class = 'published' if m.status in ['new', 'in_progress'] else ('success' if m.status == 'responded' else 'neutral') %}
-                    <tr>
-                        <td class="inbox-table__subject">
-                            <a href="{{ url_for('admin.message_detail', message_id=m.id) }}">{{ m.subject }}</a>
-                            <p>{{ m.message[:140] }}{% if m.message|length > 140 %}…{% endif %}</p>
-                            <div class="inbox-flags">
-                                {% if m.has_attachment %}<span class="attachment-chip">📎 Attachment</span>{% endif %}
-                                {% if m.subscribe %}<span class="attachment-chip attachment-chip--accent">📬 Opt-in</span>{% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            <strong>{{ m.name }}</strong>
-                            <p>{{ m.email }}</p>
-                            {% if m.phone %}<p>{{ m.phone }}</p>{% endif %}
-                        </td>
-                        <td>
-                            <span class="badge badge--outline">{{ inquiry_labels.get(m.inquiry_type, m.inquiry_type|capitalize) }}</span>
-                            {% if m.plan_snapshot %}<p class="plan-snapshot">{{ m.plan_snapshot }}</p>{% endif %}
-                        </td>
-                        <td>
-                            <span class="status-badge status-badge--{{ status_class }}">{{ status_labels.get(m.status, m.status) }}</span>
-                        </td>
-                        <td>
-                            <time datetime="{{ m.created_at.isoformat() if m.created_at }}">{{ m.created_at.strftime('%b %d, %Y · %H:%M UTC') if m.created_at else '—' }}</time>
-                        </td>
-                        <td class="inbox-actions">
-                            <a class="btn-action btn-action--edit" href="{{ url_for('admin.message_detail', message_id=m.id) }}">Open</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6">
-                            <p class="inbox-empty">No messages match your filter.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                    {% include 'admin/_messages_fragment.html' %}
+                    {% if not messages %}
+                        <tr>
+                            <td colspan="7" class="muted">No messages found.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -147,4 +185,128 @@
         </nav>
     </section>
 </div>
+
+<script>
+(function() {
+  const form = document.getElementById('inbox-filters');
+  const fragmentUrl = form ? form.getAttribute('data-fragment-url') : null;
+    const tbody = document.querySelector('#inbox-table tbody');
+  const bulkSelect = document.getElementById('bulk-action');
+  const applyBulk = document.getElementById('apply-bulk');
+  const selectAll = document.getElementById('select-all');
+  const selectedCount = document.getElementById('selected-count');
+
+  if (!form || !fragmentUrl || !tbody) return;
+
+  let abortController = null;
+  let debounceTimer = null;
+
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.msg-select:checked')).map(el => Number(el.value)).filter(Boolean);
+  }
+
+  function updateSelectedUi() {
+    const ids = getSelectedIds();
+    if (selectedCount) selectedCount.textContent = `${ids.length} selected`;
+    if (applyBulk) applyBulk.disabled = ids.length === 0 || !bulkSelect.value;
+    if (selectAll) {
+      const all = Array.from(document.querySelectorAll('.msg-select'));
+      selectAll.checked = all.length > 0 && all.every(el => el.checked);
+      selectAll.indeterminate = all.some(el => el.checked) && !selectAll.checked;
+    }
+  }
+
+  function applyFragment(html) {
+    tbody.innerHTML = html;
+    updateSelectedUi();
+  }
+
+  function buildQueryString() {
+    const data = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [k, v] of data.entries()) {
+      if (v !== null && String(v).trim() !== '') params.set(k, v);
+    }
+    params.set('page', '1');
+    return params.toString();
+  }
+
+  async function refreshList() {
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+    const qs = buildQueryString();
+    const url = `${fragmentUrl}?${qs}`;
+    const res = await fetch(url, { signal: abortController.signal, headers: { 'X-Requested-With': 'fetch' }});
+    if (!res.ok) return;
+    const html = await res.text();
+    applyFragment(html);
+  }
+
+  function scheduleRefresh() {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => { refreshList().catch(() => {}); }, 200);
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    refreshList().catch(() => {});
+  });
+
+  form.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t) return;
+    const name = t.getAttribute('name') || '';
+    if (name === 'q' || name === 'sender' || name === 'subject') {
+      scheduleRefresh();
+    }
+  });
+
+  form.addEventListener('change', () => {
+    refreshList().catch(() => {});
+  });
+
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!t) return;
+    if (t.classList && t.classList.contains('msg-select')) updateSelectedUi();
+  });
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      const all = Array.from(document.querySelectorAll('.msg-select'));
+      all.forEach(el => { el.checked = selectAll.checked; });
+      updateSelectedUi();
+    });
+  }
+
+  if (bulkSelect) {
+    bulkSelect.addEventListener('change', updateSelectedUi);
+  }
+
+  if (applyBulk) {
+    applyBulk.addEventListener('click', async () => {
+      const action = bulkSelect.value;
+      const ids = getSelectedIds();
+      if (!action || ids.length === 0) return;
+      if (action === 'delete') {
+        if (!window.confirm(`Delete ${ids.length} messages? This cannot be undone.`)) return;
+      }
+      applyBulk.disabled = true;
+      try {
+        const res = await fetch("{{ url_for('admin.messages_bulk_action') }}", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+          body: JSON.stringify({ action, ids }),
+        });
+        if (!res.ok) return;
+        await refreshList();
+      } finally {
+        updateSelectedUi();
+      }
+    });
+  }
+
+  updateSelectedUi();
+})();
+</script>
 {% endblock %}

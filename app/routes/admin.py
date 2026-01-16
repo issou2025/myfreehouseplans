@@ -8,7 +8,7 @@ This blueprint handles administrative functionality including:
 - Order management
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file, abort, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file, abort, session, jsonify
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
 import os
@@ -23,6 +23,18 @@ from slugify import slugify
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.domain.plan_policy import diagnose_plan, diagnostics_to_flash_messages
+from app.services.admin_inbox_cache import (
+    get_inbox_counts_cached,
+    invalidate_inbox_counts_cache,
+    refresh_inbox_counts_async,
+)
+from app.services.admin_inbox_service import (
+    InboxFilters,
+    build_messages_query,
+    is_important_message,
+    message_preview_text,
+    toggle_important,
+)
 from sqlalchemy.exc import OperationalError, IntegrityError
 from app.utils.media import is_absolute_url
 from app.utils.pack_visibility import load_pack_visibility, save_pack_visibility
@@ -616,40 +628,26 @@ def messages():
     per_page = request.args.get('per_page', 20, type=int)
     per_page = max(10, min(per_page, 100))
 
-    status_filter = request.args.get('status', 'open')
-    inquiry_filter = request.args.get('type', '')
-    search = request.args.get('q', '').strip()
+    filters = InboxFilters(
+        status=request.args.get('status', 'open'),
+        inquiry_type=request.args.get('type', ''),
+        q=request.args.get('q', '').strip(),
+        sender=request.args.get('sender', '').strip(),
+        subject=request.args.get('subject', '').strip(),
+        date_from=request.args.get('from', '').strip(),
+        date_to=request.args.get('to', '').strip(),
+        important=request.args.get('important', '').strip(),
+        include_body=request.args.get('body', '').strip(),
+        sort=request.args.get('sort', 'date_desc').strip(),
+        per_page=per_page,
+    )
 
-    query = ContactMessage.query.order_by(ContactMessage.created_at.desc())
+    refresh_inbox_counts_async()
 
-    if status_filter == 'open':
-        query = query.filter(ContactMessage.status.in_(OPEN_INBOX_STATUSES))
-    elif status_filter and status_filter != 'all':
-        query = query.filter(ContactMessage.status == status_filter)
-
-    if inquiry_filter:
-        query = query.filter(ContactMessage.inquiry_type == inquiry_filter)
-
-    if search:
-        like_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                ContactMessage.subject.ilike(like_pattern),
-                ContactMessage.email.ilike(like_pattern),
-                ContactMessage.name.ilike(like_pattern),
-                ContactMessage.reference_code.ilike(like_pattern),
-            )
-        )
-
+    query = build_messages_query(filters)
     messages_page = query.paginate(page=page, per_page=per_page, error_out=False)
 
-    status_counts = {
-        'all': ContactMessage.query.count(),
-        'open': ContactMessage.query.filter(ContactMessage.status.in_(OPEN_INBOX_STATUSES)).count(),
-        ContactMessage.STATUS_NEW: ContactMessage.query.filter_by(status=ContactMessage.STATUS_NEW).count(),
-        ContactMessage.STATUS_RESPONDED: ContactMessage.query.filter_by(status=ContactMessage.STATUS_RESPONDED).count(),
-        ContactMessage.STATUS_ARCHIVED: ContactMessage.query.filter_by(status=ContactMessage.STATUS_ARCHIVED).count(),
-    }
+    status_counts = get_inbox_counts_cached()
 
     status_options = [
         ('open', 'Open'),
@@ -658,10 +656,17 @@ def messages():
 
     inquiry_options = [('', 'All topics')] + [(key, label) for key, label in INQUIRY_LABELS.items()]
 
-    filters = {
-        'status': status_filter,
-        'type': inquiry_filter,
-        'q': search,
+    filters_dict = {
+        'status': filters.status,
+        'type': filters.inquiry_type,
+        'q': filters.q,
+        'sender': filters.sender,
+        'subject': filters.subject,
+        'from': filters.date_from,
+        'to': filters.date_to,
+        'important': filters.important,
+        'body': filters.include_body,
+        'sort': filters.sort,
         'per_page': per_page,
     }
 
@@ -674,14 +679,139 @@ def messages():
         'admin/messages_list.html',
         messages=messages_page.items,
         pagination=messages_page,
-        filters=filters,
+        filters=filters_dict,
         status_counts=status_counts,
         status_options=status_options,
         inquiry_options=inquiry_options,
         inquiry_labels=INQUIRY_LABELS,
         query_args=query_args,
         status_labels=status_labels,
+        important_tag='[IMPORTANT]',
+        important_predicate=is_important_message,
     )
+
+
+@admin_bp.route('/messages/fragment')
+@login_required
+@admin_required
+def messages_fragment():
+    """Fast partial rendering for instant search/filter UX."""
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    per_page = max(10, min(per_page, 100))
+
+    filters = InboxFilters(
+        status=request.args.get('status', 'open'),
+        inquiry_type=request.args.get('type', ''),
+        q=request.args.get('q', '').strip(),
+        sender=request.args.get('sender', '').strip(),
+        subject=request.args.get('subject', '').strip(),
+        date_from=request.args.get('from', '').strip(),
+        date_to=request.args.get('to', '').strip(),
+        important=request.args.get('important', '').strip(),
+        include_body=request.args.get('body', '').strip(),
+        sort=request.args.get('sort', 'date_desc').strip(),
+        per_page=per_page,
+    )
+
+    query = build_messages_query(filters)
+    messages_page = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    query_args = request.args.to_dict(flat=True)
+    query_args.pop('page', None)
+    status_labels = dict(ContactMessage.STATUS_CHOICES)
+
+    html = render_template(
+        'admin/_messages_fragment.html',
+        messages=messages_page.items,
+        pagination=messages_page,
+        query_args=query_args,
+        inquiry_labels=INQUIRY_LABELS,
+        status_labels=status_labels,
+        important_predicate=is_important_message,
+    )
+
+    resp = current_app.response_class(html)
+    resp.headers['X-Total'] = str(messages_page.total)
+    resp.headers['X-Page'] = str(messages_page.page)
+    resp.headers['X-Pages'] = str(messages_page.pages or 1)
+    return resp
+
+
+@admin_bp.route('/messages/preview/<int:message_id>')
+@login_required
+@admin_required
+def message_preview(message_id: int):
+    """Return a lightweight preview for quick-open without loading full detail UI."""
+
+    msg = ContactMessage.query.get_or_404(message_id)
+    return jsonify({
+        'id': msg.id,
+        'preview': message_preview_text(msg.message),
+    })
+
+
+@admin_bp.route('/messages/bulk', methods=['POST'])
+@login_required
+@admin_required
+def messages_bulk_action():
+    """Bulk operations for high-volume inbox workflows."""
+
+    payload = request.get_json(silent=True) or {}
+    action = (payload.get('action') or '').strip()
+    ids = payload.get('ids') or []
+
+    try:
+        ids_int = sorted({int(x) for x in ids})
+    except Exception:
+        return jsonify({'ok': False, 'error': 'Invalid ids'}), 400
+    if not ids_int:
+        return jsonify({'ok': False, 'error': 'No messages selected'}), 400
+
+    messages = ContactMessage.query.filter(ContactMessage.id.in_(ids_int)).all()
+    if not messages:
+        return jsonify({'ok': False, 'error': 'No messages found'}), 404
+
+    changed = 0
+    deleted = 0
+
+    try:
+        if action in {'new', 'in_progress', 'responded', 'archived'}:
+            for m in messages:
+                before = m.status
+                m.mark_status(action)
+                if m.status != before:
+                    changed += 1
+
+        elif action == 'important_on':
+            for m in messages:
+                before = m.admin_notes or ''
+                m.admin_notes = toggle_important(before, True)
+                if (m.admin_notes or '') != before:
+                    changed += 1
+
+        elif action == 'important_off':
+            for m in messages:
+                before = m.admin_notes or ''
+                m.admin_notes = toggle_important(before, False)
+                if (m.admin_notes or '') != before:
+                    changed += 1
+
+        elif action == 'delete':
+            for m in messages:
+                db.session.delete(m)
+                deleted += 1
+        else:
+            return jsonify({'ok': False, 'error': 'Unknown action'}), 400
+
+        db.session.commit()
+        invalidate_inbox_counts_cache()
+        return jsonify({'ok': True, 'changed': changed, 'deleted': deleted})
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('Bulk inbox action failed: %s', exc)
+        return jsonify({'ok': False, 'error': 'Server error'}), 500
 
 
 @admin_bp.route('/messages/<int:message_id>', methods=['GET', 'POST'])
@@ -705,6 +835,7 @@ def message_detail(message_id):
         else:
             label_map = dict(ContactMessage.STATUS_CHOICES)
             flash(f"Message marked as {label_map.get(message.status, message.status)}.", 'success')
+            invalidate_inbox_counts_cache()
             return redirect(url_for('admin.message_detail', message_id=message.id))
     status_labels = dict(ContactMessage.STATUS_CHOICES)
 
