@@ -39,6 +39,11 @@
 	--transition-medium: 300ms;
 	--transition-slow: 450ms;
 
+	/* Custom icon masks (inline SVG) */
+	--icon-check: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='black' d='M7.5 13.3 4.2 10l1.2-1.2 2.1 2.1 6.1-6.1 1.2 1.2z'/></svg>");
+	--icon-spark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='black' d='M10 1.5 11.8 6l4.7 1.2-4.7 1.2L10 12.8 8.2 8.4 3.5 7.2 8.2 6z'/></svg>");
+	--icon-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='black' d='M3 10h11.6l-3.7-3.7 1.4-1.4L18.4 10l-6.1 6.1-1.4-1.4 3.7-3.7H3z'/></svg>");
+
 	/* Header / Footer tokens */
 	--header-bg: rgba(255, 255, 255, 0.95);
 	--header-border: rgba(16, 24, 40, 0.08);
@@ -968,6 +973,41 @@ a {
 	text-underline-offset: 2px;
 }
 
+/* Custom icon styling (consistent across UI) */
+.nav a i,
+.btn i,
+.text-link i,
+.section-heading .eyebrow i,
+.hero__tag i,
+.plan-card__eyebrow i,
+.nav__contact i {
+	width: 1.6em;
+	height: 1.6em;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 0.55em;
+	background: rgba(31, 76, 228, 0.12);
+	border: 1px solid rgba(31, 76, 228, 0.2);
+	color: var(--color-primary);
+	box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.nav a:hover i,
+.btn:hover i,
+.text-link:hover i {
+	background: rgba(31, 76, 228, 0.18);
+}
+
+.icon-btn i,
+.social-icon i {
+	background: transparent;
+	border: none;
+	width: auto;
+	height: auto;
+	box-shadow: none;
+}
+
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -1049,10 +1089,15 @@ textarea {
 }
 
 .package-points li::before {
-	content: '•';
+	content: '';
 	position: absolute;
-	left: 4px;
-	color: var(--color-muted);
+	left: 2px;
+	top: 5px;
+	width: 14px;
+	height: 14px;
+	background: var(--color-primary);
+	-webkit-mask: var(--icon-check) no-repeat center / contain;
+	mask: var(--icon-check) no-repeat center / contain;
 }
 
 .package-cta {
@@ -1276,12 +1321,24 @@ form { overflow: visible; }
 .use-case-chips li {
 	display: inline-flex;
 	align-items: center;
-	padding: 8px 12px;
+	padding: 8px 12px 8px 30px;
 	border: 1px solid var(--color-border);
 	border-radius: 999px;
 	background: var(--color-surface);
 	color: inherit;
 	font-size: 0.92rem;
+	position: relative;
+}
+
+.use-case-chips li::before {
+	content: '';
+	position: absolute;
+	left: 10px;
+	width: 12px;
+	height: 12px;
+	background: var(--color-primary);
+	-webkit-mask: var(--icon-check) no-repeat center / contain;
+	mask: var(--icon-check) no-repeat center / contain;
 }
 
 .decision-guide {
@@ -1299,12 +1356,27 @@ form { overflow: visible; }
 
 .decision-guide__list {
 	margin: 0;
-	padding-left: 18px;
+	padding-left: 0;
 	color: var(--color-muted);
+	list-style: none;
 }
 
 .decision-guide__list li {
 	margin: 6px 0;
+	padding-left: 24px;
+	position: relative;
+}
+
+.decision-guide__list li::before {
+	content: '';
+	position: absolute;
+	left: 2px;
+	top: 4px;
+	width: 14px;
+	height: 14px;
+	background: var(--color-secondary);
+	-webkit-mask: var(--icon-spark) no-repeat center / contain;
+	mask: var(--icon-spark) no-repeat center / contain;
 }
 
 .plan-related__grid {
@@ -5581,6 +5653,20 @@ input[type="file"] {
 	padding: 16px;
 	background: rgba(13,21,46,0.6);
 	backdrop-filter: blur(10px);
+	position: relative;
+	padding-left: 40px;
+}
+
+.plan-keynotes div::before {
+	content: '';
+	position: absolute;
+	left: 14px;
+	top: 18px;
+	width: 14px;
+	height: 14px;
+	background: rgba(248,250,252,0.9);
+	-webkit-mask: var(--icon-arrow) no-repeat center / contain;
+	mask: var(--icon-arrow) no-repeat center / contain;
 }
 
 .plan-keynotes__label {
@@ -7175,6 +7261,40 @@ html {
 /* Better scrolling on iOS */
 body {
 	-webkit-overflow-scrolling: touch;
+}
+
+/* Responsive polish for cross-device layouts */
+table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.table-responsive {
+	width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+	.section-heading {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 16px;
+	}
+	.hero__cta .btn,
+	.package-cta .package-button,
+	.plan-hero__favorites .favorite-toggle--inline,
+	.plan-hero__compare .compare-toggle--inline {
+		width: 100%;
+		justify-content: center;
+	}
+	.plan-hero__favorites,
+	.plan-hero__compare {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		align-items: stretch;
+	}
 }
 
 /* Smooth scrolling for anchor links */
