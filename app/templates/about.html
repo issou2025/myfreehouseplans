@@ -4,10 +4,55 @@
 <section class="about-page" aria-labelledby="about-heading">
     <div class="shell">
         <div class="about-hero">
-            <p class="eyebrow">✨ Our story</p>
-            <h1 id="about-heading">We make house plans that work in the real world</h1>
-            <p class="lead">MyFreeHousePlans is built for homeowners and builders who want clear, buildable plans without the noise. We focus on practical layouts, consistent documentation, and a buying experience that feels straightforward from the first click.</p>
+            <div class="about-hero__copy">
+                <p class="eyebrow">✨ Our story</p>
+                <h1 id="about-heading">We make house plans that work in the real world</h1>
+                <p class="lead">MyFreeHousePlans is built for homeowners and builders who want clear, buildable plans without the noise. We focus on practical layouts, consistent documentation, and a buying experience that feels straightforward from the first click.</p>
+                <div class="about-hero__actions">
+                    <a href="{{ url_for('main.packs') }}" class="btn btn-primary">Explore plans</a>
+                    <a href="{{ url_for('main.contact') }}" class="btn btn-outline">Talk to us</a>
+                </div>
+            </div>
+            <div class="about-hero__panel" aria-hidden="true">
+                <div class="about-panel">
+                    <div class="about-panel__badge">Trusted by builders</div>
+                    <h2>Quality without complexity</h2>
+                    <p>Plans are organized, easy to compare, and ready to build. Our goal is less friction, more confidence.</p>
+                    <div class="about-panel__metrics">
+                        <div>
+                            <strong>3</strong>
+                            <span>Packs per plan</span>
+                        </div>
+                        <div>
+                            <strong>100%</strong>
+                            <span>Digital delivery</span>
+                        </div>
+                        <div>
+                            <strong>Fast</strong>
+                            <span>Support turnaround</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <section class="about-stats" aria-label="Key stats">
+            <article>
+                <p class="stat-label">Curated plans</p>
+                <strong class="stat-value">Architect-vetted</strong>
+                <p class="stat-note">Every plan is reviewed for clarity and buildability.</p>
+            </article>
+            <article>
+                <p class="stat-label">Global builders</p>
+                <strong class="stat-value">Multi‑climate ready</strong>
+                <p class="stat-note">Layouts adapt to regional materials and regulations.</p>
+            </article>
+            <article>
+                <p class="stat-label">Time savings</p>
+                <strong class="stat-value">Instant access</strong>
+                <p class="stat-note">Download files immediately after checkout.</p>
+            </article>
+        </section>
 
         <div class="about-features">
             <article class="feature-card">
@@ -26,6 +71,59 @@
                 <p>Quick answers, no runaround. Our team is here to help with code questions, site adaptation, and material guidance.</p>
             </article>
         </div>
+
+        <section class="about-values" aria-label="Our values">
+            <header class="about-section__header">
+                <p class="eyebrow">Principles</p>
+                <h2>Designed for confidence</h2>
+                <p>We keep the process simple, transparent, and builder-friendly so you can move from inspiration to construction without delays.</p>
+            </header>
+            <div class="about-values__grid">
+                <article>
+                    <h3>Clarity first</h3>
+                    <p>Structured drawings, readable legends, and consistent labeling across every plan.</p>
+                </article>
+                <article>
+                    <h3>Flexible delivery</h3>
+                    <p>Free previews plus paid packs with editable formats for serious builds.</p>
+                </article>
+                <article>
+                    <h3>Human support</h3>
+                    <p>We reply quickly and help you navigate materials, sizing, and next steps.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="about-process" aria-label="How it works">
+            <header class="about-section__header">
+                <p class="eyebrow">Workflow</p>
+                <h2>From idea to build-ready</h2>
+                <p>Each plan goes through a clean pipeline so you always know what you are buying.</p>
+            </header>
+            <ol class="about-process__steps">
+                <li>
+                    <span class="step-index">01</span>
+                    <div>
+                        <h3>Browse & compare</h3>
+                        <p>Use filters and previews to shortlist the right design.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="step-index">02</span>
+                    <div>
+                        <h3>Select your pack</h3>
+                        <p>Start free, then upgrade to construction-ready files when ready.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="step-index">03</span>
+                    <div>
+                        <h3>Build with confidence</h3>
+                        <p>Clear documentation and quick support keep your project moving.</p>
+                    </div>
+                </li>
+            </ol>
+        </section>
 
         <div class="about-cta">
             <h2>How packs work</h2>
