@@ -276,6 +276,30 @@ class HousePlanForm(FlaskForm):
     submit = SubmitField('Save Plan')
     save_draft = SubmitField('Save Draft')
 
+    def _is_draft_submission(self):
+        return bool(getattr(self, 'save_draft', None) and self.save_draft.data)
+
+    def validate(self, extra_validators=None):
+        """Allow draft saves without completing required fields."""
+
+        if not self._is_draft_submission():
+            return super().validate(extra_validators=extra_validators)
+
+        original_validators = {
+            'title': self.title.validators,
+            'description': self.description.validators,
+            'price': self.price.validators,
+        }
+        try:
+            self.title.validators = [Optional()]
+            self.description.validators = [Optional()]
+            self.price.validators = [Optional()]
+            return super().validate(extra_validators=extra_validators)
+        finally:
+            self.title.validators = original_validators['title']
+            self.description.validators = original_validators['description']
+            self.price.validators = original_validators['price']
+
     def validate_category_ids(self, category_ids):
         # Only enforce category requirement on final save, not on draft save
         # Check if this is a draft save by looking at the form data

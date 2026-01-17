@@ -903,16 +903,25 @@ def add_plan():
                                session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
     
     if form.validate_on_submit():
+        is_draft_save = bool(getattr(form, 'save_draft', None) and form.save_draft.data)
+        draft_title = (form.title.data or '').strip()
+        if not draft_title and is_draft_save:
+            draft_title = f"Draft plan {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+        draft_description = (form.description.data or '').strip()
+        if not draft_description and is_draft_save:
+            draft_description = 'Draft plan details pending.'
+        draft_price = form.price.data if form.price.data is not None else (0 if is_draft_save else None)
+
         plan = HousePlan(
-            title=form.title.data,
-            description=form.description.data,
+            title=draft_title,
+            description=draft_description,
             short_description=form.short_description.data,
             plan_type=form.plan_type.data or None,
             bedrooms=form.bedrooms.data,
             bathrooms=form.bathrooms.data,
             stories=form.stories.data,
             garage=form.garage.data,
-            price=form.price.data,
+            price=draft_price,
             sale_price=form.sale_price.data,
             price_pack_1=form.price_pack_1.data if form.price_pack_1.data is not None else 0,
             price_pack_2=form.price_pack_2.data,
@@ -984,7 +993,7 @@ def add_plan():
                     flash(message, category)
 
             # If the admin clicked "Save Draft", ensure the plan remains unpublished
-            if getattr(form, 'save_draft', None) and form.save_draft.data:
+            if is_draft_save:
                 plan.is_published = False
         except ValueError as upload_error:
             db.session.rollback()
@@ -1004,7 +1013,7 @@ def add_plan():
             else:
                 # Provide specific feedback and redirect depending on whether this
                 # was an explicit "Save Draft" action or a full publish/save.
-                if getattr(form, 'save_draft', None) and form.save_draft.data:
+                if is_draft_save:
                     flash(f'House plan "{plan.title}" has been saved as a draft.', 'info')
                     current_app.logger.info('Session after POST (draft save): user_id=%s, username=%s, role=%s, permanent=%s',
                                             session.get('user_id'), session.get('username'), session.get('role'), session.permanent)
@@ -1110,16 +1119,28 @@ def edit_plan(id):
                 current_app.logger.error('Failed to preserve category_ids on POST for plan id=%s: %s', id, preserve_exc)
 
         if form.validate_on_submit():
+            is_draft_save = bool(getattr(form, 'save_draft', None) and form.save_draft.data)
+            title_value = (form.title.data or '').strip()
+            description_value = (form.description.data or '').strip()
+            price_value = form.price.data
+            if is_draft_save:
+                if not title_value:
+                    title_value = plan.title or f"Draft plan {datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+                if not description_value:
+                    description_value = plan.description or 'Draft plan details pending.'
+                if price_value is None:
+                    price_value = plan.price if plan.price is not None else 0
+
             try:
-                plan.title = form.title.data
-                plan.description = form.description.data
+                plan.title = title_value
+                plan.description = description_value
                 plan.short_description = form.short_description.data
                 plan.plan_type = form.plan_type.data or None
                 plan.bedrooms = form.bedrooms.data
                 plan.bathrooms = form.bathrooms.data
                 plan.stories = form.stories.data
                 plan.garage = form.garage.data
-                plan.price = form.price.data
+                plan.price = price_value
                 plan.sale_price = form.sale_price.data
                 if form.price_pack_1.data is not None:
                     plan.price_pack_1 = form.price_pack_1.data
