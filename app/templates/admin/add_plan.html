@@ -2,13 +2,42 @@
 
 {% block content %}
 <div class="shell admin-shell">
-    <header class="admin-header admin-header--form">
+    <header class="admin-header admin-header--form admin-header--hero">
         <div class="admin-header__content">
-            <p class="admin-eyebrow">✨ Create New Plan</p>
+            <p class="admin-eyebrow"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Create New Plan</p>
             <h1 class="admin-title">Add House Plan</h1>
-            <p class="admin-subtitle">Fill in the details below to create a professional house plan listing.</p>
+            <p class="admin-subtitle">Fill in the details below to publish a premium listing with clear specs, pricing, and deliverables.</p>
+            <div class="admin-header__badges" role="list">
+                <span role="listitem"><i class="fa-solid fa-shield-check" aria-hidden="true"></i> Secure draft</span>
+                <span role="listitem"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Structured layout</span>
+                <span role="listitem"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Auto previews</span>
+            </div>
         </div>
     </header>
+
+    <section class="admin-quick-grid" aria-label="Plan creation guidance">
+        <article class="admin-quick-card">
+            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+            <div>
+                <h3>Start with basics</h3>
+                <p>Title, plan type, and categories drive discovery. Keep them crisp and searchable.</p>
+            </div>
+        </article>
+        <article class="admin-quick-card">
+            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+            <div>
+                <h3>Confirm dimensions</h3>
+                <p>Enter both metric and imperial values to keep conversion hints accurate.</p>
+            </div>
+        </article>
+        <article class="admin-quick-card">
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            <div>
+                <h3>Upload a hero image</h3>
+                <p>Crop a clean cover preview before publishing to keep listings consistent.</p>
+            </div>
+        </article>
+    </section>
 
     {% if form.errors %}
     <div class="form-alert form-alert--error" role="alert">
@@ -26,7 +55,7 @@
     </div>
     {% endif %}
 
-    <form class="admin-form" method="post" enctype="multipart/form-data">
+    <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
 
         <!-- Basic Information -->

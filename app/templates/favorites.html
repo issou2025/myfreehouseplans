@@ -1,25 +1,76 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="shell favorites-page">
-    <header class="section-heading favorites-page__intro">
-        <div>
-            <p class="eyebrow">Saved shortlist</p>
-            <h1>My favorite house plans</h1>
-            <p class="lead">Plans saved on this device stay right here. Toggle favorites on any card or detail page to build an instant shortlist without creating an account.</p>
+<section class="favorites-hero" aria-labelledby="favorites-heading">
+    <div class="shell favorites-hero__grid">
+        <div class="favorites-hero__content">
+            <p class="eyebrow"><i class="fa-solid fa-heart" aria-hidden="true"></i> Saved shortlist</p>
+            <h1 id="favorites-heading">My favorite house plans</h1>
+            <p class="lead">Plans saved on this device stay right here. Toggle favorites on any card or detail page to build a responsive shortlist without creating an account.</p>
+            <div class="favorites-hero__actions">
+                <a class="btn btn-primary" href="{{ url_for('main.packs') }}">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    Browse catalog
+                </a>
+                <button class="btn btn-outline" type="button" data-favorites-clear hidden>
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    Clear favorites
+                </button>
+            </div>
+            <div class="favorites-hero__badges" role="list">
+                <span role="listitem"><i class="fa-solid fa-shield-check" aria-hidden="true"></i> Private on your device</span>
+                <span role="listitem"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Instant access</span>
+                <span role="listitem"><i class="fa-solid fa-table-columns" aria-hidden="true"></i> Side-by-side ready</span>
+            </div>
         </div>
-        <div class="favorites-page__cta">
-            <a class="btn btn-primary" href="{{ url_for('main.packs') }}">Browse catalog</a>
-            <button class="btn btn-outline" type="button" data-favorites-clear hidden>Clear favorites</button>
-        </div>
-    </header>
+        <aside class="favorites-hero__card" aria-label="Favorites tips">
+            <h2>Make the shortlist work for you</h2>
+            <ul>
+                <li><strong>Compare specs:</strong> size, bedrooms, and amenities at a glance.</li>
+                <li><strong>Save pricing tiers:</strong> keep track of free vs premium packs.</li>
+                <li><strong>Share faster:</strong> open a plan and send the link to your builder.</li>
+            </ul>
+            <div class="favorites-hero__stat">
+                <span class="favorites-hero__stat-label">Support response</span>
+                <strong>Within 48 hours</strong>
+                <span class="favorites-hero__stat-note">We review every request.</span>
+            </div>
+        </aside>
+    </div>
+</section>
 
-    <section aria-label="Favorite plans">
-        <div id="favoritesEmpty" class="favorites-empty">
-            <p>You have not saved any plans yet. Explore the catalog and tap “Add to favorites” whenever a plan catches your eye.</p>
-            <a class="btn btn-soft" href="{{ url_for('main.packs') }}">Find your first favorite</a>
+<section class="shell favorites-page" aria-label="Favorite plans">
+    <div class="favorites-guide">
+        <div class="favorites-guide__card">
+            <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+            <div>
+                <h3>Save plans</h3>
+                <p>Tap “Add to favorites” on any plan card to pin it here instantly.</p>
+            </div>
         </div>
-        <div id="favoritesGrid" class="favorites-grid" aria-live="polite" aria-busy="false"></div>
-    </section>
-</div>
+        <div class="favorites-guide__card">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            <div>
+                <h3>Stay organized</h3>
+                <p>We keep your picks sorted so the newest ideas are always on top.</p>
+            </div>
+        </div>
+        <div class="favorites-guide__card">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            <div>
+                <h3>Send questions</h3>
+                <p>Open a plan and reach out for permit sets, revisions, or pricing.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="favoritesEmpty" class="favorites-empty">
+        <div>
+            <h2>No favorites yet</h2>
+            <p>Explore the catalog and tap “Add to favorites” whenever a plan catches your eye.</p>
+        </div>
+        <a class="btn btn-soft" href="{{ url_for('main.packs') }}">Find your first favorite</a>
+    </div>
+    <div id="favoritesGrid" class="favorites-grid" aria-live="polite" aria-busy="false"></div>
+</section>
 {% endblock %}

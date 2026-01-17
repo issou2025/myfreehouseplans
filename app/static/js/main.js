@@ -1233,6 +1233,13 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	function formatSavedAt(value) {
+		if (!value) return 'Saved';
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return 'Saved';
+		return `Saved ${date.toLocaleDateString()}`;
+	}
+
 	function updateToggleVisual(btn, isActive) {
 		btn.classList.toggle('is-active', isActive);
 		btn.setAttribute('aria-pressed', String(isActive));
@@ -1302,16 +1309,21 @@ document.addEventListener('DOMContentLoaded', function () {
 			article.innerHTML = `
 				<div class="favorite-card__media">
 					${fav.thumb ? `<img src="${fav.thumb}" alt="${fav.title}" loading="lazy" decoding="async">` : '<div class="plan-card__placeholder">Preview coming soon</div>'}
+					<span class="favorite-card__badge"><i class="fa-solid fa-heart" aria-hidden="true"></i> Favorite</span>
 				</div>
 				<div class="favorite-card__body">
-					<h3>${fav.title}</h3>
+					<div class="favorite-card__title-row">
+						<h3>${fav.title}</h3>
+						<span class="favorite-card__tag"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> ${fav.reference || '—'}</span>
+					</div>
 					<p class="favorite-card__meta">
-						<span>Ref ${fav.reference || '—'}</span>
+						<span><i class="fa-regular fa-clock" aria-hidden="true"></i> ${formatSavedAt(fav.savedAt)}</span>
+						<span><i class="fa-solid fa-link" aria-hidden="true"></i> Ready to share</span>
 					</p>
 				</div>
 				<div class="favorite-card__actions">
-					<a class="btn btn-primary" href="/plan/${fav.slug}">View plan</a>
-					<button type="button" class="favorite-card__remove" data-favorite-remove="${fav.slug}">Remove</button>
+					<a class="btn btn-primary" href="/plan/${fav.slug}"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> View plan</a>
+					<button type="button" class="favorite-card__remove" data-favorite-remove="${fav.slug}"><i class="fa-solid fa-trash" aria-hidden="true"></i> Remove</button>
 				</div>
 			`;
 			grid.appendChild(article);
