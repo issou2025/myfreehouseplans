@@ -1270,6 +1270,10 @@ form { overflow: visible; }
 	color: var(--color-primary);
 }
 
+.microcopy--alert {
+	color: var(--color-danger);
+}
+
 .trust-row {
 	display: flex;
 	flex-wrap: wrap;

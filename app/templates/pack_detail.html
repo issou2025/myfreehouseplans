@@ -415,6 +415,7 @@
             <p class="muted">Packs are temporarily hidden. Please check back later or contact support.</p>
             {% endif %}
             <p class="package-note">Need licensing help? <a href="{{ url_for('main.contact') }}">Email entreprise2rc@gmail.com</a> or <a href="https://wa.me/22796380877" target="_blank" rel="noopener">message us on WhatsApp</a>.</p>
+            <p class="microcopy microcopy--alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Gumroad files are temporarily disabled. They will be reestablished. Thank you for visiting myfreehouseplans.com.</p>
             {% set visible_paid_price = visible_starting_price(plan.pricing_tiers, pack_visibility) %}
             <meta itemprop="priceCurrency" content="USD">
             <meta itemprop="lowPrice" content="{{ visible_paid_price or 0 }}">
