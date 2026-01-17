@@ -1965,9 +1965,44 @@ body.cropper-open { overflow: hidden; }
 }
 
 @media (max-width: 640px) {
+	.favorites-hero {
+		padding: 56px 0 32px;
+	}
+
+	.favorites-hero__content h1 {
+		font-size: clamp(1.6rem, 5vw, 1.9rem);
+	}
+
+	.favorites-hero__card {
+		padding: 18px;
+	}
+
+	.favorites-hero__actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.favorites-hero__actions .btn {
+		width: 100%;
+		justify-content: center;
+	}
+
 	.favorites-empty {
 		flex-direction: column;
 		align-items: flex-start;
+	}
+
+	.favorites-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.favorite-card__actions {
+		flex-direction: column;
+	}
+
+	.favorite-card__actions .btn {
+		flex: 1 1 auto;
+		width: 100%;
 	}
 }
 
