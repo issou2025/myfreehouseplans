@@ -339,6 +339,10 @@ def download_free(plan_id):
         abort(404)
 
     if is_absolute_url(plan.free_pdf_file):
+        url_path = (plan.free_pdf_file or '').split('?')[0].lower()
+        if not url_path.endswith('.pdf'):
+            current_app.logger.warning('Blocked non-PDF free download URL for plan %s: %s', plan.id, plan.free_pdf_file)
+            abort(400)
         return redirect(plan.free_pdf_file)
 
     try:
@@ -349,8 +353,17 @@ def download_free(plan_id):
 
     if not protected_path.exists():
         abort(404)
-    mimetype, _ = mimetypes.guess_type(str(protected_path))
-    return send_file(protected_path, as_attachment=True, download_name=protected_path.name, mimetype=mimetype or 'application/octet-stream')
+
+    if protected_path.suffix.lower() != '.pdf':
+        current_app.logger.warning('Blocked non-PDF free download for plan %s: %s', plan.id, protected_path)
+        abort(400)
+
+    return send_file(
+        protected_path,
+        as_attachment=True,
+        download_name=f"{protected_path.stem}.pdf",
+        mimetype='application/pdf'
+    )
 
 
 def _is_allowed_gumroad_url(raw_url: str) -> bool:
