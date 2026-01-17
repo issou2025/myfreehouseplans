@@ -3,15 +3,20 @@
 {% block content %}
 <section class="contact-hero" aria-labelledby="contact-heading">
     <div class="shell">
-        <p class="eyebrow">Talk to the studio</p>
+        <p class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Talk to the studio</p>
         <h1 id="contact-heading">We answer every message within two business days.</h1>
         <p class="lead">Use the form below for plan questions, partnership ideas, or AdSense-required compliance inquiries. All fields are encrypted and protected.</p>
+        <div class="contact-hero__badges" role="list">
+            <span role="listitem"><i class="fa-solid fa-shield-heart" aria-hidden="true"></i> Secure form</span>
+            <span role="listitem"><i class="fa-solid fa-clock" aria-hidden="true"></i> 48h response</span>
+            <span role="listitem"><i class="fa-solid fa-headset" aria-hidden="true"></i> Human support</span>
+        </div>
     </div>
 </section>
 
 <section class="shell contact-grid" aria-label="Contact My Free House Plans">
     <div class="contact-panel contact-panel--form">
-        <h2>Send a message</h2>
+        <h2><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send a message</h2>
         <p class="contact-panel__helper">We only need your name, email, and a short message. Attachments and extra details remain optional.</p>
         <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
             {{ form.hidden_tag() }}
@@ -20,17 +25,17 @@
                 {{ form.inquiry_type(class='hidden-input', value=form.inquiry_type.data or 'support') }}
             </div>
             <label class="form-field">
-                <span>{{ form.name.label.text }}</span>
+                <span><i class="fa-solid fa-user" aria-hidden="true"></i>{{ form.name.label.text }}</span>
                 {{ form.name(class="form-input", aria_label='Your name', placeholder='Jane Doe') }}
                 {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </label>
             <label class="form-field">
-                <span>{{ form.email.label.text }}</span>
+                <span><i class="fa-solid fa-envelope" aria-hidden="true"></i>{{ form.email.label.text }}</span>
                 {{ form.email(class="form-input", aria_label='Your email', placeholder='you@email.com') }}
                 {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </label>
             <label class="form-field">
-                <span>{{ form.message.label.text }}</span>
+                <span><i class="fa-solid fa-message" aria-hidden="true"></i>{{ form.message.label.text }}</span>
                 {{ form.message(class="form-textarea", rows=6, aria_label='Message', placeholder='Tell us about your project, question, or issue...') }}
                 {% for err in form.message.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </label>
@@ -38,7 +43,7 @@
                 <details>
                     <summary>Attach supporting files (optional)</summary>
                     <label>
-                        <span>{{ form.attachment.label.text }}</span>
+                        <span><i class="fa-solid fa-paperclip" aria-hidden="true"></i>{{ form.attachment.label.text }}</span>
                         {{ form.attachment(class="form-file") }}
                         <p class="form-help">PDF, DOC/DOCX, DWG, JPG/PNG — up to 16 MB.</p>
                         {% for err in form.attachment.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
@@ -54,59 +59,123 @@
                 <p class="microcopy">Submitting confirms you accept our <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a> and <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>.</p>
             </div>
         </form>
-    </div>
-    <div class="contact-panel contact-panel--info">
-        <h2>Prefer a direct line?</h2>
+                padding: clamp(70px, 10vw, 120px) 0 clamp(30px, 6vw, 50px);
+                background: linear-gradient(135deg, #081227, #0f2a5b 45%, #0b6f6a 100%);
+                color: #fff;
+                position: relative;
+                overflow: hidden;
         <ul class="contact-list">
+            .contact-hero::after {
+                content: '';
+                position: absolute;
+                inset: -40% -10% -30% -10%;
+                background: radial-gradient(circle at 25% 20%, rgba(59,130,246,0.35), transparent 55%),
+                    radial-gradient(circle at 80% 10%, rgba(16,185,129,0.25), transparent 55%),
+                    radial-gradient(circle at 50% 90%, rgba(14,165,233,0.25), transparent 60%);
+                filter: blur(40px);
+                opacity: 0.7;
+                pointer-events: none;
+            }
+            .contact-hero .shell { position: relative; z-index: 1; }
+            .contact-hero .lead { color: rgba(255,255,255,0.8); max-width: 720px; }
+            .contact-hero__badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-top: 18px;
+            }
+            .contact-hero__badges span {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 14px;
+                border-radius: 999px;
+                background: rgba(255,255,255,0.12);
+                border: 1px solid rgba(255,255,255,0.24);
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+            .contact-hero__badges i { color: #9ae6ff; }
             <li><i class="fa-solid fa-envelope"></i> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></li>
             <li><i class="fa-solid fa-phone"></i> <a href="tel:+22796380877">+227 96 38 08 77</a></li>
             <li><i class="fa-brands fa-whatsapp"></i> <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Message on WhatsApp</a></li>
         </ul>
         <div class="info-card">
-            <p class="muted">Business hours</p>
+            <p class="muted"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Business hours</p>
             <p>Monday – Friday · 9:00–18:00 GMT</p>
-        </div>
-        {% if plan_options %}
-        <div class="info-card">
-            <p class="muted">Frequently referenced plans</p>
-            <ul class="plan-chip-list">
+                border-radius: 28px;
+                padding: clamp(22px, 4vw, 36px);
+                background: var(--color-surface, #fff);
+                border: 1px solid rgba(15, 23, 42, 0.12);
+                box-shadow: 0 30px 60px rgba(8, 15, 32, 0.08);
                 {% for plan in plan_options[:3] %}
                 <li>{{ plan.reference_code }} · {{ plan.title }}</li>
-                {% endfor %}
-            </ul>
+            .contact-panel--info { background: linear-gradient(180deg, rgba(12, 18, 33, 0.02), rgba(12, 18, 33, 0.05)); }
+            .contact-panel h2 { margin-top: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         </div>
         {% endif %}
-        <div class="info-card info-card--accent">
-            <h3>After you submit</h3>
+            .contact-form label span { font-weight: 600; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 8px; }
+            <h3><i class="fa-solid fa-route" aria-hidden="true"></i> After you submit</h3>
             <ol>
                 <li>You receive an on-screen confirmation and email receipt.</li>
                 <li>We review your message within two business days.</li>
                 <li>A designer follows up with files, pricing, or next steps.</li>
-            </ol>
-        </div>
+                border: 1px solid rgba(9, 13, 23, 0.18);
+                padding: 14px;
     </div>
 </section>
-{% endblock %}
+                background: #fff;
+                transition: border-color 0.18s ease, box-shadow 0.18s ease;
 
 {% block extra_css %}
+            .form-input:focus,
+            .form-textarea:focus,
+            .form-file:focus {
+                border-color: rgba(37, 99, 235, 0.55);
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+            }
+            .form-input::placeholder,
+            .form-textarea::placeholder { color: rgba(15, 23, 42, 0.45); }
 <style>
 .contact-hero {
     padding: 90px 0 40px;
     background: linear-gradient(135deg, #070a12, #112648);
     color: #fff;
-}
-.contact-grid {
-    display: grid;
+            .contact-list li { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+            .contact-list i { color: #0f4bcf; }
+            .info-card { border-radius: 20px; border: 1px solid rgba(9, 13, 23, 0.12); padding: 20px; margin-bottom: 18px; background: #fff; }
+            .info-card p.muted { display: inline-flex; align-items: center; gap: 8px; }
+            .info-card--accent { background: rgba(12, 132, 131, 0.1); border-color: rgba(12, 132, 131, 0.3); }
+            .info-card--accent h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+            .info-card--accent ol { margin: 10px 0 0 20px; padding: 0; }
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 32px;
+            .plan-chip-list li { padding: 6px 0 6px 22px; border-bottom: 1px solid rgba(9, 13, 23, 0.08); position: relative; }
+            .plan-chip-list li::before {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 10px;
+                width: 12px;
+                height: 12px;
+                background: #1f4ce4;
+                -webkit-mask: var(--icon-check) no-repeat center / contain;
+                mask: var(--icon-check) no-repeat center / contain;
+            }
     padding: 50px 0 90px;
 }
 .contact-panel {
     border-radius: 28px;
     padding: 32px;
     background: var(--color-surface, #fff);
-    border: 1px solid rgba(15, 23, 42, 0.12);
+                .contact-hero { padding: 70px 0 30px; }
+                .contact-grid { padding: 40px 0 70px; }
+                .contact-hero__badges { gap: 8px; }
+                .contact-hero__badges span { width: 100%; justify-content: center; }
+                .contact-panel h2 { font-size: 1.25rem; }
     box-shadow: 0 30px 60px rgba(8, 15, 32, 0.08);
+            @media (min-width: 960px) {
+                .contact-panel--form { position: sticky; top: 110px; align-self: start; }
+            }
 }
 .contact-panel--form { background: #fff; }
 .contact-panel--info { background: rgba(9, 13, 23, 0.03); }
