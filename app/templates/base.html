@@ -47,6 +47,15 @@
     
     {# Structured Data #}
     {% block structured_data %}{% endblock %}
+
+    {# Google Analytics 4 #}
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B74YY1J754"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-B74YY1J754');
+    </script>
 </head>
 <body class="site-body theme-lux" data-img-fallback="{{ url_for('static', filename='images/placeholder.svg') }}">
     <a class="skip-link" href="#main">Skip to content</a>
