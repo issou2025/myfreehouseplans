@@ -1266,6 +1266,10 @@ form { overflow: visible; }
 	color: var(--color-muted);
 }
 
+.microcopy--info {
+	color: var(--color-primary);
+}
+
 .trust-row {
 	display: flex;
 	flex-wrap: wrap;
