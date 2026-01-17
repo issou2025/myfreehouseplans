@@ -354,7 +354,17 @@ def download_free(plan_id):
     if not protected_path.exists():
         abort(404)
 
-    if protected_path.suffix.lower() != '.pdf':
+    is_pdf = protected_path.suffix.lower() == '.pdf'
+    if not is_pdf:
+        try:
+            with protected_path.open('rb') as handle:
+                header = handle.read(4)
+            is_pdf = header == b'%PDF'
+        except Exception as exc:
+            current_app.logger.warning('Failed to inspect free download for plan %s: %s', plan.id, exc)
+            abort(400)
+
+    if not is_pdf:
         current_app.logger.warning('Blocked non-PDF free download for plan %s: %s', plan.id, protected_path)
         abort(400)
 
