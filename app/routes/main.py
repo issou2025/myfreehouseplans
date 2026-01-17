@@ -293,19 +293,26 @@ def _find_similar_plans(plan: HousePlan, limit: int = 6):
         query = query.filter(func.abs(beds_expr - beds_value) <= 1)
 
     area_expr = func.coalesce(HousePlan.total_area_sqft, cast(HousePlan.square_feet, Float), 0.0)
+    uses_distance = False
     if area_value:
         window = float(area_value)
         lower = max(0.0, window * 0.8)
         upper = window * 1.2
+        distance_expr = func.abs(area_expr - window).label('area_distance')
         query = query.filter(area_expr.between(lower, upper))
-        query = query.order_by(func.abs(area_expr - window).asc(), HousePlan.views_count.desc())
+        query = query.add_columns(distance_expr)
+        query = query.order_by(distance_expr.asc(), HousePlan.views_count.desc())
+        uses_distance = True
     else:
         query = query.order_by(HousePlan.views_count.desc(), HousePlan.created_at.desc())
 
     if category_ids:
         query = query.distinct()
 
-    return query.limit(limit).all()
+    results = query.limit(limit).all()
+    if uses_distance:
+        return [row[0] for row in results]
+    return results
 
 
 def _serialize_plan_summary(plan: HousePlan):
@@ -339,10 +346,15 @@ def download_free(plan_id):
         abort(404)
 
     if is_absolute_url(plan.free_pdf_file):
-        url_path = (plan.free_pdf_file or '').split('?')[0].lower()
+        url_value = plan.free_pdf_file or ''
+        url_path = url_value.split('?')[0].lower()
         if not url_path.endswith('.pdf'):
-            current_app.logger.warning('Blocked non-PDF free download URL for plan %s: %s', plan.id, plan.free_pdf_file)
-            abort(400)
+            parsed = urlparse(url_value)
+            host = (parsed.hostname or '').lower()
+            is_cloudinary = host.endswith('cloudinary.com')
+            if not is_cloudinary:
+                current_app.logger.warning('Blocked non-PDF free download URL for plan %s: %s', plan.id, plan.free_pdf_file)
+                abort(400)
         return redirect(plan.free_pdf_file)
 
     try:
