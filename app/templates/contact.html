@@ -5,7 +5,7 @@
     <div class="shell">
         <p class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Talk to the studio</p>
         <h1 id="contact-heading">We answer every message within two business days.</h1>
-        <p class="lead">Use the form below for plan questions, partnership ideas, or AdSense-required compliance inquiries. All fields are encrypted and protected.</p>
+        <p class="lead">Use the form below for plan questions, partnership ideas, or compliance inquiries. All fields are encrypted and protected.</p>
         <div class="contact-hero__badges" role="list">
             <span role="listitem"><i class="fa-solid fa-shield-heart" aria-hidden="true"></i> Secure form</span>
             <span role="listitem"><i class="fa-solid fa-clock" aria-hidden="true"></i> 48h response</span>
@@ -20,25 +20,58 @@
         <p class="contact-panel__helper">We only need your name, email, and a short message. Attachments and extra details remain optional.</p>
         <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
             {{ form.hidden_tag() }}
-            <div class="visually-hidden">
-                {{ form.subject(type='hidden', value=form.subject.data or 'General contact request') }}
-                {{ form.inquiry_type(class='hidden-input', value=form.inquiry_type.data or 'support') }}
+
+            <div class="form-row">
+                <label class="form-field">
+                    <span><i class="fa-solid fa-user" aria-hidden="true"></i>{{ form.name.label.text }}</span>
+                    {{ form.name(class="form-input", aria_label='Your name', placeholder='Jane Doe') }}
+                    {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label class="form-field">
+                    <span><i class="fa-solid fa-envelope" aria-hidden="true"></i>{{ form.email.label.text }}</span>
+                    {{ form.email(class="form-input", aria_label='Your email', placeholder='you@email.com') }}
+                    {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
             </div>
+
+            <div class="form-row">
+                <label class="form-field">
+                    <span><i class="fa-solid fa-phone" aria-hidden="true"></i>{{ form.phone.label.text }}</span>
+                    {{ form.phone(class="form-input", aria_label='Phone number', placeholder='+227 96 38 08 77') }}
+                    {% for err in form.phone.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label class="form-field">
+                    <span><i class="fa-solid fa-tag" aria-hidden="true"></i>{{ form.subject.label.text }}</span>
+                    {{ form.subject(class="form-input", aria_label='Subject', placeholder='General contact request') }}
+                    {% for err in form.subject.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+            </div>
+
+            <div class="form-row">
+                <label class="form-field">
+                    <span><i class="fa-solid fa-filter" aria-hidden="true"></i>{{ form.inquiry_type.label.text }}</span>
+                    {{ form.inquiry_type(class="form-input", aria_label='Inquiry type') }}
+                    {% for err in form.inquiry_type.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+                <label class="form-field">
+                    <span><i class="fa-solid fa-layer-group" aria-hidden="true"></i>{{ form.plan_reference.label.text }}</span>
+                    {{ form.plan_reference(class="form-input", aria_label='Plan of interest') }}
+                    {% for err in form.plan_reference.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                </label>
+            </div>
+
             <label class="form-field">
-                <span><i class="fa-solid fa-user" aria-hidden="true"></i>{{ form.name.label.text }}</span>
-                {{ form.name(class="form-input", aria_label='Your name', placeholder='Jane Doe') }}
-                {% for err in form.name.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
+                <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i>{{ form.reference_code.label.text }}</span>
+                {{ form.reference_code(class="form-input", aria_label='Reference code', placeholder='Optional reference code') }}
+                {% for err in form.reference_code.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </label>
-            <label class="form-field">
-                <span><i class="fa-solid fa-envelope" aria-hidden="true"></i>{{ form.email.label.text }}</span>
-                {{ form.email(class="form-input", aria_label='Your email', placeholder='you@email.com') }}
-                {% for err in form.email.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
-            </label>
+
             <label class="form-field">
                 <span><i class="fa-solid fa-message" aria-hidden="true"></i>{{ form.message.label.text }}</span>
                 {{ form.message(class="form-textarea", rows=6, aria_label='Message', placeholder='Tell us about your project, question, or issue...') }}
                 {% for err in form.message.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </label>
+
             <div class="form-field optional-field">
                 <details>
                     <summary>Attach supporting files (optional)</summary>
@@ -50,6 +83,7 @@
                     </label>
                 </details>
             </div>
+
             <label class="form-checkbox">
                 {{ form.subscribe() }}
                 <span>Send me quarterly studio updates</span>
@@ -59,159 +93,232 @@
                 <p class="microcopy">Submitting confirms you accept our <a href="{{ url_for('main.terms_of_service') }}">Terms of Service</a> and <a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a>.</p>
             </div>
         </form>
-                padding: clamp(70px, 10vw, 120px) 0 clamp(30px, 6vw, 50px);
-                background: linear-gradient(135deg, #081227, #0f2a5b 45%, #0b6f6a 100%);
-                color: #fff;
-                position: relative;
-                overflow: hidden;
+    </div>
+
+    <div class="contact-panel contact-panel--info">
+        <h2><i class="fa-solid fa-phone-volume" aria-hidden="true"></i> Prefer a direct line?</h2>
         <ul class="contact-list">
-            .contact-hero::after {
-                content: '';
-                position: absolute;
-                inset: -40% -10% -30% -10%;
-                background: radial-gradient(circle at 25% 20%, rgba(59,130,246,0.35), transparent 55%),
-                    radial-gradient(circle at 80% 10%, rgba(16,185,129,0.25), transparent 55%),
-                    radial-gradient(circle at 50% 90%, rgba(14,165,233,0.25), transparent 60%);
-                filter: blur(40px);
-                opacity: 0.7;
-                pointer-events: none;
-            }
-            .contact-hero .shell { position: relative; z-index: 1; }
-            .contact-hero .lead { color: rgba(255,255,255,0.8); max-width: 720px; }
-            .contact-hero__badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 12px;
-                margin-top: 18px;
-            }
-            .contact-hero__badges span {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 14px;
-                border-radius: 999px;
-                background: rgba(255,255,255,0.12);
-                border: 1px solid rgba(255,255,255,0.24);
-                font-size: 0.9rem;
-                font-weight: 600;
-            }
-            .contact-hero__badges i { color: #9ae6ff; }
             <li><i class="fa-solid fa-envelope"></i> <a href="mailto:entreprise2rc@gmail.com">entreprise2rc@gmail.com</a></li>
             <li><i class="fa-solid fa-phone"></i> <a href="tel:+22796380877">+227 96 38 08 77</a></li>
             <li><i class="fa-brands fa-whatsapp"></i> <a href="https://wa.me/22796380877" target="_blank" rel="noopener">Message on WhatsApp</a></li>
         </ul>
+
+        <div class="contact-actions" aria-label="Quick actions">
+            <a class="contact-action" href="mailto:entreprise2rc@gmail.com">
+                <span class="contact-action__icon"><i class="fa-solid fa-envelope" aria-hidden="true"></i></span>
+                <span>
+                    <strong>Email the studio</strong>
+                    <small>Best for detailed questions</small>
+                </span>
+            </a>
+            <a class="contact-action" href="https://wa.me/22796380877" target="_blank" rel="noopener">
+                <span class="contact-action__icon"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></span>
+                <span>
+                    <strong>WhatsApp now</strong>
+                    <small>Fast replies during business hours</small>
+                </span>
+            </a>
+        </div>
+
         <div class="info-card">
             <p class="muted"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Business hours</p>
             <p>Monday – Friday · 9:00–18:00 GMT</p>
-                border-radius: 28px;
-                padding: clamp(22px, 4vw, 36px);
-                background: var(--color-surface, #fff);
-                border: 1px solid rgba(15, 23, 42, 0.12);
-                box-shadow: 0 30px 60px rgba(8, 15, 32, 0.08);
+        </div>
+        {% if plan_options %}
+        <div class="info-card">
+            <p class="muted"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Frequently referenced plans</p>
+            <ul class="plan-chip-list">
                 {% for plan in plan_options[:3] %}
                 <li>{{ plan.reference_code }} · {{ plan.title }}</li>
-            .contact-panel--info { background: linear-gradient(180deg, rgba(12, 18, 33, 0.02), rgba(12, 18, 33, 0.05)); }
-            .contact-panel h2 { margin-top: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
-            .contact-form label span { font-weight: 600; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 8px; }
+        <div class="info-card info-card--accent">
             <h3><i class="fa-solid fa-route" aria-hidden="true"></i> After you submit</h3>
             <ol>
                 <li>You receive an on-screen confirmation and email receipt.</li>
                 <li>We review your message within two business days.</li>
                 <li>A designer follows up with files, pricing, or next steps.</li>
-                border: 1px solid rgba(9, 13, 23, 0.18);
-                padding: 14px;
+            </ol>
+        </div>
+        <div class="info-card info-card--dark">
+            <h3><i class="fa-solid fa-shield-check" aria-hidden="true"></i> Privacy & security</h3>
+            <p>Your message is encrypted in transit and reviewed only by our studio team.</p>
+        </div>
     </div>
 </section>
-                background: #fff;
-                transition: border-color 0.18s ease, box-shadow 0.18s ease;
+{% endblock %}
 
 {% block extra_css %}
-            .form-input:focus,
-            .form-textarea:focus,
-            .form-file:focus {
-                border-color: rgba(37, 99, 235, 0.55);
-                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
-            }
-            .form-input::placeholder,
-            .form-textarea::placeholder { color: rgba(15, 23, 42, 0.45); }
 <style>
 .contact-hero {
-    padding: 90px 0 40px;
-    background: linear-gradient(135deg, #070a12, #112648);
+    padding: clamp(70px, 10vw, 120px) 0 clamp(30px, 6vw, 50px);
+    background: linear-gradient(135deg, #081227, #0f2a5b 45%, #0b6f6a 100%);
     color: #fff;
-            .contact-list li { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-            .contact-list i { color: #0f4bcf; }
-            .info-card { border-radius: 20px; border: 1px solid rgba(9, 13, 23, 0.12); padding: 20px; margin-bottom: 18px; background: #fff; }
-            .info-card p.muted { display: inline-flex; align-items: center; gap: 8px; }
-            .info-card--accent { background: rgba(12, 132, 131, 0.1); border-color: rgba(12, 132, 131, 0.3); }
-            .info-card--accent h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
-            .info-card--accent ol { margin: 10px 0 0 20px; padding: 0; }
+    position: relative;
+    overflow: hidden;
+}
+.contact-hero::after {
+    content: '';
+    position: absolute;
+    inset: -40% -10% -30% -10%;
+    background: radial-gradient(circle at 25% 20%, rgba(59,130,246,0.35), transparent 55%),
+        radial-gradient(circle at 80% 10%, rgba(16,185,129,0.25), transparent 55%),
+        radial-gradient(circle at 50% 90%, rgba(14,165,233,0.25), transparent 60%);
+    filter: blur(40px);
+    opacity: 0.7;
+    pointer-events: none;
+}
+.contact-hero .shell { position: relative; z-index: 1; }
+.contact-hero .lead { color: rgba(255,255,255,0.8); max-width: 720px; }
+.contact-hero__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+.contact-hero__badges span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.24);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.contact-hero__badges i { color: #9ae6ff; }
+
+.contact-grid {
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            .plan-chip-list li { padding: 6px 0 6px 22px; border-bottom: 1px solid rgba(9, 13, 23, 0.08); position: relative; }
-            .plan-chip-list li::before {
-                content: '';
-                position: absolute;
-                left: 4px;
-                top: 10px;
-                width: 12px;
-                height: 12px;
-                background: #1f4ce4;
-                -webkit-mask: var(--icon-check) no-repeat center / contain;
-                mask: var(--icon-check) no-repeat center / contain;
-            }
+    gap: 32px;
     padding: 50px 0 90px;
 }
 .contact-panel {
     border-radius: 28px;
-    padding: 32px;
+    padding: clamp(22px, 4vw, 36px);
     background: var(--color-surface, #fff);
-                .contact-hero { padding: 70px 0 30px; }
-                .contact-grid { padding: 40px 0 70px; }
-                .contact-hero__badges { gap: 8px; }
-                .contact-hero__badges span { width: 100%; justify-content: center; }
-                .contact-panel h2 { font-size: 1.25rem; }
+    border: 1px solid rgba(15, 23, 42, 0.12);
     box-shadow: 0 30px 60px rgba(8, 15, 32, 0.08);
-            @media (min-width: 960px) {
-                .contact-panel--form { position: sticky; top: 110px; align-self: start; }
-            }
 }
 .contact-panel--form { background: #fff; }
-.contact-panel--info { background: rgba(9, 13, 23, 0.03); }
-.contact-panel h2 { margin-top: 0; font-size: 1.4rem; }
+.contact-panel--info { background: linear-gradient(180deg, rgba(12, 18, 33, 0.02), rgba(12, 18, 33, 0.05)); }
+.contact-panel h2 { margin-top: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
 .contact-panel__helper { color: var(--color-muted, #4c5160); margin-bottom: 24px; }
 .contact-form .form-field { display: flex; flex-direction: column; margin-bottom: 18px; }
-.contact-form label span { font-weight: 600; margin-bottom: 6px; }
+.contact-form label span { font-weight: 600; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 8px; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
 .form-input,
 .form-textarea,
 .form-file {
     width: 100%;
     border-radius: 14px;
-    border: 1px solid rgba(9, 13, 23, 0.2);
+    border: 1px solid rgba(9, 13, 23, 0.18);
     padding: 14px;
     font-size: 1rem;
     color: #0f172a;
     background: #fff;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .form-textarea { min-height: 160px; resize: vertical; }
+.form-input:focus,
+.form-textarea:focus,
+.form-file:focus {
+    border-color: rgba(37, 99, 235, 0.55);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+.form-input::placeholder,
+.form-textarea::placeholder { color: rgba(15, 23, 42, 0.45); }
 .form-error { color: #c53030; font-size: 0.85rem; margin-top: 6px; }
 .form-help { font-size: 0.85rem; color: var(--color-muted, #4c5160); }
 .form-checkbox { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .form-submit { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+
 .contact-list { list-style: none; padding: 0; margin: 0 0 20px; }
 .contact-list li { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.contact-list i { color: #0f4bcf; }
+
+.contact-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+}
+.contact-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(31, 76, 228, 0.15);
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.contact-action:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+.contact-action__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(31, 76, 228, 0.12);
+    color: var(--color-primary);
+}
+.contact-action small { display: block; color: var(--color-muted); margin-top: 2px; }
+
 .info-card { border-radius: 20px; border: 1px solid rgba(9, 13, 23, 0.12); padding: 20px; margin-bottom: 18px; background: #fff; }
-.info-card--accent { background: rgba(15, 118, 110, 0.08); border-color: rgba(15, 118, 110, 0.3); }
+.info-card p.muted { display: inline-flex; align-items: center; gap: 8px; }
+.info-card--accent { background: rgba(12, 132, 131, 0.1); border-color: rgba(12, 132, 131, 0.3); }
+.info-card--accent h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.info-card--accent ol { margin: 10px 0 0 20px; padding: 0; }
+.info-card--dark {
+    background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(9,18,40,0.95));
+    color: #fff;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+.info-card--dark h3 { color: #fff; display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.info-card--dark p { color: rgba(255,255,255,0.8); }
+
 .plan-chip-list { list-style: none; padding: 0; margin: 0; }
-.plan-chip-list li { padding: 6px 0; border-bottom: 1px solid rgba(9, 13, 23, 0.08); }
+.plan-chip-list li { padding: 6px 0 6px 22px; border-bottom: 1px solid rgba(9, 13, 23, 0.08); position: relative; }
+.plan-chip-list li::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    width: 12px;
+    height: 12px;
+    background: #1f4ce4;
+    -webkit-mask: var(--icon-check) no-repeat center / contain;
+    mask: var(--icon-check) no-repeat center / contain;
+}
 .plan-chip-list li:last-child { border-bottom: none; }
+
 .visually-hidden,
-.hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; padding: 0; margin: -1px; }
+.hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; padding: 0; margin: 0; }
 .microcopy { font-size: 0.8rem; color: var(--color-muted, #5c6272); }
+
 @media (max-width: 640px) {
     .contact-panel { padding: 24px; }
     .contact-hero { padding: 70px 0 30px; }
+    .contact-grid { padding: 40px 0 70px; }
+    .contact-hero__badges { gap: 8px; }
+    .contact-hero__badges span { width: 100%; justify-content: center; }
+    .contact-panel h2 { font-size: 1.25rem; }
+}
+@media (min-width: 960px) {
+    .contact-panel--form { position: sticky; top: 110px; align-self: start; }
 }
 </style>
 {% endblock %}
