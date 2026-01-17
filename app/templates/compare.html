@@ -1,27 +1,82 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="shell compare-page">
-    <header class="section-heading compare-page__intro">
-        <div>
-            <p class="eyebrow">Side-by-side review</p>
-            <h1>Compare up to three house plans</h1>
-            <p class="lead">Toggle “Add to compare” on any plan card or detail page. We’ll keep your picks ready in this tray so you can evaluate key specs, pricing, and deliverables in one view.</p>
+<section class="compare-hero" aria-labelledby="compare-heading">
+    <div class="shell compare-hero__grid">
+        <div class="compare-hero__content">
+            <p class="eyebrow"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Side-by-side review</p>
+            <h1 id="compare-heading">Compare up to three house plans</h1>
+            <p class="lead">Toggle “Add to compare” on any plan card or detail page. We’ll keep your picks ready so you can weigh specs, pricing, and deliverables in one clean view.</p>
+            <div class="compare-hero__actions">
+                <a class="btn btn-primary" href="{{ url_for('main.packs') }}">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    Browse catalog
+                </a>
+                <button class="btn btn-soft" type="button" data-compare-export hidden>
+                    <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
+                    Download PDF summary
+                </button>
+                <button class="btn btn-outline" type="button" data-compare-clear hidden>
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    Clear selection
+                </button>
+            </div>
+            <div class="compare-hero__badges" role="list">
+                <span role="listitem"><i class="fa-solid fa-shield-check" aria-hidden="true"></i> Secure comparison</span>
+                <span role="listitem"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Specs + pricing</span>
+                <span role="listitem"><i class="fa-solid fa-star" aria-hidden="true"></i> Curated highlights</span>
+            </div>
         </div>
-        <div class="compare-page__cta">
-            <a class="btn btn-primary" href="{{ url_for('main.packs') }}">Browse catalog</a>
-            <button class="btn btn-soft" type="button" data-compare-export hidden>Download PDF summary</button>
-            <button class="btn btn-outline" type="button" data-compare-clear hidden>Clear selection</button>
-        </div>
-    </header>
+        <aside class="compare-hero__card" aria-label="Comparison tips">
+            <h2>Smart comparison tips</h2>
+            <ul>
+                <li><strong>Start with area:</strong> match budget to total square footage.</li>
+                <li><strong>Check deliverables:</strong> verify PDF, CAD, or 3D add-ons.</li>
+                <li><strong>Review lifestyle fit:</strong> prioritize bedrooms, storage, and flow.</li>
+            </ul>
+            <div class="compare-hero__stat">
+                <span class="compare-hero__stat-label">Average response time</span>
+                <strong>48 hours</strong>
+                <span class="compare-hero__stat-note">We respond to every inquiry.</span>
+            </div>
+        </aside>
+    </div>
+</section>
 
-    <section aria-label="Comparison results">
-        <div id="compareEmpty" class="compare-empty">
-            <p>No plans selected yet. Add up to three plans using the “Add to compare” button, then return here to see them side by side.</p>
+<section class="shell compare-page" aria-label="Comparison results">
+    <div class="compare-guide">
+        <div class="compare-guide__card">
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <div>
+                <h3>Add plans</h3>
+                <p>Use the “Add to compare” button on any plan card to stage up to three options.</p>
+            </div>
         </div>
-        <div id="compareTableWrapper" class="compare-table-wrapper" hidden>
-            <div class="compare-table" id="compareTable" role="table" aria-live="polite"></div>
+        <div class="compare-guide__card">
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+            <div>
+                <h3>Review the matrix</h3>
+                <p>We align pricing, sizes, rooms, and packs in a clean table for quick decisions.</p>
+            </div>
         </div>
-    </section>
-</div>
+        <div class="compare-guide__card">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            <div>
+                <h3>Request details</h3>
+                <p>Shortlist a plan and send questions. We can share tailored guidance.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="compareEmpty" class="compare-empty">
+        <div>
+            <h2>No plans selected yet</h2>
+            <p>Add up to three plans using the “Add to compare” button, then return here to see them side by side.</p>
+        </div>
+        <a class="btn btn-soft" href="{{ url_for('main.packs') }}">Start comparing</a>
+    </div>
+    <div id="compareTableWrapper" class="compare-table-wrapper" hidden>
+        <div class="compare-table" id="compareTable" role="table" aria-live="polite"></div>
+    </div>
+</section>
 {% endblock %}
