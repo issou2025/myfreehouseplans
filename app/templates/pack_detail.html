@@ -385,6 +385,7 @@
                                 {% if plan.free_pdf_file %}
                                     <a class="package-button {{ meta.button_class }}" href="{{ url_for('main.download_free', plan_id=plan.id) }}">{{ meta.cta_label }}</a>
                                     <p class="microcopy">Instant download · No registration required</p>
+                                    <p class="microcopy">Downloaded files do not include the .pdf extension. Please rename the file by adding .pdf after download to open it correctly.</p>
                                 {% else %}
                                     <button class="package-button package-button--disabled" disabled>Preview unavailable</button>
                                     <p class="microcopy">We’re finishing this file. Check back soon.</p>
