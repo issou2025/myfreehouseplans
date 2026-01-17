@@ -15,6 +15,17 @@
         </div>
     </header>
 
+    <section class="admin-meta-bar" aria-label="Plan creation status">
+        <div class="admin-meta-pill admin-meta-pill--draft"><i class="fa-regular fa-circle-dot" aria-hidden="true"></i> Draft in progress</div>
+        <div class="admin-meta-pill admin-meta-pill--tip"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> Optimized for mobile entry</div>
+        <div class="admin-meta-pill admin-meta-pill--muted"><i class="fa-regular fa-floppy-disk" aria-hidden="true"></i> Use Save Draft frequently</div>
+        <div class="admin-meta-actions">
+            <a class="admin-meta-link" href="#section-media"><i class="fa-regular fa-image" aria-hidden="true"></i> Media</a>
+            <a class="admin-meta-link" href="#section-pricing"><i class="fa-solid fa-tag" aria-hidden="true"></i> Pricing</a>
+            <a class="admin-meta-link" href="#section-publish"><i class="fa-solid fa-rocket" aria-hidden="true"></i> Publish</a>
+        </div>
+    </section>
+
     <section class="admin-quick-grid" aria-label="Plan creation guidance">
         <article class="admin-quick-card">
             <i class="fa-solid fa-list-check" aria-hidden="true"></i>
@@ -58,11 +69,35 @@
     <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
 
+        <div class="admin-form__layout">
+            <div class="admin-form__main">
+                <div class="admin-form__toolbar" aria-label="Jump to section">
+                    <span class="admin-form__toolbar-label">Jump to:</span>
+                    <div class="admin-form__toolbar-actions">
+                        <a class="admin-form__chip" href="#section-basics">Basics</a>
+                        <a class="admin-form__chip" href="#section-editorial">Editorial</a>
+                        <a class="admin-form__chip" href="#section-architecture">Architecture</a>
+                        <a class="admin-form__chip" href="#section-description">Description</a>
+                        <a class="admin-form__chip" href="#section-media">Media</a>
+                        <a class="admin-form__chip" href="#section-pricing">Pricing</a>
+                        <a class="admin-form__chip" href="#section-gumroad">Gumroad</a>
+                        <a class="admin-form__chip" href="#section-seo">SEO</a>
+                        <a class="admin-form__chip" href="#section-optional">Optional</a>
+                        <a class="admin-form__chip admin-form__chip--primary" href="#section-publish">Publish</a>
+                    </div>
+                </div>
+
         <!-- Basic Information -->
-        <div class="form-card">
+        <div class="form-card" id="section-basics">
             <div class="form-card__header">
-                <div class="form-card__icon">📝</div>
-                <h2 class="form-card__title">Basic Information</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📝</div>
+                    <div>
+                        <h2 class="form-card__title">Basic Information</h2>
+                        <p class="form-card__subtitle">Plan name, type, categories, and a short summary for listings.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--2">
                 <div class="form-group">
@@ -101,10 +136,16 @@
         </div>
 
         <!-- Editorial depth -->
-        <div class="form-card">
+        <div class="form-card" id="section-editorial">
             <div class="form-card__header">
-                <div class="form-card__icon">🧭</div>
-                <h2 class="form-card__title">Editorial depth</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🧭</div>
+                    <div>
+                        <h2 class="form-card__title">Editorial depth</h2>
+                        <p class="form-card__subtitle">Describe the design intent, lifestyle fit, and customization options.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -123,10 +164,16 @@
         </div>
 
         <!-- Architectural Details -->
-        <div class="form-card">
+        <div class="form-card" id="section-architecture">
             <div class="form-card__header">
-                <div class="form-card__icon">🏗️</div>
-                <h2 class="form-card__title">Architectural Details</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🏗️</div>
+                    <div>
+                        <h2 class="form-card__title">Architectural Details</h2>
+                        <p class="form-card__subtitle">Key dimensions, floor count, and area metrics for filtering.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -164,10 +211,16 @@
         </div>
 
         <!-- Full Description -->
-        <div class="form-card">
+        <div class="form-card" id="section-description">
             <div class="form-card__header">
-                <div class="form-card__icon">📄</div>
-                <h2 class="form-card__title">Full Description</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📄</div>
+                    <div>
+                        <h2 class="form-card__title">Full Description</h2>
+                        <p class="form-card__subtitle">Write the full narrative shown on the plan detail page.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-group">
                 {{ form.description.label(class="form-label") }}
@@ -178,10 +231,16 @@
         </div>
 
         <!-- Files & Media -->
-        <div class="form-card">
+        <div class="form-card" id="section-media">
             <div class="form-card__header">
-                <div class="form-card__icon">📷</div>
-                <h2 class="form-card__title">Files & Media</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📷</div>
+                    <div>
+                        <h2 class="form-card__title">Files & Media</h2>
+                        <p class="form-card__subtitle">Upload cover artwork and downloadable assets.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--2">
                 <div class="form-group image-cropper" data-cropper data-input-id="cover_image" data-preview-id="cover_image_preview">
@@ -208,10 +267,16 @@
         </div>
 
         <!-- Pack Pricing -->
-        <div class="form-card">
+        <div class="form-card" id="section-pricing">
             <div class="form-card__header">
-                <div class="form-card__icon">💰</div>
-                <h2 class="form-card__title">Pack Pricing</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">💰</div>
+                    <div>
+                        <h2 class="form-card__title">Pack Pricing</h2>
+                        <p class="form-card__subtitle">Keep pricing aligned with Gumroad listings.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -236,10 +301,16 @@
         </div>
 
         <!-- Paid Packs (Gumroad) -->
-        <div class="form-card">
+        <div class="form-card" id="section-gumroad">
             <div class="form-card__header">
-                <div class="form-card__icon">💎</div>
-                <h2 class="form-card__title">Paid Packs (Gumroad)</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">💎</div>
+                    <div>
+                        <h2 class="form-card__title">Paid Packs (Gumroad)</h2>
+                        <p class="form-card__subtitle">Link the paid packs so customers can purchase instantly.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -258,10 +329,16 @@
         </div>
 
         <!-- SEO Optimization -->
-        <div class="form-card">
+        <div class="form-card" id="section-seo">
             <div class="form-card__header">
-                <div class="form-card__icon">🔍</div>
-                <h2 class="form-card__title">SEO Optimization</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🔍</div>
+                    <div>
+                        <h2 class="form-card__title">SEO Optimization</h2>
+                        <p class="form-card__subtitle">Improve ranking with a clear title and description.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Optional</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -283,10 +360,16 @@
         </div>
 
         <!-- Additional Fields (Optional) -->
-        <div class="form-card form-card--optional">
+        <div class="form-card form-card--optional" id="section-optional">
             <div class="form-card__header">
-                <div class="form-card__icon">⚙️</div>
-                <h2 class="form-card__title">Additional Details (Optional)</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">⚙️</div>
+                    <div>
+                        <h2 class="form-card__title">Additional Details (Optional)</h2>
+                        <p class="form-card__subtitle">Extra technical notes and attributes for advanced buyers.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--optional">Optional</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -371,7 +454,7 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="form-actions">
+        <div class="form-actions" id="section-publish">
             <div class="form-toggles">
                 <label class="form-checkbox">
                     {{ form.is_published() }}
@@ -393,6 +476,47 @@
                     <span class="status-indicator">Status: <strong>Draft</strong></span>
                 </div>
             </div>
+        </div>
+            </div>
+            <aside class="admin-form__aside" aria-label="Publishing tips">
+                <div class="aside-card aside-card--preview">
+                    <div class="aside-preview__eyebrow">Live preview</div>
+                    <div class="aside-preview__title" data-preview-title>Untitled plan</div>
+                    <div class="aside-preview__meta">
+                        <span data-preview-type>Plan type</span>
+                        <span class="aside-preview__dot" aria-hidden="true"></span>
+                        <span data-preview-price>Pack 2: $0.00</span>
+                    </div>
+                    <div class="aside-preview__chips" data-preview-categories>
+                        <span class="aside-preview__chip">Categories appear here</span>
+                    </div>
+                    <p class="aside-preview__hint">Values update as you type and select categories.</p>
+                </div>
+                <div class="aside-card">
+                    <h3>Publish readiness</h3>
+                    <ul class="aside-list">
+                        <li>Confirm title, type, and at least one category.</li>
+                        <li>Upload a cover image and the free PDF.</li>
+                        <li>Align pricing with Gumroad packs.</li>
+                    </ul>
+                </div>
+                <div class="aside-card">
+                    <h3>Quality tips</h3>
+                    <ul class="aside-list">
+                        <li>Use a short description under 160 characters.</li>
+                        <li>Include metric + imperial dimensions when possible.</li>
+                        <li>Highlight unique features near the top.</li>
+                    </ul>
+                </div>
+                <div class="aside-card aside-card--accent">
+                    <h3>Shortcuts</h3>
+                    <div class="aside-links">
+                        <a href="#section-media">Jump to media</a>
+                        <a href="#section-pricing">Jump to pricing</a>
+                        <a href="#section-publish">Go to publish</a>
+                    </div>
+                </div>
+            </aside>
         </div>
     </form>
 </div>
@@ -546,6 +670,73 @@
 
         document.querySelectorAll('[data-cropper]').forEach(initCropperField);
 
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const id = entry.target.getAttribute('id');
+                const chip = document.querySelector(`.admin-form__chip[href="#${id}"]`);
+                if (!chip) return;
+                if (entry.isIntersecting) {
+                    chip.classList.add('is-active');
+                } else {
+                    chip.classList.remove('is-active');
+                }
+            });
+        }, { rootMargin: '-30% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+        document.querySelectorAll('.form-card').forEach(section => observer.observe(section));
+
+        function initLivePreview() {
+            const titleInput = document.getElementById('title');
+            const typeSelect = document.getElementById('plan_type');
+            const priceInput = document.getElementById('price_pack_2');
+            const previewTitle = document.querySelector('[data-preview-title]');
+            const previewType = document.querySelector('[data-preview-type]');
+            const previewPrice = document.querySelector('[data-preview-price]');
+            const previewCategories = document.querySelector('[data-preview-categories]');
+
+            if (!previewTitle || !previewType || !previewPrice || !previewCategories) return;
+
+            function updatePreview() {
+                const titleValue = titleInput?.value?.trim();
+                previewTitle.textContent = titleValue || 'Untitled plan';
+
+                const typeOption = typeSelect?.selectedOptions?.[0]?.textContent || 'Plan type';
+                previewType.textContent = typeOption;
+
+                const priceValue = priceInput?.value;
+                previewPrice.textContent = priceValue ? `Pack 2: $${Number(priceValue).toFixed(2)}` : 'Pack 2: $0.00';
+
+                const checkedCategories = Array.from(document.querySelectorAll('input[name="category_ids"]:checked'))
+                    .map(input => input.nextElementSibling?.textContent?.trim())
+                    .filter(Boolean)
+                    .slice(0, 4);
+
+                previewCategories.innerHTML = '';
+                if (checkedCategories.length === 0) {
+                    previewCategories.innerHTML = '<span class="aside-preview__chip">Categories appear here</span>';
+                } else {
+                    checkedCategories.forEach(label => {
+                        const chip = document.createElement('span');
+                        chip.className = 'aside-preview__chip';
+                        chip.textContent = label;
+                        previewCategories.appendChild(chip);
+                    });
+                }
+            }
+
+            [titleInput, typeSelect, priceInput].forEach(el => {
+                if (!el) return;
+                el.addEventListener('input', updatePreview);
+                el.addEventListener('change', updatePreview);
+            });
+
+            document.querySelectorAll('input[name="category_ids"]').forEach(el => {
+                el.addEventListener('change', updatePreview);
+            });
+
+            updatePreview();
+        }
+
         function parseNumber(value) {
             const num = Number.parseFloat(value);
             return Number.isFinite(num) ? num : null;
@@ -618,6 +809,7 @@
         }
 
         initMetricImperialPreview();
+        initLivePreview();
     })();
 </script>
 
