@@ -118,6 +118,7 @@ class ContactForm(FlaskForm):
         DataRequired(message='Message is required'),
         Length(min=10, max=2000, message='Message must be between 10 and 2000 characters')
     ])
+    website = StringField('Website', validators=[Optional(), Length(max=120)])
     inquiry_type = SelectField(
         'Inquiry type',
         choices=[

@@ -13,7 +13,7 @@ from flask import send_file, abort
 from datetime import datetime
 from app.models import HousePlan, Category, Order, ContactMessage
 from app.forms import ContactForm, SearchForm
-from app.extensions import db, mail
+from app.extensions import db, mail, limiter
 from app.seo import generate_meta_tags, generate_product_schema, generate_breadcrumb_schema, generate_sitemap
 from flask_mail import Message as MailMessage
 from sqlalchemy import or_, func, cast
@@ -29,9 +29,21 @@ from app.utils.visitor_tracking import tag_visit_identity
 from werkzeug.exceptions import HTTPException
 import traceback
 from sqlalchemy.exc import SQLAlchemyError
+from email_validator import validate_email, EmailNotValidError
+import re
 
 # Create Blueprint
 main_bp = Blueprint('main', __name__)
+
+
+_SPAM_URL_PATTERN = re.compile(r'(https?://|www\.)', re.IGNORECASE)
+
+
+def _looks_like_spam(message: str) -> bool:
+    if not message:
+        return False
+    max_urls = int(current_app.config.get('SPAM_MAX_URLS', 3) or 3)
+    return len(_SPAM_URL_PATTERN.findall(message)) >= max_urls
 
 
 NARRATIVE_FILTERS = {
@@ -1002,12 +1014,19 @@ def compare_data():
 
 
 @main_bp.route('/newsletter', methods=['POST'])
+@limiter.limit('10 per hour')
 def newsletter_signup():
     payload = request.get_json(silent=True) or request.form
     email = (payload.get('email') if payload else '') or ''
     email = email.strip()
     if not email:
         return jsonify({'ok': False, 'message': 'Please enter an email.'}), 400
+
+    try:
+        valid = validate_email(email, check_deliverability=False)
+        email = valid.normalized
+    except EmailNotValidError:
+        return jsonify({'ok': False, 'message': 'Please enter a valid email.'}), 400
 
     record = ContactMessage(
         name='Newsletter subscriber',
@@ -1072,6 +1091,7 @@ def faq():
     return render_template('faq.html', meta=meta, faqs=faqs)
 
 @main_bp.route('/contact', methods=['GET', 'POST'])
+@limiter.limit('5 per minute; 30 per hour')
 def contact():
     """Contact page with form"""
     
@@ -1105,7 +1125,23 @@ def contact():
         url=url_for('main.contact', _external=True)
     )
     
+    success_message = 'Thank you! Your message has been sent. We will get back to you shortly.'
+
+    def _success_response():
+        if request.headers.get('X-Requested-With') == 'fetch' or request.accept_mimetypes.accept_json:
+            return jsonify({'ok': True, 'message': success_message})
+        flash(success_message, 'success')
+        return redirect(url_for('main.contact'))
+
     if form.validate_on_submit():
+        if form.website.data:
+            current_app.logger.info('Contact form honeypot triggered from %s', request.remote_addr)
+            return _success_response()
+
+        if _looks_like_spam(form.message.data):
+            current_app.logger.info('Contact form blocked as spam from %s', request.remote_addr)
+            return _success_response()
+
         selected_plan = plan_map.get(form.plan_reference.data)
         plan_label = f"{selected_plan.title} ({selected_plan.reference_code})" if selected_plan else None
 
@@ -1152,8 +1188,6 @@ def contact():
             flash("We're sorry — we couldn't save your message right now. Please try again shortly or email entreprise2rc@gmail.com and we'll assist you.", 'danger')
             return render_template('contact.html', form=form, meta=meta, plan_options=plan_options)
 
-        # Guaranteed user confirmation: always show success immediately after DB commit.
-        success_message = 'Thank you! Your message has been sent. We will get back to you shortly.'
         # For XHR/JSON clients, return JSON success response.
         if request.headers.get('X-Requested-With') == 'fetch' or request.accept_mimetypes.accept_json:
             # Attempt background-safe email operations but do not block response.

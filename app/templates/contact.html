@@ -21,6 +21,13 @@
         <form id="contact-form" method="post" enctype="multipart/form-data" class="contact-form" novalidate>
             {{ form.hidden_tag() }}
 
+            <div class="hp-field" aria-hidden="true">
+                <label class="form-field">
+                    <span>{{ form.website.label.text }}</span>
+                    {{ form.website(class="form-input", tabindex="-1", autocomplete="off") }}
+                </label>
+            </div>
+
             <div class="form-row">
                 <label class="form-field">
                     <span><i class="fa-solid fa-user" aria-hidden="true"></i>{{ form.name.label.text }}</span>
@@ -247,6 +254,14 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
     margin: 0 0 18px;
+}
+.hp-field {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
 }
 .contact-action {
     display: flex;

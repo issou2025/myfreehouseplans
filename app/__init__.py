@@ -7,7 +7,7 @@ Flask application instances with different configurations.
 
 from flask import Flask, render_template
 from app.config import config
-from app.extensions import db, migrate, login_manager, mail
+from app.extensions import db, migrate, login_manager, mail, limiter
 from datetime import datetime
 import os
 import importlib
@@ -255,6 +255,9 @@ def create_app(config_name='default'):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     # Ensure protected uploads folder exists
     os.makedirs(app.config.get('PROTECTED_UPLOAD_FOLDER', app.config['UPLOAD_FOLDER']), exist_ok=True)
+
+    # Initialize extensions
+    limiter.init_app(app)
 
     # GeoIP (read-only) initialization
     project_root = os.path.abspath(os.path.join(app.root_path, os.pardir))

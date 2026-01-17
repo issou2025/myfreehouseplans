@@ -68,6 +68,10 @@ class Config:
     SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+
+    # Rate limiting (Flask-Limiter)
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+    RATELIMIT_HEADERS_ENABLED = True
     
     # SEO Configuration
     SITE_NAME = 'MyFreeHousePlans'
@@ -77,6 +81,9 @@ class Config:
     
     # Admin configuration
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@myfreehouseplans.com')
+
+    # Spam heuristics
+    SPAM_MAX_URLS = int(os.environ.get('SPAM_MAX_URLS', 3))
 
     # Cloudinary (Render): provide CLOUDINARY_URL in environment.
     CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
