@@ -293,7 +293,7 @@ class PowerfulPostForm(FlaskForm):
             FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Images only.'),
         ],
     )
-    linked_product_id = SelectField('Link this article to a plan', coerce=int, validators=[Optional()])
+    plan_id = SelectField('Link this article to a plan', coerce=int, validators=[Optional()])
     status = SelectField(
         'Status',
         choices=[
@@ -309,7 +309,7 @@ class PowerfulPostForm(FlaskForm):
         super().__init__(*args, **kwargs)
         plans = HousePlan.query.order_by(HousePlan.title.asc()).all()
         choices = [(0, 'No linked plan')] + [(plan.id, f"#{plan.reference_code} — {plan.title}") for plan in plans]
-        self.linked_product_id.choices = choices
+        self.plan_id.choices = choices
     save_draft = SubmitField('Save Draft')
 
     def _is_draft_submission(self):

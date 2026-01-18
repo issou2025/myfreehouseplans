@@ -244,7 +244,7 @@ class HousePlan(db.Model):
         back_populates='plans',
         lazy='selectin',
     )
-    blog_posts = db.relationship('BlogPost', backref='linked_plan', lazy='selectin')
+    blog_posts = db.relationship('BlogPost', back_populates='linked_plan', lazy='selectin')
 
     @property
     def category(self):
@@ -608,12 +608,13 @@ class BlogPost(db.Model):
     meta_description = db.Column(db.String(160))
     content = db.Column(db.Text, nullable=False)
     cover_image = db.Column(db.String(600))
-    linked_product_id = db.Column(
+    plan_id = db.Column(
         db.Integer,
         db.ForeignKey('house_plans.id', ondelete='SET NULL'),
         nullable=True,
         index=True,
     )
+    linked_plan = db.relationship('HousePlan', back_populates='blog_posts')
     status = db.Column(
         db.Enum(*STATUS_CHOICES, name='blog_post_status'),
         default=STATUS_DRAFT,
