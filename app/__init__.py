@@ -82,6 +82,44 @@ def _force_create_tables(app) -> None:
         except Exception as exc:
             _safe_log(app, 'warning', '⚠ Could not verify schema completeness (continuing): %s', exc, exc_info=True)
 
+        # 3b) Emergency safety net (Render / production): create ONLY blog_posts if missing.
+        # This is non-destructive: it does NOT drop or alter existing tables.
+        # Prefer migrations, but this prevents total site failure when Render releaseCommand
+        # does not execute (no shell access).
+        try:
+            inspector = inspect(db.engine)
+            tables = set(inspector.get_table_names())
+            if 'blog_posts' not in tables:
+                try:
+                    from app.models import BlogPost
+
+                    # Ensure Postgres ENUM exists before table create.
+                    status_type = getattr(BlogPost.__table__.c, 'status', None)
+                    status_type = getattr(status_type, 'type', None)
+                    if status_type is not None and hasattr(status_type, 'create'):
+                        try:
+                            status_type.create(db.engine, checkfirst=True)
+                        except Exception:
+                            # Do not block startup on enum creation quirks.
+                            pass
+
+                    BlogPost.__table__.create(bind=db.engine, checkfirst=True)
+                except Exception:
+                    # Critical: clear aborted transaction so later queries don't hit
+                    # psycopg2.errors.InFailedSqlTransaction.
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                    # Keep logging minimal; avoid crashing startup.
+                    _safe_log(app, 'warning', '⚠ Startup DB sync: could not create blog_posts (continuing)', exc_info=True)
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            _safe_log(app, 'warning', '⚠ Startup DB sync check failed (continuing)', exc_info=True)
+
         # 4) Patch critical columns (non-fatal)
         try:
             inspector = inspect(db.engine)

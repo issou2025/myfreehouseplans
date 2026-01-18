@@ -19,3 +19,6 @@ Thumbs.db
 .vscode/
 logs/
 *.log
+
+# Local one-off test scripts
+test_blog_table.py
