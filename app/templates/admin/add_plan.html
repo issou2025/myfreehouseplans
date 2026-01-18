@@ -15,40 +15,6 @@
         </div>
     </header>
 
-    <section class="admin-meta-bar" aria-label="Plan creation status">
-        <div class="admin-meta-pill admin-meta-pill--draft"><i class="fa-regular fa-circle-dot" aria-hidden="true"></i> Draft in progress</div>
-        <div class="admin-meta-pill admin-meta-pill--tip"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> Optimized for mobile entry</div>
-        <div class="admin-meta-pill admin-meta-pill--muted"><i class="fa-regular fa-floppy-disk" aria-hidden="true"></i> Use Save Draft frequently</div>
-        <div class="admin-meta-actions">
-            <a class="admin-meta-link" href="#section-media"><i class="fa-regular fa-image" aria-hidden="true"></i> Media</a>
-            <a class="admin-meta-link" href="#section-pricing"><i class="fa-solid fa-tag" aria-hidden="true"></i> Pricing</a>
-            <a class="admin-meta-link" href="#section-publish"><i class="fa-solid fa-rocket" aria-hidden="true"></i> Publish</a>
-        </div>
-    </section>
-
-    <section class="admin-quick-grid" aria-label="Plan creation guidance">
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-            <div>
-                <h3>Start with basics</h3>
-                <p>Title, plan type, and categories drive discovery. Keep them crisp and searchable.</p>
-            </div>
-        </article>
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-            <div>
-                <h3>Confirm dimensions</h3>
-                <p>Enter both metric and imperial values to keep conversion hints accurate.</p>
-            </div>
-        </article>
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-camera" aria-hidden="true"></i>
-            <div>
-                <h3>Upload a hero image</h3>
-                <p>Crop a clean cover preview before publishing to keep listings consistent.</p>
-            </div>
-        </article>
-    </section>
 
     {% if form.errors %}
     <div class="form-alert form-alert--error" role="alert">
@@ -489,45 +455,6 @@
             </div>
         </div>
             </div>
-            <aside class="admin-form__aside" aria-label="Publishing tips">
-                <div class="aside-card aside-card--preview">
-                    <div class="aside-preview__eyebrow">Live preview</div>
-                    <div class="aside-preview__title" data-preview-title>Untitled plan</div>
-                    <div class="aside-preview__meta">
-                        <span data-preview-type>Plan type</span>
-                        <span class="aside-preview__dot" aria-hidden="true"></span>
-                        <span data-preview-price>Pack 2: $0.00</span>
-                    </div>
-                    <div class="aside-preview__chips" data-preview-categories>
-                        <span class="aside-preview__chip">Categories appear here</span>
-                    </div>
-                    <p class="aside-preview__hint">Values update as you type and select categories.</p>
-                </div>
-                <div class="aside-card">
-                    <h3>Publish readiness</h3>
-                    <ul class="aside-list">
-                        <li>Confirm title, type, and at least one category.</li>
-                        <li>Upload a cover image and the free PDF.</li>
-                        <li>Align pricing with Gumroad packs.</li>
-                    </ul>
-                </div>
-                <div class="aside-card">
-                    <h3>Quality tips</h3>
-                    <ul class="aside-list">
-                        <li>Use a short description under 160 characters.</li>
-                        <li>Include metric + imperial dimensions when possible.</li>
-                        <li>Highlight unique features near the top.</li>
-                    </ul>
-                </div>
-                <div class="aside-card aside-card--accent">
-                    <h3>Shortcuts</h3>
-                    <div class="aside-links">
-                        <a href="#section-media">Jump to media</a>
-                        <a href="#section-pricing">Jump to pricing</a>
-                        <a href="#section-publish">Go to publish</a>
-                    </div>
-                </div>
-            </aside>
         </div>
     </form>
 </div>
@@ -724,57 +651,6 @@
 
         progressSections.forEach(section => progressObserver.observe(section));
 
-        function initLivePreview() {
-            const titleInput = document.getElementById('title');
-            const typeSelect = document.getElementById('plan_type');
-            const priceInput = document.getElementById('price_pack_2');
-            const previewTitle = document.querySelector('[data-preview-title]');
-            const previewType = document.querySelector('[data-preview-type]');
-            const previewPrice = document.querySelector('[data-preview-price]');
-            const previewCategories = document.querySelector('[data-preview-categories]');
-
-            if (!previewTitle || !previewType || !previewPrice || !previewCategories) return;
-
-            function updatePreview() {
-                const titleValue = titleInput?.value?.trim();
-                previewTitle.textContent = titleValue || 'Untitled plan';
-
-                const typeOption = typeSelect?.selectedOptions?.[0]?.textContent || 'Plan type';
-                previewType.textContent = typeOption;
-
-                const priceValue = priceInput?.value;
-                previewPrice.textContent = priceValue ? `Pack 2: $${Number(priceValue).toFixed(2)}` : 'Pack 2: $0.00';
-
-                const checkedCategories = Array.from(document.querySelectorAll('input[name="category_ids"]:checked'))
-                    .map(input => input.nextElementSibling?.textContent?.trim())
-                    .filter(Boolean)
-                    .slice(0, 4);
-
-                previewCategories.innerHTML = '';
-                if (checkedCategories.length === 0) {
-                    previewCategories.innerHTML = '<span class="aside-preview__chip">Categories appear here</span>';
-                } else {
-                    checkedCategories.forEach(label => {
-                        const chip = document.createElement('span');
-                        chip.className = 'aside-preview__chip';
-                        chip.textContent = label;
-                        previewCategories.appendChild(chip);
-                    });
-                }
-            }
-
-            [titleInput, typeSelect, priceInput].forEach(el => {
-                if (!el) return;
-                el.addEventListener('input', updatePreview);
-                el.addEventListener('change', updatePreview);
-            });
-
-            document.querySelectorAll('input[name="category_ids"]').forEach(el => {
-                el.addEventListener('change', updatePreview);
-            });
-
-            updatePreview();
-        }
 
         function parseNumber(value) {
             const num = Number.parseFloat(value);
@@ -848,7 +724,6 @@
         }
 
         initMetricImperialPreview();
-        initLivePreview();
     })();
 </script>
 
