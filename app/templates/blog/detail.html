@@ -23,8 +23,8 @@
             {% endif %}
 
                 <div class="blog-article__content" itemprop="articleBody">
-                    {{ render_richtext(post.content) }}
-            </div>
+                    {{ post.content|safe }}
+                </div>
 
             {% if post.linked_plan %}
             <section class="blog-cta" aria-label="Linked plan">
