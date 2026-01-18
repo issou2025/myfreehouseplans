@@ -63,6 +63,90 @@ def _force_create_tables(app) -> None:
             _safe_log(app, 'error', '✗ Failed to import models during bootstrap (continuing): %s', exc, exc_info=True)
             return
 
+        # 2b) Automated migration check (Render/no-shell safety).
+        # If migrations are pending AND the database is already under Alembic control,
+        # apply them automatically. This fixes missing columns/tables that can break
+        # admin writes (e.g., adding plans) without dropping any data.
+        if os.environ.get('SKIP_STARTUP_MIGRATIONS') != '1':
+            try:
+                inspector = inspect(db.engine)
+                existing_tables = set(inspector.get_table_names())
+
+                # Only run programmatic upgrades when we can confirm Alembic is managing
+                # this database. If alembic_version is missing, upgrading from base may
+                # try to recreate tables and fail.
+                if 'alembic_version' in existing_tables:
+                    current_rev = None
+                    try:
+                        current_rev = db.session.execute(text('SELECT version_num FROM alembic_version')).scalar()
+                        db.session.commit()
+                    except Exception:
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+
+                    if current_rev:
+                        # Acquire a Postgres advisory lock to avoid multi-worker races.
+                        got_lock = True
+                        lock_key = 921337401  # stable app-specific lock id
+                        dialect = getattr(db.engine.dialect, 'name', '')
+                        if dialect == 'postgresql':
+                            try:
+                                got_lock = bool(
+                                    db.session.execute(
+                                        text('SELECT pg_try_advisory_lock(:k)'),
+                                        {'k': lock_key},
+                                    ).scalar()
+                                )
+                                db.session.commit()
+                            except Exception:
+                                got_lock = False
+                                try:
+                                    db.session.rollback()
+                                except Exception:
+                                    pass
+
+                        if got_lock:
+                            try:
+                                from flask_migrate import upgrade as alembic_upgrade
+
+                                alembic_upgrade()
+                                # Ensure no stale/failed transaction leaks into request handling.
+                                try:
+                                    db.session.remove()
+                                except Exception:
+                                    pass
+                            except Exception:
+                                # Never crash startup due to migration issues.
+                                try:
+                                    db.session.rollback()
+                                except Exception:
+                                    pass
+                                _safe_log(app, 'warning', '⚠ Startup migration upgrade failed (continuing)', exc_info=True)
+                            finally:
+                                if dialect == 'postgresql':
+                                    try:
+                                        db.session.execute(text('SELECT pg_advisory_unlock(:k)'), {'k': lock_key})
+                                        db.session.commit()
+                                    except Exception:
+                                        try:
+                                            db.session.rollback()
+                                        except Exception:
+                                            pass
+                        else:
+                            # Another worker/process is handling upgrades.
+                            try:
+                                db.session.remove()
+                            except Exception:
+                                pass
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                _safe_log(app, 'warning', '⚠ Startup migration check failed (continuing)', exc_info=True)
+
         # 3) Non-fatal schema sanity check
         try:
             inspector = inspect(db.engine)
