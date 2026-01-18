@@ -87,8 +87,19 @@
                     </div>
                 </div>
 
+                <div class="admin-progress" aria-label="Plan creation progress">
+                    <div class="admin-progress__meta">
+                        <span class="admin-progress__label">Section:</span>
+                        <strong class="admin-progress__current" data-progress-current>Basic Information</strong>
+                    </div>
+                    <div class="admin-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <span class="admin-progress__bar" data-progress-bar></span>
+                    </div>
+                    <span class="admin-progress__percent" data-progress-percent>0%</span>
+                </div>
+
         <!-- Basic Information -->
-        <div class="form-card" id="section-basics">
+        <div class="form-card" id="section-basics" data-section-label="Basic Information">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">📝</div>
@@ -136,7 +147,7 @@
         </div>
 
         <!-- Editorial depth -->
-        <div class="form-card" id="section-editorial">
+        <div class="form-card" id="section-editorial" data-section-label="Editorial">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">🧭</div>
@@ -164,7 +175,7 @@
         </div>
 
         <!-- Architectural Details -->
-        <div class="form-card" id="section-architecture">
+        <div class="form-card" id="section-architecture" data-section-label="Architecture">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">🏗️</div>
@@ -211,7 +222,7 @@
         </div>
 
         <!-- Full Description -->
-        <div class="form-card" id="section-description">
+        <div class="form-card" id="section-description" data-section-label="Description">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">📄</div>
@@ -231,7 +242,7 @@
         </div>
 
         <!-- Files & Media -->
-        <div class="form-card" id="section-media">
+        <div class="form-card" id="section-media" data-section-label="Files & Uploads">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">📷</div>
@@ -267,7 +278,7 @@
         </div>
 
         <!-- Pack Pricing -->
-        <div class="form-card" id="section-pricing">
+        <div class="form-card" id="section-pricing" data-section-label="Pricing & Packs">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">💰</div>
@@ -301,7 +312,7 @@
         </div>
 
         <!-- Paid Packs (Gumroad) -->
-        <div class="form-card" id="section-gumroad">
+        <div class="form-card" id="section-gumroad" data-section-label="Gumroad Links">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">💎</div>
@@ -329,7 +340,7 @@
         </div>
 
         <!-- SEO Optimization -->
-        <div class="form-card" id="section-seo">
+        <div class="form-card" id="section-seo" data-section-label="SEO">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">🔍</div>
@@ -360,7 +371,7 @@
         </div>
 
         <!-- Additional Fields (Optional) -->
-        <div class="form-card form-card--optional" id="section-optional">
+        <div class="form-card form-card--optional" id="section-optional" data-section-label="Optional Details">
             <div class="form-card__header">
                 <div class="form-card__heading">
                     <div class="form-card__icon">⚙️</div>
@@ -454,7 +465,7 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="form-actions" id="section-publish">
+        <div class="form-actions form-actions--sticky" id="section-publish" data-section-label="Publishing Settings">
             <div class="form-toggles">
                 <label class="form-checkbox">
                     {{ form.is_published() }}
@@ -684,6 +695,34 @@
         }, { rootMargin: '-30% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
 
         document.querySelectorAll('.form-card').forEach(section => observer.observe(section));
+
+        const progressBar = document.querySelector('[data-progress-bar]');
+        const progressPercent = document.querySelector('[data-progress-percent]');
+        const progressCurrent = document.querySelector('[data-progress-current]');
+        const progressTrack = document.querySelector('.admin-progress__track');
+        const progressSections = Array.from(document.querySelectorAll('.form-card'));
+
+        function updateProgress(index) {
+            if (!progressBar || !progressPercent || !progressCurrent || !progressTrack) return;
+            const total = progressSections.length;
+            const safeIndex = Math.min(Math.max(index, 0), total - 1);
+            const percent = total ? Math.round(((safeIndex + 1) / total) * 100) : 0;
+            const label = progressSections[safeIndex]?.getAttribute('data-section-label') || 'Section';
+            progressBar.style.width = `${percent}%`;
+            progressPercent.textContent = `${percent}%`;
+            progressCurrent.textContent = label;
+            progressTrack.setAttribute('aria-valuenow', String(percent));
+        }
+
+        const progressObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const index = progressSections.indexOf(entry.target);
+                if (index >= 0) updateProgress(index);
+            });
+        }, { rootMargin: '-40% 0px -40% 0px', threshold: [0.1, 0.4, 0.7] });
+
+        progressSections.forEach(section => progressObserver.observe(section));
 
         function initLivePreview() {
             const titleInput = document.getElementById('title');
