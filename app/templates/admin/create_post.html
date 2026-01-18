@@ -92,6 +92,7 @@
                     <div class="form-group">
                         {{ form.content.label(class="form-label") }}
                         {{ form.content() }}
+                        {{ ckeditor.config(name='content') }}
                     </div>
                 </div>
 
@@ -122,8 +123,6 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ ckeditor.load() }}
-{{ ckeditor.config(name='content') }}
 <script>
     (function () {
         const dropzone = document.querySelector('[data-dropzone]');
