@@ -244,6 +244,7 @@ class HousePlan(db.Model):
         back_populates='plans',
         lazy='selectin',
     )
+    blog_posts = db.relationship('BlogPost', backref='linked_plan', lazy='selectin')
 
     @property
     def category(self):
@@ -588,6 +589,47 @@ class HousePlan(db.Model):
 
     def __repr__(self):
         return f'<HousePlan {self.title}>'
+
+
+class BlogPost(db.Model):
+    """Blog post model for editorial content."""
+
+    __tablename__ = 'blog_posts'
+
+    STATUS_DRAFT = 'draft'
+    STATUS_PUBLISHED = 'published'
+    STATUS_ARCHIVED = 'archived'
+    STATUS_CHOICES = (STATUS_DRAFT, STATUS_PUBLISHED, STATUS_ARCHIVED)
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    meta_title = db.Column(db.String(150))
+    meta_description = db.Column(db.String(160))
+    content = db.Column(db.Text, nullable=False)
+    cover_image = db.Column(db.String(600))
+    linked_product_id = db.Column(
+        db.Integer,
+        db.ForeignKey('house_plans.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
+    status = db.Column(
+        db.Enum(*STATUS_CHOICES, name='blog_post_status'),
+        default=STATUS_DRAFT,
+        nullable=False,
+        index=True,
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.slug and self.title:
+            self.slug = slugify(self.title)
+
+    def __repr__(self):
+        return f'<BlogPost {self.title}>'
 
 
 class PlanFAQ(db.Model):
