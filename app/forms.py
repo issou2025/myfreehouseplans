@@ -323,18 +323,15 @@ class PowerfulPostForm(FlaskForm):
 
         original_validators = {
             'title': self.title.validators,
-            'description': self.description.validators,
-            'price': self.price.validators,
+            'content': self.content.validators,
         }
         try:
             self.title.validators = [Optional()]
-            self.description.validators = [Optional()]
-            self.price.validators = [Optional()]
+            self.content.validators = [Optional()]
             return super().validate(extra_validators=extra_validators)
         finally:
             self.title.validators = original_validators['title']
-            self.description.validators = original_validators['description']
-            self.price.validators = original_validators['price']
+            self.content.validators = original_validators['content']
 
     def validate_category_ids(self, category_ids):
         # Only enforce category requirement on final save, not on draft save
