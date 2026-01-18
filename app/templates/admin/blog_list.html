@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">✍️ Blog CMS</p>
+            <h1 class="admin-title">Blog Posts</h1>
+            <p class="admin-subtitle">Manage editorial content and link posts to plans.</p>
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--primary" href="{{ url_for('blog.create') }}">
+                <span class="btn-admin__icon">✨</span>
+                <span>New Article</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="admin-filter-card">
+        <form class="admin-filter-form" method="get" action="{{ url_for('blog.admin_list') }}">
+            <label>
+                <span>Search</span>
+                <input type="search" name="q" value="{{ query }}" placeholder="Search articles">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="">All</option>
+                    <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="published" {% if status == 'published' %}selected{% endif %}>Published</option>
+                    <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </label>
+            <button class="btn btn-primary" type="submit">Filter</button>
+        </form>
+    </div>
+
+    <div class="admin-table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Linked Plan</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td>
+                        <div class="plan-title">{{ post.title }}</div>
+                        <div class="muted">/{{ post.slug }}</div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-badge--{{ 'published' if post.status == 'published' else 'draft' }}">
+                            {{ post.status|capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if post.linked_plan %}
+                            <span class="badge badge--outline">{{ post.linked_plan.reference_code }}</span>
+                        {% else %}
+                            <span class="status-badge status-badge--neutral">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ post.updated_at.strftime('%b %d, %Y') }}</td>
+                    <td class="admin-table__actions">
+                        <a class="btn-action btn-action--edit" href="{{ url_for('blog.edit', post_id=post.id) }}">Edit</a>
+                        {% if post.status == 'published' %}
+                            <a class="btn-action btn-action--toggle" href="{{ url_for('blog.detail', slug=post.slug) }}">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="muted">No posts yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+        {% set endpoint = 'blog.admin_list' %}
+        {% include "_pagination.html" %}
+    {% endif %}
+</div>
+{% endblock %}
