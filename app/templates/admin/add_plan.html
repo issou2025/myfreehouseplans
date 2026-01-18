@@ -202,7 +202,6 @@
             <div class="form-group">
                 {{ form.description.label(class="form-label") }}
                 {{ form.description(class="form-textarea", rows=8, placeholder="Describe the house plan in detail...") }}
-                {{ ckeditor.config(name='description') }}
                 <p class="form-help">Write a complete description of the house plan, highlighting its features and benefits.</p>
                 {% for err in form.description.errors %}<span class="form-error">{{ err }}</span>{% endfor %}
             </div>
