@@ -206,6 +206,39 @@
     {# Main Content #}
     <main id="main" role="main" class="page-shell">
         {% block content %}{% endblock %}
+
+        {% if random_post %}
+            <section class="shell" aria-label="Recommended reading" style="margin-top: 2.5rem;">
+                <div class="glass" style="padding: 1.5rem; border-radius: 1rem;">
+                    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+                        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                        Recommended Reading
+                    </p>
+                    <h2 style="margin: 0 0 .75rem 0; font-family: 'Playfair Display', serif;">
+                        <a href="{{ url_for('blog.detail', slug=random_post.slug) }}" style="text-decoration: none;">
+                            {{ random_post.title }}
+                        </a>
+                    </h2>
+
+                    {% set promo_text = random_post.meta_description or (random_post.content|striptags) %}
+                    {% if promo_text %}
+                        <div style="opacity: .92; margin-bottom: 1rem;">
+                            {{ render_richtext(promo_text|truncate(240, True, '…')) }}
+                        </div>
+                    {% endif %}
+
+                    <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
+                        <a class="btn btn-primary" href="{{ url_for('blog.detail', slug=random_post.slug) }}">
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            Read article
+                        </a>
+                        <a class="btn btn-secondary" href="{{ url_for('blog.index') }}">
+                            Browse blog
+                        </a>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
     </main>
 
     <div id="compareInlineBar" class="compare-inline" aria-live="polite" hidden></div>

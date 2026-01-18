@@ -617,6 +617,46 @@ def register_template_processors(app):
             'geoip_country': get_country_for_ip,
         }
 
+    @app.context_processor
+    def inject_random_post():
+        """Inject a random published blog post on public pages (SEO promo).
+
+        Safety:
+            - Read-only: only SELECT queries.
+            - Never runs for admin routes.
+            - Fails closed (returns None) and rolls back on DB errors to avoid
+              poisoning the session.
+        """
+
+        try:
+            from flask import request
+        except Exception:
+            return {'random_post': None}
+
+        try:
+            if request.path.startswith('/admin'):
+                return {'random_post': None}
+        except Exception:
+            return {'random_post': None}
+
+        try:
+            from sqlalchemy import func
+            from app.models import BlogPost
+
+            post = (
+                BlogPost.query
+                .filter_by(status=BlogPost.STATUS_PUBLISHED)
+                .order_by(func.random())
+                .first()
+            )
+            return {'random_post': post}
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return {'random_post': None}
+
 
 def register_shell_context(app):
     """Register shell context for Flask CLI"""
