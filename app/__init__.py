@@ -551,6 +551,36 @@ def register_template_processors(app):
         from app.utils.geoip import get_country_for_ip, resolve_client_ip
         from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers, visible_starting_price
 
+        def render_richtext(value):
+            """Render blog content with paragraph breaks.
+
+            - If content already looks like HTML (CKEditor), return it as-is.
+            - If content is plain text, convert blank-line-separated paragraphs
+              to <p> blocks and preserve single newlines as <br>.
+            """
+
+            if value is None:
+                return ''
+
+            try:
+                from markupsafe import Markup, escape
+                import re
+
+                text_value = str(value)
+                # Heuristic: treat as HTML if it contains tags.
+                if '<' in text_value and '>' in text_value:
+                    return Markup(text_value)
+
+                paragraphs = [p for p in re.split(r'\n\s*\n', text_value) if p.strip()]
+                rendered = []
+                for p in paragraphs:
+                    safe_p = escape(p.strip()).replace('\n', Markup('<br>'))
+                    rendered.append(Markup('<p>') + safe_p + Markup('</p>'))
+                return Markup('').join(rendered)
+            except Exception:
+                # Absolute fallback: return raw text.
+                return str(value)
+
         def query_args(exclude=None):
             exclude = set(exclude or [])
             args = request.args.to_dict(flat=True)
@@ -580,6 +610,7 @@ def register_template_processors(app):
             'pack_visibility': pack_visibility,
             'filter_pack_tiers': filter_pack_tiers,
             'visible_starting_price': visible_starting_price,
+            'render_richtext': render_richtext,
             'query_args': query_args,
             'client_ip': visitor_ip,
             'visitor_country': visitor_country,

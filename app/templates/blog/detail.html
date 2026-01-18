@@ -22,8 +22,8 @@
                 </figure>
             {% endif %}
 
-            <div class="blog-article__content" itemprop="articleBody">
-                {{ post.content|safe }}
+                <div class="blog-article__content" itemprop="articleBody">
+                    {{ render_richtext(post.content) }}
             </div>
 
             {% if post.linked_plan %}

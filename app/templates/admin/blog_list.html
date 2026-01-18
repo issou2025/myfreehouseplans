@@ -71,6 +71,10 @@
                         {% if post.status == 'published' %}
                             <a class="btn-action btn-action--toggle" href="{{ url_for('blog.detail', slug=post.slug) }}">View</a>
                         {% endif %}
+                        <form method="post" action="{{ url_for('blog.delete', post_id=post.id) }}" style="display:inline" onsubmit="return confirm('Delete this blog post? This cannot be undone.');">
+                            {{ csrf_token() if csrf_token is defined else '' }}
+                            <button type="submit" class="btn-action btn-action--danger">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% else %}

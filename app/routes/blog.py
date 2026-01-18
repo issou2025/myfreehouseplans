@@ -67,7 +67,13 @@ def index():
             .filter(Category.slug == category)
         )
 
-    posts_query = posts_query.order_by(BlogPost.created_at.desc())
+    # Random display for a fresher editorial experience.
+    # NOTE: keep deterministic ordering when filtering/searching to avoid
+    # confusing pagination results.
+    if not query and not category:
+        posts_query = posts_query.order_by(func.random())
+    else:
+        posts_query = posts_query.order_by(BlogPost.created_at.desc())
     pagination = posts_query.paginate(page=page, per_page=9, error_out=False)
 
     meta = generate_meta_tags(
@@ -215,3 +221,22 @@ def edit(post_id):
             flash('A post with this slug already exists. Please choose another.', 'danger')
 
     return render_template('admin/create_post.html', form=form, post=post)
+
+
+@blog_bp.route('/admin/blog/<int:post_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete(post_id):
+    """Delete a blog post (admin-only)."""
+
+    post = BlogPost.query.get_or_404(post_id)
+    try:
+        db.session.delete(post)
+        db.session.commit()
+        flash('Blog post deleted.', 'info')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception('Failed to delete blog post %s: %s', post_id, exc)
+        flash('Unable to delete this post right now. Please try again.', 'danger')
+
+    return redirect(url_for('blog.admin_list'))
