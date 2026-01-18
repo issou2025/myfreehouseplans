@@ -138,7 +138,7 @@ def create():
             meta_description=form.meta_description.data.strip() if form.meta_description.data else None,
             content=form.content.data,
             cover_image=cover_path,
-            linked_product_id=form.linked_product_id.data or None,
+            plan_id=form.plan_id.data or None,
             status=form.status.data,
         )
 
@@ -203,7 +203,7 @@ def edit(post_id):
         post.meta_description = form.meta_description.data.strip() if form.meta_description.data else None
         post.content = form.content.data
         post.cover_image = cover_path
-        post.linked_product_id = form.linked_product_id.data or None
+        post.plan_id = form.plan_id.data or None
         post.status = form.status.data
 
         try:
