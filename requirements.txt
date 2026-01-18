@@ -31,4 +31,4 @@ geoip2==4.8.0
 
 # Date and Time
 python-dateutil==2.8.2
-flask-ckeditor
+flask-ckeditor==0.5.1

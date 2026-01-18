@@ -88,6 +88,11 @@ class Config:
     # Cloudinary (Render): provide CLOUDINARY_URL in environment.
     CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 
+    # CKEditor (Flask-CKEditor)
+    # Serve CKEditor assets locally to avoid CSP/CDN issues on Render.
+    CKEDITOR_SERVE_LOCAL = True
+    CKEDITOR_PKG_TYPE = 'standard'
+
 
 class DevelopmentConfig(Config):
     """Development environment configuration"""
