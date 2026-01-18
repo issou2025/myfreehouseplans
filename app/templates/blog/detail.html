@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<div class="reading-progress" aria-hidden="true">
+    <span class="reading-progress__bar" data-reading-progress></span>
+</div>
+
+<section class="section blog-article" aria-labelledby="article-heading">
+    <div class="shell blog-article__layout">
+        <article class="blog-article__main" itemscope itemtype="https://schema.org/Article">
+            <header class="blog-article__header">
+                <p class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Editorial</p>
+                <h1 id="article-heading" itemprop="headline">{{ post.title }}</h1>
+                <p class="blog-article__meta">{{ post.created_at.strftime('%B %d, %Y') }}</p>
+            </header>
+
+            {% if post.cover_image %}
+                <figure class="blog-article__cover">
+                    <img src="{{ upload_url(post.cover_image) }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
+                </figure>
+            {% endif %}
+
+            <div class="blog-article__content" itemprop="articleBody">
+                {{ post.content|safe }}
+            </div>
+
+            {% if post.linked_plan %}
+            <section class="blog-cta" aria-label="Linked plan">
+                <div class="blog-cta__content">
+                    <p class="eyebrow"><i class="fa-solid fa-tag" aria-hidden="true"></i> Featured Plan</p>
+                    <h2>{{ post.linked_plan.title }}</h2>
+                    <p>{{ post.linked_plan.short_description or post.linked_plan.description }}</p>
+                    {% set starting_price = visible_starting_price(post.linked_plan.pricing_tiers, pack_visibility) %}
+                    <div class="blog-cta__price">
+                        <span class="badge badge--outline">{{ post.linked_plan.reference_code }}</span>
+                        <strong>{% if starting_price %}From ${{ starting_price|round(0)|int }}{% else %}Free{% endif %}</strong>
+                    </div>
+                    <div class="blog-cta__actions">
+                        <a class="btn btn-primary" href="{{ url_for('main.pack_detail', slug=post.linked_plan.slug) }}">Buy plan</a>
+                        <a class="btn btn-ghost" href="{{ url_for('main.packs') }}">Browse all plans</a>
+                    </div>
+                </div>
+                {% if post.linked_plan.cover_image or post.linked_plan.main_image %}
+                <div class="blog-cta__media">
+                    {% set plan_image = post.linked_plan.cover_image or post.linked_plan.main_image %}
+                    <img src="{{ upload_url(plan_image) }}" alt="{{ post.linked_plan.title }}" loading="lazy" decoding="async">
+                </div>
+                {% endif %}
+            </section>
+            {% endif %}
+        </article>
+
+        <aside class="blog-article__aside" aria-label="Sidebar">
+            <div class="aside-card">
+                <h3>Most popular plans</h3>
+                <ul class="blog-aside-list">
+                    {% for plan in popular_plans %}
+                    <li>
+                        <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a>
+                        <span>{{ plan.reference_code }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </aside>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const bar = document.querySelector('[data-reading-progress]');
+        if (!bar) return;
+        function update() {
+            const doc = document.documentElement;
+            const scrollTop = doc.scrollTop || document.body.scrollTop;
+            const scrollHeight = doc.scrollHeight - doc.clientHeight;
+            const percent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+            bar.style.width = `${percent}%`;
+        }
+        document.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        update();
+    })();
+</script>
+{% endblock %}

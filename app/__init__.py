@@ -7,7 +7,7 @@ Flask application instances with different configurations.
 
 from flask import Flask, render_template
 from app.config import config
-from app.extensions import db, migrate, login_manager, mail, limiter
+from app.extensions import db, migrate, login_manager, mail, limiter, ckeditor
 from datetime import datetime
 import os
 import importlib
@@ -291,6 +291,7 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
+    ckeditor.init_app(app)
 
     # Zero-touch bootstrap (Render-friendly): force-create tables and NEVER
     # hard-fail startup if schema is incomplete.
@@ -366,11 +367,13 @@ def register_blueprints(app):
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
     from app.routes.health import health_bp
+    from app.routes.blog import blog_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(health_bp)  # No prefix - accessible at /health
+    app.register_blueprint(blog_bp)
 
 
 def register_error_handlers(app):
@@ -448,7 +451,7 @@ def register_shell_context(app):
     @app.shell_context_processor
     def make_shell_context():
         """Make database models available in Flask shell"""
-        from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor
+        from app.models import User, HousePlan, Category, Order, ContactMessage, Visitor, BlogPost
         return {
             'db': db,
             'User': User,
@@ -457,6 +460,7 @@ def register_shell_context(app):
             'Order': Order,
             'ContactMessage': ContactMessage,
             'Visitor': Visitor,
+            'BlogPost': BlogPost,
         }
 
 

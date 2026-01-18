@@ -15,29 +15,6 @@
         </div>
     </header>
 
-    <section class="admin-quick-grid" aria-label="Plan creation guidance">
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-            <div>
-                <h3>Start with basics</h3>
-                <p>Title, plan type, and categories drive discovery. Keep them crisp and searchable.</p>
-            </div>
-        </article>
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-            <div>
-                <h3>Confirm dimensions</h3>
-                <p>Enter both metric and imperial values to keep conversion hints accurate.</p>
-            </div>
-        </article>
-        <article class="admin-quick-card">
-            <i class="fa-solid fa-camera" aria-hidden="true"></i>
-            <div>
-                <h3>Upload a hero image</h3>
-                <p>Crop a clean cover preview before publishing to keep listings consistent.</p>
-            </div>
-        </article>
-    </section>
 
     {% if form.errors %}
     <div class="form-alert form-alert--error" role="alert">
@@ -58,11 +35,46 @@
     <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
 
+        <div class="admin-form__layout">
+            <div class="admin-form__main">
+                <div class="admin-form__toolbar" aria-label="Jump to section">
+                    <span class="admin-form__toolbar-label">Jump to:</span>
+                    <div class="admin-form__toolbar-actions">
+                        <a class="admin-form__chip" href="#section-basics">Basics</a>
+                        <a class="admin-form__chip" href="#section-editorial">Editorial</a>
+                        <a class="admin-form__chip" href="#section-architecture">Architecture</a>
+                        <a class="admin-form__chip" href="#section-description">Description</a>
+                        <a class="admin-form__chip" href="#section-media">Media</a>
+                        <a class="admin-form__chip" href="#section-pricing">Pricing</a>
+                        <a class="admin-form__chip" href="#section-gumroad">Gumroad</a>
+                        <a class="admin-form__chip" href="#section-seo">SEO</a>
+                        <a class="admin-form__chip" href="#section-optional">Optional</a>
+                        <a class="admin-form__chip admin-form__chip--primary" href="#section-publish">Publish</a>
+                    </div>
+                </div>
+
+                <div class="admin-progress" aria-label="Plan creation progress">
+                    <div class="admin-progress__meta">
+                        <span class="admin-progress__label">Section:</span>
+                        <strong class="admin-progress__current" data-progress-current>Basic Information</strong>
+                    </div>
+                    <div class="admin-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <span class="admin-progress__bar" data-progress-bar></span>
+                    </div>
+                    <span class="admin-progress__percent" data-progress-percent>0%</span>
+                </div>
+
         <!-- Basic Information -->
-        <div class="form-card">
+        <div class="form-card" id="section-basics" data-section-label="Basic Information">
             <div class="form-card__header">
-                <div class="form-card__icon">📝</div>
-                <h2 class="form-card__title">Basic Information</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📝</div>
+                    <div>
+                        <h2 class="form-card__title">Basic Information</h2>
+                        <p class="form-card__subtitle">Plan name, type, categories, and a short summary for listings.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--2">
                 <div class="form-group">
@@ -101,10 +113,16 @@
         </div>
 
         <!-- Editorial depth -->
-        <div class="form-card">
+        <div class="form-card" id="section-editorial" data-section-label="Editorial">
             <div class="form-card__header">
-                <div class="form-card__icon">🧭</div>
-                <h2 class="form-card__title">Editorial depth</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🧭</div>
+                    <div>
+                        <h2 class="form-card__title">Editorial depth</h2>
+                        <p class="form-card__subtitle">Describe the design intent, lifestyle fit, and customization options.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -123,10 +141,16 @@
         </div>
 
         <!-- Architectural Details -->
-        <div class="form-card">
+        <div class="form-card" id="section-architecture" data-section-label="Architecture">
             <div class="form-card__header">
-                <div class="form-card__icon">🏗️</div>
-                <h2 class="form-card__title">Architectural Details</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🏗️</div>
+                    <div>
+                        <h2 class="form-card__title">Architectural Details</h2>
+                        <p class="form-card__subtitle">Key dimensions, floor count, and area metrics for filtering.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -164,10 +188,16 @@
         </div>
 
         <!-- Full Description -->
-        <div class="form-card">
+        <div class="form-card" id="section-description" data-section-label="Description">
             <div class="form-card__header">
-                <div class="form-card__icon">📄</div>
-                <h2 class="form-card__title">Full Description</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📄</div>
+                    <div>
+                        <h2 class="form-card__title">Full Description</h2>
+                        <p class="form-card__subtitle">Write the full narrative shown on the plan detail page.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-group">
                 {{ form.description.label(class="form-label") }}
@@ -178,10 +208,16 @@
         </div>
 
         <!-- Files & Media -->
-        <div class="form-card">
+        <div class="form-card" id="section-media" data-section-label="Files & Uploads">
             <div class="form-card__header">
-                <div class="form-card__icon">📷</div>
-                <h2 class="form-card__title">Files & Media</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">📷</div>
+                    <div>
+                        <h2 class="form-card__title">Files & Media</h2>
+                        <p class="form-card__subtitle">Upload cover artwork and downloadable assets.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--2">
                 <div class="form-group image-cropper" data-cropper data-input-id="cover_image" data-preview-id="cover_image_preview">
@@ -208,10 +244,16 @@
         </div>
 
         <!-- Pack Pricing -->
-        <div class="form-card">
+        <div class="form-card" id="section-pricing" data-section-label="Pricing & Packs">
             <div class="form-card__header">
-                <div class="form-card__icon">💰</div>
-                <h2 class="form-card__title">Pack Pricing</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">💰</div>
+                    <div>
+                        <h2 class="form-card__title">Pack Pricing</h2>
+                        <p class="form-card__subtitle">Keep pricing aligned with Gumroad listings.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--required">Required</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -236,10 +278,16 @@
         </div>
 
         <!-- Paid Packs (Gumroad) -->
-        <div class="form-card">
+        <div class="form-card" id="section-gumroad" data-section-label="Gumroad Links">
             <div class="form-card__header">
-                <div class="form-card__icon">💎</div>
-                <h2 class="form-card__title">Paid Packs (Gumroad)</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">💎</div>
+                    <div>
+                        <h2 class="form-card__title">Paid Packs (Gumroad)</h2>
+                        <p class="form-card__subtitle">Link the paid packs so customers can purchase instantly.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Recommended</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -258,10 +306,16 @@
         </div>
 
         <!-- SEO Optimization -->
-        <div class="form-card">
+        <div class="form-card" id="section-seo" data-section-label="SEO">
             <div class="form-card__header">
-                <div class="form-card__icon">🔍</div>
-                <h2 class="form-card__title">SEO Optimization</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">🔍</div>
+                    <div>
+                        <h2 class="form-card__title">SEO Optimization</h2>
+                        <p class="form-card__subtitle">Improve ranking with a clear title and description.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag">Optional</span>
             </div>
             <div class="form-grid form-grid--1">
                 <div class="form-group">
@@ -283,10 +337,16 @@
         </div>
 
         <!-- Additional Fields (Optional) -->
-        <div class="form-card form-card--optional">
+        <div class="form-card form-card--optional" id="section-optional" data-section-label="Optional Details">
             <div class="form-card__header">
-                <div class="form-card__icon">⚙️</div>
-                <h2 class="form-card__title">Additional Details (Optional)</h2>
+                <div class="form-card__heading">
+                    <div class="form-card__icon">⚙️</div>
+                    <div>
+                        <h2 class="form-card__title">Additional Details (Optional)</h2>
+                        <p class="form-card__subtitle">Extra technical notes and attributes for advanced buyers.</p>
+                    </div>
+                </div>
+                <span class="form-card__tag form-card__tag--optional">Optional</span>
             </div>
             <div class="form-grid form-grid--3">
                 <div class="form-group">
@@ -371,7 +431,7 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="form-actions">
+        <div class="form-actions form-actions--sticky" id="section-publish" data-section-label="Publishing Settings">
             <div class="form-toggles">
                 <label class="form-checkbox">
                     {{ form.is_published() }}
@@ -392,6 +452,8 @@
                 <div class="form-status">
                     <span class="status-indicator">Status: <strong>Draft</strong></span>
                 </div>
+            </div>
+        </div>
             </div>
         </div>
     </form>
@@ -545,6 +607,50 @@
         }
 
         document.querySelectorAll('[data-cropper]').forEach(initCropperField);
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const id = entry.target.getAttribute('id');
+                const chip = document.querySelector(`.admin-form__chip[href="#${id}"]`);
+                if (!chip) return;
+                if (entry.isIntersecting) {
+                    chip.classList.add('is-active');
+                } else {
+                    chip.classList.remove('is-active');
+                }
+            });
+        }, { rootMargin: '-30% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+        document.querySelectorAll('.form-card').forEach(section => observer.observe(section));
+
+        const progressBar = document.querySelector('[data-progress-bar]');
+        const progressPercent = document.querySelector('[data-progress-percent]');
+        const progressCurrent = document.querySelector('[data-progress-current]');
+        const progressTrack = document.querySelector('.admin-progress__track');
+        const progressSections = Array.from(document.querySelectorAll('.form-card'));
+
+        function updateProgress(index) {
+            if (!progressBar || !progressPercent || !progressCurrent || !progressTrack) return;
+            const total = progressSections.length;
+            const safeIndex = Math.min(Math.max(index, 0), total - 1);
+            const percent = total ? Math.round(((safeIndex + 1) / total) * 100) : 0;
+            const label = progressSections[safeIndex]?.getAttribute('data-section-label') || 'Section';
+            progressBar.style.width = `${percent}%`;
+            progressPercent.textContent = `${percent}%`;
+            progressCurrent.textContent = label;
+            progressTrack.setAttribute('aria-valuenow', String(percent));
+        }
+
+        const progressObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const index = progressSections.indexOf(entry.target);
+                if (index >= 0) updateProgress(index);
+            });
+        }, { rootMargin: '-40% 0px -40% 0px', threshold: [0.1, 0.4, 0.7] });
+
+        progressSections.forEach(section => progressObserver.observe(section));
+
 
         function parseNumber(value) {
             const num = Number.parseFloat(value);

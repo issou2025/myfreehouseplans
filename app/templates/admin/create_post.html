@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header admin-header--form">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Blog CMS</p>
+            <h1 class="admin-title">{{ 'Edit Article' if post else 'Create Article' }}</h1>
+            <p class="admin-subtitle">Write high-converting content and link it to a plan.</p>
+        </div>
+    </header>
+
+    {% if form.errors %}
+    <div class="form-alert form-alert--error" role="alert">
+        <div class="form-alert__icon">⚠️</div>
+        <div class="form-alert__content">
+            <p class="form-alert__title">Please fix the following errors:</p>
+            <ul class="form-alert__list">
+                {% for field_errors in form.errors.values() %}
+                    {% for err in field_errors %}
+                    <li>{{ err }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <div class="admin-form__layout">
+            <div class="admin-form__main">
+                <div class="form-card">
+                    <div class="form-card__header">
+                        <div class="form-card__heading">
+                            <div class="form-card__icon">📰</div>
+                            <div>
+                                <h2 class="form-card__title">Article details</h2>
+                                <p class="form-card__subtitle">Title, slug, and plan linking.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-grid form-grid--2">
+                        <div class="form-group">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-input", placeholder="A modern layout for compact family homes") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.slug.label(class="form-label") }}
+                            {{ form.slug(class="form-input", placeholder="auto-generated if empty") }}
+                        </div>
+                        <div class="form-group form-group--full">
+                            {{ form.plan_id.label(class="form-label") }}
+                            {{ form.plan_id(class="form-select") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <div class="form-card__header">
+                        <div class="form-card__heading">
+                            <div class="form-card__icon">🖼️</div>
+                            <div>
+                                <h2 class="form-card__title">Cover image</h2>
+                                <p class="form-card__subtitle">Upload a hero image for the article.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group dropzone" data-dropzone>
+                        {{ form.cover_image.label(class="form-label") }}
+                        {{ form.cover_image(class="form-input", data_drop_input="true") }}
+                        <p class="form-help">Drag and drop an image or click to browse.</p>
+                        <span class="dropzone__file" data-dropzone-filename>No file selected</span>
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <div class="form-card__header">
+                        <div class="form-card__heading">
+                            <div class="form-card__icon">✍️</div>
+                            <div>
+                                <h2 class="form-card__title">Content</h2>
+                                <p class="form-card__subtitle">Use rich text to build a readable article.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        {{ form.content.label(class="form-label") }}
+                        {{ form.content() }}
+                    </div>
+                </div>
+
+                <details class="form-card">
+                    <summary class="form-card__summary">SEO settings</summary>
+                    <div class="form-grid form-grid--2">
+                        <div class="form-group">
+                            {{ form.meta_title.label(class="form-label") }}
+                            {{ form.meta_title(class="form-input", placeholder="SEO title for Google") }}
+                        </div>
+                        <div class="form-group">
+                            {{ form.meta_description.label(class="form-label") }}
+                            {{ form.meta_description(class="form-textarea", rows=3, placeholder="Short description for search results") }}
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-actions">
+                    <div class="form-submit__row">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a class="btn btn-ghost" href="{{ url_for('blog.index') }}">Back to blog</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ ckeditor.load() }}
+{{ ckeditor.config(name='content') }}
+<script>
+    (function () {
+        const dropzone = document.querySelector('[data-dropzone]');
+        if (!dropzone) return;
+        const input = dropzone.querySelector('input[type="file"]');
+        const fileLabel = dropzone.querySelector('[data-dropzone-filename]');
+        if (!input || !fileLabel) return;
+
+        function updateLabel() {
+            const file = input.files && input.files[0];
+            fileLabel.textContent = file ? file.name : 'No file selected';
+        }
+
+        dropzone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropzone.classList.add('is-dragging');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('is-dragging');
+        });
+
+        dropzone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropzone.classList.remove('is-dragging');
+            if (event.dataTransfer.files.length) {
+                input.files = event.dataTransfer.files;
+                updateLabel();
+            }
+        });
+
+        input.addEventListener('change', updateLabel);
+        updateLabel();
+    })();
+</script>
+{% endblock %}

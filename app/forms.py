@@ -8,8 +8,9 @@ for user input validation and CSRF protection.
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, TextAreaField, DecimalField, IntegerField, FloatField, SelectField, SelectMultipleField, BooleanField, SubmitField
+from flask_ckeditor import CKEditorField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, NumberRange, URL
-from app.models import User, Category, ContactMessage
+from app.models import User, Category, ContactMessage, HousePlan, BlogPost
 from app.models import PlanFAQ
 
 
@@ -275,6 +276,40 @@ class HousePlanForm(FlaskForm):
     is_published = BooleanField('Published')
     
     submit = SubmitField('Save Plan')
+
+
+class PowerfulPostForm(FlaskForm):
+    """Admin form for creating/editing blog posts."""
+
+    title = StringField('Article Title', validators=[DataRequired(), Length(max=200)])
+    slug = StringField('Slug (optional)', validators=[Optional(), Length(max=200)])
+    meta_title = StringField('Meta Title', validators=[Optional(), Length(max=150)])
+    meta_description = TextAreaField('Meta Description', validators=[Optional(), Length(max=160)])
+    content = CKEditorField('Content', validators=[DataRequired()])
+    cover_image = FileField(
+        'Cover Image',
+        validators=[
+            Optional(),
+            FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Images only.'),
+        ],
+    )
+    plan_id = SelectField('Link this article to a plan', coerce=int, validators=[Optional()])
+    status = SelectField(
+        'Status',
+        choices=[
+            (BlogPost.STATUS_DRAFT, 'Draft'),
+            (BlogPost.STATUS_PUBLISHED, 'Published'),
+            (BlogPost.STATUS_ARCHIVED, 'Archived'),
+        ],
+        default=BlogPost.STATUS_DRAFT,
+    )
+    submit = SubmitField('Save Article')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        plans = HousePlan.query.order_by(HousePlan.title.asc()).all()
+        choices = [(0, 'No linked plan')] + [(plan.id, f"#{plan.reference_code} — {plan.title}") for plan in plans]
+        self.plan_id.choices = choices
     save_draft = SubmitField('Save Draft')
 
     def _is_draft_submission(self):
@@ -288,18 +323,15 @@ class HousePlanForm(FlaskForm):
 
         original_validators = {
             'title': self.title.validators,
-            'description': self.description.validators,
-            'price': self.price.validators,
+            'content': self.content.validators,
         }
         try:
             self.title.validators = [Optional()]
-            self.description.validators = [Optional()]
-            self.price.validators = [Optional()]
+            self.content.validators = [Optional()]
             return super().validate(extra_validators=extra_validators)
         finally:
             self.title.validators = original_validators['title']
-            self.description.validators = original_validators['description']
-            self.price.validators = original_validators['price']
+            self.content.validators = original_validators['content']
 
     def validate_category_ids(self, category_ids):
         # Only enforce category requirement on final save, not on draft save
