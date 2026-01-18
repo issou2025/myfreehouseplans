@@ -49,6 +49,79 @@
         {% endif %}
     </div>
 
+    <section class="admin-toolkit" aria-label="Admin tools">
+        <header class="admin-toolkit__header">
+            <div>
+                <p class="admin-toolkit__eyebrow">Quick workspace</p>
+                <h2 class="admin-toolkit__title">Tools to manage your studio</h2>
+                <p class="admin-toolkit__subtitle">Jump into key workflows without leaving the dashboard.</p>
+            </div>
+            <div class="admin-toolkit__helper">
+                <span>Tip:</span> Start with “Add plan” then review pricing and Gumroad links.
+            </div>
+        </header>
+        <div class="admin-toolkit__grid">
+            <a class="admin-tool-card admin-tool-card--primary" href="{{ url_for('admin.add_plan') }}">
+                <div class="admin-tool-card__icon">✨</div>
+                <div class="admin-tool-card__content">
+                    <h3>Add new plan</h3>
+                    <p>Create a new listing with photos, pricing, and downloadable packs.</p>
+                </div>
+                <div class="admin-tool-card__meta">Draft ready</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.plans') }}">
+                <div class="admin-tool-card__icon">📚</div>
+                <div class="admin-tool-card__content">
+                    <h3>Manage plans</h3>
+                    <p>Update details, toggle publish status, and review assets.</p>
+                </div>
+                <div class="admin-tool-card__meta">{{ stats.total_plans }} total</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.messages') }}">
+                <div class="admin-tool-card__icon">💬</div>
+                <div class="admin-tool-card__content">
+                    <h3>Inbox</h3>
+                    <p>Reply to customer questions and keep response times fast.</p>
+                </div>
+                <div class="admin-tool-card__meta">{{ stats.messages_open }} open</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.orders') }}">
+                <div class="admin-tool-card__icon">🧾</div>
+                <div class="admin-tool-card__content">
+                    <h3>Orders</h3>
+                    <p>Track purchases and order statuses in one place.</p>
+                </div>
+                <div class="admin-tool-card__meta">{{ stats.total_orders }} orders</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.visitors') }}">
+                <div class="admin-tool-card__icon">📈</div>
+                <div class="admin-tool-card__content">
+                    <h3>Visitor analytics</h3>
+                    <p>See visits, locations, and trending plans.</p>
+                </div>
+                <div class="admin-tool-card__meta">Live insights</div>
+            </a>
+            {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
+            <a class="admin-tool-card" href="{{ url_for('admin.manage_categories') }}">
+                <div class="admin-tool-card__icon">🗂️</div>
+                <div class="admin-tool-card__content">
+                    <h3>Categories</h3>
+                    <p>Organize filters and keep catalog navigation clean.</p>
+                </div>
+                <div class="admin-tool-card__meta">Admin only</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.manage_team') }}">
+                <div class="admin-tool-card__icon">🤝</div>
+                <div class="admin-tool-card__content">
+                    <h3>Team access</h3>
+                    <p>Invite collaborators and update role permissions.</p>
+                </div>
+                <div class="admin-tool-card__meta">Admin only</div>
+            </a>
+            {% endif %}
+        </div>
+    </section>
+
     <section class="admin-metrics" aria-label="Key metrics">
         <article class="metric-card metric-card--slate">
             <div class="metric-card__icon">📮</div>

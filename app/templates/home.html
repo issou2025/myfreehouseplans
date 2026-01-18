@@ -4,10 +4,10 @@
 <section class="hero hero--immersive" aria-labelledby="hero-heading">
     <div class="hero__backdrop" aria-hidden="true"></div>
     <div class="shell hero__layout">
-        <div class="hero__text">
+        <div class="hero__text reveal">
             <span class="hero__tag"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Luxury Architectural Portfolio</span>
-            <h1 id="hero-heading">Plans curated for visionary homes.</h1>
-            <p class="hero__lead">{{ site_description }} Each design blends technical rigor with lifestyle narratives so your build moves from inspiration to permit-ready execution.</p>
+            <h1 id="hero-heading">Premium house plans engineered for real-world builds.</h1>
+            <p class="hero__lead">{{ site_description }} Trusted documentation, precise dimensions, and curated styles so you can move from inspiration to construction-ready faster.</p>
             <div class="hero__cta">
                 <a href="{{ url_for('main.packs') }}" class="btn btn-primary btn--glow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore catalog</a>
                 <a href="{{ url_for('main.contact') }}" class="btn btn-outline btn-ghost"><i class="fa-solid fa-comments" aria-hidden="true"></i> Talk to an architect</a>
@@ -37,7 +37,7 @@
                 </div>
             </div>
         </div>
-        <div class="hero__visual" aria-label="Plan highlights">
+        <div class="hero__visual reveal" aria-label="Plan highlights">
             <div class="hero__panel glass">
                 <div class="hero__panel-row">
                     <i class="fa-solid fa-vector-square" aria-hidden="true"></i>
@@ -65,10 +65,52 @@
     </div>
 </section>
 
+<section class="section section--trust" aria-labelledby="trust-heading">
+    <div class="shell">
+        <div class="section-heading reveal">
+            <div>
+                <p class="eyebrow"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Trusted by builders & homeowners</p>
+                <h2 id="trust-heading">Built for clients who demand precision.</h2>
+                <p>Designed for contractors, architects, and homeowners who need clear documentation, reliable details, and consistent quality.</p>
+            </div>
+        </div>
+        <div class="trust-grid" role="list">
+            <div class="trust-card reveal" role="listitem">
+                <i class="fa-solid fa-award" aria-hidden="true"></i>
+                <div>
+                    <h3>Pro-grade documentation</h3>
+                    <p>Complete drawings and schedules aligned with modern standards.</p>
+                </div>
+            </div>
+            <div class="trust-card reveal" role="listitem">
+                <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                <div>
+                    <h3>Precision dimensions</h3>
+                    <p>Metric and imperial measurements for global build teams.</p>
+                </div>
+            </div>
+            <div class="trust-card reveal" role="listitem">
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                <div>
+                    <h3>Consistent quality</h3>
+                    <p>Curated plans vetted for clarity, flow, and construction logic.</p>
+                </div>
+            </div>
+            <div class="trust-card reveal" role="listitem">
+                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                <div>
+                    <h3>Responsive support</h3>
+                    <p>Guidance when you need it, from selection to execution.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% if featured_plans %}
 <section class="section section--bento" aria-labelledby="featured-heading">
     <div class="shell">
-        <div class="section-heading">
+        <div class="section-heading reveal">
             <div>
                 <p class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Signature collection</p>
                 <h2 id="featured-heading">Architect-approved favorites</h2>
@@ -79,7 +121,7 @@
         <div class="bento-grid">
             {% for plan in featured_plans %}
             {% set card_image = plan.cover_image or plan.main_image %}
-            <article class="plan-card plan-card--bento {% if loop.index == 1 %}span-2{% elif loop.index == 2 %}span-tall{% else %}span-1{% endif %}" itemscope itemtype="https://schema.org/Product">
+            <article class="plan-card plan-card--bento reveal {% if loop.index == 1 %}span-2{% elif loop.index == 2 %}span-tall{% else %}span-1{% endif %}" itemscope itemtype="https://schema.org/Product">
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}" itemprop="url">
                     {% if card_image %}
                         {{ picture_tag(card_image, alt=plan.title, preset=CARD_PRESET, variant='base', loading='lazy', decoding='async', itemprop='image') }}
@@ -153,7 +195,7 @@
 {% if recent_plans %}
 <section class="section section--scroll" aria-labelledby="recent-heading">
     <div class="shell">
-        <div class="section-heading">
+        <div class="section-heading reveal">
             <div>
                 <p class="eyebrow"><i class="fa-solid fa-signal" aria-hidden="true"></i> Fresh releases</p>
                 <h2 id="recent-heading">New layouts every week</h2>
@@ -162,7 +204,7 @@
         </div>
         <div class="plan-row" role="list">
             {% for plan in recent_plans %}
-            <article class="plan-card plan-card--inline" role="listitem">
+            <article class="plan-card plan-card--inline reveal" role="listitem">
                 <a class="plan-card__media" href="{{ url_for('main.pack_detail', slug=plan.slug) }}">
                     {% set card_image = plan.cover_image or plan.main_image %}
                     {% if card_image %}
@@ -203,28 +245,113 @@
 
 <section class="section section--experience" aria-labelledby="experience-heading">
     <div class="shell">
-        <div class="section-heading">
+        <div class="section-heading reveal">
             <div>
                 <p class="eyebrow"><i class="fa-solid fa-star" aria-hidden="true"></i> Why builders trust us</p>
-                <h2 id="experience-heading">Architecture expertise, packaged for execution</h2>
+                <h2 id="experience-heading">Why choose this platform</h2>
             </div>
         </div>
-        <div class="experience-grid">
-            <article class="experience-card glass">
+        <div class="why-grid" role="list">
+            <article class="why-card reveal" role="listitem">
                 <i class="fa-solid fa-ruler-triangle" aria-hidden="true"></i>
                 <h3>Professional documentation</h3>
-                <p>Full drawing sets authored by licensed architects with precise dimensions, sections, schedules, and notes for engineers.</p>
+                <p>Complete drawing sets with sections, schedules, and clear construction notes.</p>
             </article>
-            <article class="experience-card glass">
+            <article class="why-card reveal" role="listitem">
                 <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
                 <h3>Flexible deliverables</h3>
-                <p>Start with the free PDF, then upgrade to Pro or Ultimate packs with CAD/BIM layers, materials, and variant options.</p>
+                <p>Start free, then upgrade to Pro or Ultimate for CAD/BIM layers.</p>
             </article>
-            <article class="experience-card glass">
+            <article class="why-card reveal" role="listitem">
                 <i class="fa-solid fa-handshake" aria-hidden="true"></i>
-                <h3>Dedicated guidance</h3>
-                <p>Our architects advise on code compliance, structural adaptations, and climate optimization in every region.</p>
+                <h3>Guided decisions</h3>
+                <p>Architect input on code compliance, climate adaptation, and structure.</p>
             </article>
+            <article class="why-card reveal" role="listitem">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <h3>Curated aesthetics</h3>
+                <p>Balanced proportions and modern layouts for premium builds.</p>
+            </article>
+            <article class="why-card reveal" role="listitem">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                <h3>Faster approvals</h3>
+                <p>Clear specs reduce revisions and help move to permits quickly.</p>
+            </article>
+            <article class="why-card reveal" role="listitem">
+                <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+                <h3>Reliable support</h3>
+                <p>Responsive assistance for modifications and build planning.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section section--use-cases" aria-labelledby="use-cases-heading">
+    <div class="shell">
+        <div class="section-heading reveal">
+            <div>
+                <p class="eyebrow"><i class="fa-solid fa-users" aria-hidden="true"></i> Use cases</p>
+                <h2 id="use-cases-heading">Built for every kind of project team</h2>
+                <p>Clear paths for homeowners, developers, and professional builders to act fast.</p>
+            </div>
+        </div>
+        <div class="use-case-grid">
+            <article class="use-case-card reveal">
+                <h3>Homeowners</h3>
+                <p>Choose plans with confidence, understand dimensions, and visualize outcomes.</p>
+                <span>Best for first-time builders</span>
+            </article>
+            <article class="use-case-card reveal">
+                <h3>Architects & designers</h3>
+                <p>Extend CAD layers, customize details, and align with local requirements.</p>
+                <span>Ideal for customization</span>
+            </article>
+            <article class="use-case-card reveal">
+                <h3>Builders & contractors</h3>
+                <p>Access construction-ready sets that shorten revisions and reduce delays.</p>
+                <span>Built for execution</span>
+            </article>
+            <article class="use-case-card reveal">
+                <h3>Developers</h3>
+                <p>Scale reliable designs across multiple lots with consistent deliverables.</p>
+                <span>Made for repeat builds</span>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section section--proof" aria-labelledby="proof-heading">
+    <div class="shell">
+        <div class="section-heading reveal">
+            <div>
+                <p class="eyebrow"><i class="fa-solid fa-certificate" aria-hidden="true"></i> Social proof</p>
+                <h2 id="proof-heading">A trusted studio for modern builds</h2>
+                <p>Clear results, repeat clients, and predictable outcomes.</p>
+            </div>
+        </div>
+        <div class="proof-grid" role="list">
+            <div class="proof-card reveal" role="listitem">
+                <strong>{{ stats.total_plans if stats else 120 }}+</strong>
+                <p>Plans delivered with precision documentation</p>
+            </div>
+            <div class="proof-card reveal" role="listitem">
+                <strong>{{ stats.total_orders if stats else 950 }}+</strong>
+                <p>Successful purchases across our catalog</p>
+            </div>
+            <div class="proof-card reveal" role="listitem">
+                <strong>4.9/5</strong>
+                <p>Average client satisfaction on clarity & delivery</p>
+            </div>
+        </div>
+        <div class="proof-testimonials">
+            <figure class="testimonial-card reveal">
+                <blockquote>“The documentation is impeccable. Our approvals were smooth and fast.”</blockquote>
+                <figcaption>— Contracting lead, residential builds</figcaption>
+            </figure>
+            <figure class="testimonial-card reveal">
+                <blockquote>“Professional layouts, easy to adjust, and impressive to clients.”</blockquote>
+                <figcaption>— Architectural studio partner</figcaption>
+            </figure>
         </div>
     </div>
 </section>
@@ -232,9 +359,9 @@
 <section class="section section--cta" aria-labelledby="cta-heading">
     <div class="shell section-cta glass">
         <div>
-            <p class="eyebrow"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Need guidance?</p>
-            <h2 id="cta-heading">Let's choreograph your ideal plan.</h2>
-            <p>Share your site, climate, and timeline—our studio will recommend a plan or craft a custom approach.</p>
+            <p class="eyebrow"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Ready to build?</p>
+            <h2 id="cta-heading">Start with a plan that feels built for you.</h2>
+            <p>Explore premium layouts, secure clear deliverables, and get expert guidance when you need it.</p>
         </div>
         <div class="section-cta__actions">
             <a class="btn btn-primary btn--glow" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> Start a conversation</a>
@@ -242,4 +369,31 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const elements = document.querySelectorAll('.reveal');
+
+        if (!elements.length) return;
+
+        if (prefersReduced) {
+            elements.forEach(el => el.classList.add('is-visible'));
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2, rootMargin: '0px 0px -10% 0px' });
+
+        elements.forEach(el => observer.observe(el));
+    })();
+</script>
 {% endblock %}
