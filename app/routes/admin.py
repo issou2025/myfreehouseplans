@@ -265,7 +265,7 @@ def delete_plan_faq(faq_id):
 @admin_required
 def dashboard():
     """Admin dashboard with statistics"""
-    
+
     try:
         # Get statistics
         total_plans = HousePlan.query.count()
@@ -278,10 +278,26 @@ def dashboard():
         paid_plans = HousePlan.query.filter(
             or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
         ).count()
-        
+
+        # Blog (non-fatal): if blog_posts table is missing, do not crash the dashboard.
+        blog_posts_total = 0
+        blog_posts_published = 0
+        try:
+            from app.models import BlogPost
+
+            blog_posts_total = BlogPost.query.count()
+            blog_posts_published = BlogPost.query.filter_by(status=BlogPost.STATUS_PUBLISHED).count()
+        except Exception as exc:
+            # Important on Postgres: clear aborted transactions caused by UndefinedTable.
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            current_app.logger.warning('Blog dashboard stats unavailable: %s', exc)
+
         # Recent orders
         recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
-        
+
         # Popular plans
         popular_plans = HousePlan.query.order_by(HousePlan.views_count.desc()).limit(5).all()
         plan_table = HousePlan.query.order_by(HousePlan.created_at.desc()).all()
@@ -293,7 +309,7 @@ def dashboard():
             'responded': ContactMessage.query.filter_by(status=ContactMessage.STATUS_RESPONDED).count(),
         }
         recent_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all()
-        
+
         stats = {
             'total_plans': total_plans,
             'published_plans': published_plans,
@@ -306,21 +322,25 @@ def dashboard():
             'messages_total': inbox_counts['total'],
             'messages_open': inbox_counts['open'],
             'messages_new': inbox_counts['new'],
+            'blog_posts_total': blog_posts_total,
+            'blog_posts_published': blog_posts_published,
         }
-        
+
         status_labels = dict(ContactMessage.STATUS_CHOICES)
 
         pack_visibility = load_pack_visibility()
-        return render_template('admin/dashboard.html',
-                             stats=stats,
-                             recent_orders=recent_orders,
-                             popular_plans=popular_plans,
-                             plan_table=plan_table,
-                             recent_messages=recent_messages,
-                             inbox_counts=inbox_counts,
-                             pack_visibility=pack_visibility,
-                         inquiry_labels=INQUIRY_LABELS,
-                         status_labels=status_labels)
+        return render_template(
+            'admin/dashboard.html',
+            stats=stats,
+            recent_orders=recent_orders,
+            popular_plans=popular_plans,
+            plan_table=plan_table,
+            recent_messages=recent_messages,
+            inbox_counts=inbox_counts,
+            pack_visibility=pack_visibility,
+            inquiry_labels=INQUIRY_LABELS,
+            status_labels=status_labels,
+        )
     except Exception as e:
         current_app.logger.error('Admin dashboard query failed: %s', e, exc_info=True)
         underlying = getattr(e, 'orig', None) or getattr(e, '__cause__', None) or e
@@ -880,6 +900,12 @@ def add_plan():
     """Add new house plan"""
     
     form = HousePlanForm()
+
+    # Clear any failed transaction state from previous errors (Postgres safety).
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
     
     try:
         categories = Category.query.order_by(Category.name).all()

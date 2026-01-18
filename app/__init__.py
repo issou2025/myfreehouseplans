@@ -166,15 +166,35 @@ def _force_create_tables(app) -> None:
         except Exception as exc:
             _safe_log(app, 'warning', '⚠ Could not verify schema completeness (continuing): %s', exc, exc_info=True)
 
-        # 3b) Emergency safety net (Render / production): create ONLY blog_posts if missing.
-        # This is non-destructive: it does NOT drop or alter existing tables.
+        # 3b) Emergency safety net (Render / production): ensure blog_posts exists.
+        # Non-destructive: does NOT drop or alter existing tables.
         # Prefer migrations, but this prevents total site failure when Render releaseCommand
         # does not execute (no shell access).
+        #
+        # User-requested guardrail: include db.create_all() so missing blog tables are
+        # created automatically. We only run it when the DB is clearly the *real*
+        # production schema (i.e., it already has core tables) to avoid accidentally
+        # creating an empty schema on a misconfigured/brand-new database.
         try:
             inspector = inspect(db.engine)
             tables = set(inspector.get_table_names())
             if 'blog_posts' not in tables:
                 try:
+                    # Only safe to auto-create missing tables when this DB already
+                    # contains core tables or is under Alembic control.
+                    safe_to_create_missing = bool(
+                        tables.intersection({'users', 'house_plans', 'categories', 'orders', 'alembic_version'})
+                    )
+                    if safe_to_create_missing:
+                        try:
+                            db.create_all()
+                        except Exception:
+                            try:
+                                db.session.rollback()
+                            except Exception:
+                                pass
+                            _safe_log(app, 'warning', '⚠ Startup db.create_all() failed (continuing)', exc_info=True)
+
                     from app.models import BlogPost
 
                     # Ensure Postgres ENUM exists before table create.

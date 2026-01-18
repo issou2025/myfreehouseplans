@@ -274,8 +274,57 @@ class HousePlanForm(FlaskForm):
     # Status
     is_featured = BooleanField('Featured Plan')
     is_published = BooleanField('Published')
+
+    save_draft = SubmitField('Save Draft')
     
     submit = SubmitField('Save Plan')
+
+    def _is_draft_submission(self) -> bool:
+        return bool(getattr(self, 'save_draft', None) and self.save_draft.data)
+
+    def validate(self, extra_validators=None):
+        """Allow draft saves without completing required fields."""
+
+        if not self._is_draft_submission():
+            return super().validate(extra_validators=extra_validators)
+
+        original_validators = {
+            'title': self.title.validators,
+            'description': self.description.validators,
+            'price': self.price.validators,
+        }
+        try:
+            self.title.validators = [Optional()]
+            self.description.validators = [Optional()]
+            self.price.validators = [Optional()]
+            return super().validate(extra_validators=extra_validators)
+        finally:
+            self.title.validators = original_validators['title']
+            self.description.validators = original_validators['description']
+            self.price.validators = original_validators['price']
+
+    def validate_category_ids(self, category_ids):
+        # Only enforce category requirement on final save, not on draft save
+        if self._is_draft_submission():
+            return
+
+        if not category_ids.data or len(category_ids.data) < 1:
+            raise ValidationError('Please select at least one category for this plan.')
+
+    def validate_sale_price(self, sale_price):
+        """Prevent inconsistent price states.
+
+        Sale price is optional, but if provided it must not exceed the base price.
+        """
+        if sale_price.data is None:
+            return
+        if getattr(self, 'price', None) is None or self.price.data is None:
+            return
+        try:
+            if sale_price.data > self.price.data:
+                raise ValidationError('Sale price must be less than or equal to the display price.')
+        except TypeError:
+            raise ValidationError('Invalid sale price value.')
 
 
 class PowerfulPostForm(FlaskForm):
