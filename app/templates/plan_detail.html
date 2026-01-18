@@ -3,7 +3,7 @@
 {% block title %}{{ plan.title|default('Plan', true) }}{% endblock %}
 
 {% block content %}
-{% set placeholder = 'https://via.placeholder.com/1200x800?text=No+Image' %}
+{% set placeholder = url_for('static', filename='images/placeholder.svg') %}
 
 {% set cover_value = plan.image_url if plan.image_url else '' %}
 {% set floor_value = plan.floor_plan_image if plan.floor_plan_image else '' %}
@@ -52,7 +52,15 @@
     </p>
   </header>
 
-  <section class="plan-tech__hero" aria-label="Gallery and key specs">
+  <nav class="plan-tech__nav" aria-label="On this page">
+    <a class="plan-tech__nav-link" href="#gallery">Gallery</a>
+    <a class="plan-tech__nav-link" href="#design">Design</a>
+    <a class="plan-tech__nav-link" href="#features">Features</a>
+    <a class="plan-tech__nav-link" href="#specs">Specs</a>
+    <a class="plan-tech__nav-link plan-tech__nav-link--primary" href="#pricing">Packs</a>
+  </nav>
+
+  <section class="plan-tech__hero" id="gallery" aria-label="Gallery and key specs">
     <div class="plan-tech__gallery">
       <figure class="plan-tech__main" aria-label="Main image">
         <img id="planMainImage" src="{{ cover_src }}" alt="{{ plan.title|default('Plan', true) }}" loading="eager" decoding="async" {% if cover_srcset %}srcset="{{ cover_srcset }}" sizes="{{ HERO_PRESET.sizes }}"{% endif %} onerror="this.onerror=null;this.src='{{ placeholder }}';">
@@ -111,7 +119,14 @@
             <strong>Reference:</strong> {{ plan.reference_code|default(plan.id, true) }}
           {% endif %}
         </p>
-        <p class="aside-muted">Need engineering adaptation for your local code? We can help you plan the next steps.</p>
+        {% set starting_price = visible_starting_price(plan.pricing_tiers, pack_visibility) %}
+        <p class="aside-muted">
+          {% if starting_price %}
+            <strong>Starting from:</strong> ${{ starting_price|round(0)|int }} · Includes instant delivery.
+          {% else %}
+            <strong>Starting pack:</strong> Free preview (if available).
+          {% endif %}
+        </p>
         <div class="aside-actions">
           <a class="btn btn-primary" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> Contact</a>
           <a class="btn btn-ghost" href="#pricing"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> View packs</a>
@@ -120,36 +135,41 @@
     </aside>
   </section>
 
+  <div class="plan-tech__mobile-cta" aria-label="Quick actions">
+    <a class="btn btn-primary" href="#pricing"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> View packs</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> Contact</a>
+  </div>
+
   <section class="plan-tech__content" aria-label="Technical description">
     <div class="tech-grid">
-      <article class="tech-card" aria-label="Design philosophy">
+      <article class="tech-card" id="design" aria-label="Design philosophy">
         <header class="tech-card__head">
           <h2>Design philosophy</h2>
           <p>Concept and intent, from an architect’s perspective.</p>
         </header>
         <div class="tech-card__body rich-text">
           {% if plan.design_philosophy %}
-            {{ plan.design_philosophy | safe }}
+            {{ render_richtext(plan.design_philosophy) }}
           {% elif plan.description %}
-            {{ plan.description | safe }}
+            {{ render_richtext(plan.description) }}
           {% else %}
             <p>Description coming soon.</p>
           {% endif %}
         </div>
       </article>
 
-      <article class="tech-card" aria-label="Technical features">
+      <article class="tech-card" id="features" aria-label="Technical features">
         <header class="tech-card__head">
           <h2>Technical features</h2>
           <p>Materials, structure, and build notes.</p>
         </header>
         <div class="tech-card__body rich-text">
           {% if plan.main_features %}
-            {{ plan.main_features | safe }}
+            {{ render_richtext(plan.main_features) }}
           {% elif plan.room_details %}
-            {{ plan.room_details | safe }}
+            {{ render_richtext(plan.room_details) }}
           {% elif plan.construction_notes %}
-            {{ plan.construction_notes | safe }}
+            {{ render_richtext(plan.construction_notes) }}
           {% else %}
             <p>Technical details will be added soon.</p>
           {% endif %}
@@ -157,7 +177,7 @@
       </article>
     </div>
 
-    <section class="spec-table" aria-label="Detailed specifications">
+    <section class="spec-table" id="specs" aria-label="Detailed specifications">
       <header class="spec-table__head">
         <h2>Detailed specifications</h2>
         <p>Clean technical data for quick evaluation.</p>
