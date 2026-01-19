@@ -1,6 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}{{ post.title }}{% endblock %}
+{% block title %}{{ meta.title if meta else post.title }}{% endblock %}
+
+{% block meta_robots %}
+        {% set _seo = (extras or {}).get('seo', {}) if extras is defined else {} %}
+        {{ _seo.get('robots', 'index,follow') }}
+{% endblock %}
+
+{% block structured_data %}
+        {% set _faq = (extras or {}).get('faq', []) if extras is defined else [] %}
+        {% if _faq and _faq|length > 0 %}
+                <script type="application/ld+json">
+                {
+                    "@context": "https://schema.org",
+                    "@type": "FAQPage",
+                    "mainEntity": [
+                        {% for item in _faq %}
+                        {
+                            "@type": "Question",
+                            "name": {{ (item.get('question','')|string)|tojson }},
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": {{ (item.get('answer','')|string)|tojson }}
+                            }
+                        }{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ]
+                }
+                </script>
+        {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="reading-progress" aria-hidden="true">
@@ -9,6 +38,11 @@
 
 <section class="section blog-article" aria-labelledby="article-heading">
     <div class="shell blog-article__layout">
+        {% set _extras = extras if extras is defined else {} %}
+        {% set _aff = (_extras or {}).get('affiliate', {}) %}
+        {% set _img = (_extras or {}).get('images', {}) %}
+        {% set _faq = (_extras or {}).get('faq', []) %}
+
         <article class="blog-article__main" itemscope itemtype="https://schema.org/Article">
             <header class="blog-article__header">
                 <p class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Editorial</p>
@@ -20,11 +54,76 @@
                 <figure class="blog-article__cover">
                     <img src="{{ upload_url(post.cover_image) }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
                 </figure>
+            {% elif _img.get('featured') %}
+                <figure class="blog-article__cover">
+                    <img src="{{ _img.get('featured') }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
+                </figure>
+            {% endif %}
+
+            {% if _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') == 'before') %}
+                <section class="blog-affiliate" aria-label="Recommended product">
+                    <div class="blog-affiliate__card">
+                        <p class="eyebrow"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Recommended</p>
+                        <h2 class="blog-affiliate__title">{{ _aff.get('product_title') or 'Recommended product' }}</h2>
+                        {% if _aff.get('short_description') %}
+                            <p class="blog-affiliate__desc">{{ _aff.get('short_description') }}</p>
+                        {% endif %}
+                        <a class="btn btn-primary" href="{{ _aff.get('affiliate_url') }}" target="_blank" rel="sponsored noopener noreferrer">
+                            {{ _aff.get('button_text') or 'Learn more' }}
+                        </a>
+                    </div>
+                </section>
             {% endif %}
 
                 <div class="blog-article__content" itemprop="articleBody">
                     {{ post.content|safe }}
                 </div>
+
+            {% if _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') != 'before') %}
+                <section class="blog-affiliate" aria-label="Recommended product">
+                    <div class="blog-affiliate__card">
+                        <p class="eyebrow"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Recommended</p>
+                        <h2 class="blog-affiliate__title">{{ _aff.get('product_title') or 'Recommended product' }}</h2>
+                        {% if _aff.get('short_description') %}
+                            <p class="blog-affiliate__desc">{{ _aff.get('short_description') }}</p>
+                        {% endif %}
+                        <a class="btn btn-primary" href="{{ _aff.get('affiliate_url') }}" target="_blank" rel="sponsored noopener noreferrer">
+                            {{ _aff.get('button_text') or 'Learn more' }}
+                        </a>
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if _img.get('gallery') and _img.get('gallery')|length > 0 %}
+                <section class="blog-gallery" aria-label="Gallery">
+                    <h2 class="blog-gallery__title">Gallery</h2>
+                    <div class="blog-gallery__grid">
+                        {% for src in _img.get('gallery') %}
+                            <figure class="blog-gallery__item">
+                                <img src="{{ src }}" alt="{{ post.title }}" loading="lazy" decoding="async">
+                            </figure>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if _faq and _faq|length > 0 %}
+                <section class="blog-faq" aria-label="Frequently asked questions">
+                    <h2>FAQ</h2>
+                    <div class="blog-faq__list">
+                        {% for item in _faq %}
+                            {% if item.get('question') and item.get('answer') %}
+                                <details class="blog-faq__item">
+                                    <summary>{{ item.get('question') }}</summary>
+                                    <div class="blog-faq__answer">
+                                        {{ item.get('answer') }}
+                                    </div>
+                                </details>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
 
             {% if post.linked_plan %}
             <section class="blog-cta" aria-label="Linked plan">

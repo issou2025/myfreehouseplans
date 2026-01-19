@@ -15,7 +15,7 @@
     <meta name="keywords" content="{{ site_description }}">
     {% endif %}
     {% endblock %}
-    <meta name="robots" content="index,follow">
+    <meta name="robots" content="{% block meta_robots %}index,follow{% endblock %}">
     <link rel="canonical" href="{% block canonical %}{{ meta.canonical_url if meta else site_url }}{% endblock %}">
     
     {# Open Graph / Facebook #}

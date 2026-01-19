@@ -13,6 +13,11 @@ from app.forms import PowerfulPostForm
 from app.models import BlogPost, HousePlan, Category
 from app.seo import generate_meta_tags
 from app.utils.uploads import save_uploaded_file
+from app.utils.article_extras import (
+    extract_article_extras_from_form,
+    load_article_extras,
+    save_article_extras,
+)
 
 blog_bp = Blueprint('blog', __name__)
 
@@ -106,10 +111,35 @@ def index():
 def detail(slug):
     post = BlogPost.query.filter_by(slug=slug, status=BlogPost.STATUS_PUBLISHED).first_or_404()
 
+    extras = {}
+    try:
+        extras = load_article_extras(slug=post.slug, post_id=post.id)
+    except Exception:
+        extras = {}
+
+    seo_overrides = {}
+    try:
+        seo_overrides = (extras or {}).get('seo') or {}
+    except Exception:
+        seo_overrides = {}
+
+    meta_title = seo_overrides.get('meta_title') or post.meta_title or post.title
+    meta_description = seo_overrides.get('meta_description') or post.meta_description or ''
+    canonical_url = seo_overrides.get('canonical_url') or url_for('blog.detail', slug=post.slug, _external=True)
+
+    og_image = seo_overrides.get('og_image')
+    if not og_image:
+        try:
+            featured = (extras or {}).get('images', {}).get('featured')
+        except Exception:
+            featured = None
+        og_image = featured or post.cover_image
+
     meta = generate_meta_tags(
-        title=post.meta_title or post.title,
-        description=post.meta_description or '',
-        url=url_for('blog.detail', slug=post.slug, _external=True),
+        title=meta_title,
+        description=meta_description,
+        image=og_image,
+        url=canonical_url,
         type='article',
     )
 
@@ -120,6 +150,7 @@ def detail(slug):
         post=post,
         popular_plans=popular_plans,
         meta=meta,
+        extras=extras,
     )
 
 
@@ -128,6 +159,13 @@ def detail(slug):
 @admin_required
 def create():
     form = PowerfulPostForm()
+
+    extras = {}
+    try:
+        # New article: extras not persisted until after first save.
+        extras = {}
+    except Exception:
+        extras = {}
 
     if form.validate_on_submit():
         slug_source = (form.slug.data or '').strip() or form.title.data
@@ -151,13 +189,22 @@ def create():
         try:
             db.session.add(post)
             db.session.commit()
+
+            # Save optional extras (filesystem only). Never blocks DB success.
+            try:
+                extras_payload = extract_article_extras_from_form(request.form)
+                if extras_payload:
+                    save_article_extras(extras_payload, slug=post.slug, post_id=post.id)
+            except Exception:
+                current_app.logger.exception('Failed to save article extras (create)')
+
             flash('Blog post created successfully.', 'success')
             return redirect(url_for('blog.edit', post_id=post.id))
         except IntegrityError:
             db.session.rollback()
             flash('A post with this slug already exists. Please choose another.', 'danger')
 
-    return render_template('admin/create_post.html', form=form)
+    return render_template('admin/create_post.html', form=form, extras=extras)
 
 
 @blog_bp.route('/admin/blog')
@@ -196,7 +243,14 @@ def edit(post_id):
     post = BlogPost.query.get_or_404(post_id)
     form = PowerfulPostForm(obj=post)
 
+    extras = {}
+    try:
+        extras = load_article_extras(slug=post.slug, post_id=post.id)
+    except Exception:
+        extras = {}
+
     if form.validate_on_submit():
+        old_slug = post.slug
         slug_source = (form.slug.data or '').strip() or post.slug
         slug_value = _generate_unique_slug(slug_source, exclude_id=post.id)
         cover_path = post.cover_image
@@ -214,13 +268,22 @@ def edit(post_id):
 
         try:
             db.session.commit()
+
+            # Save optional extras (filesystem only). Never blocks DB success.
+            try:
+                extras_payload = extract_article_extras_from_form(request.form)
+                if extras_payload:
+                    save_article_extras(extras_payload, slug=post.slug, post_id=post.id)
+            except Exception:
+                current_app.logger.exception('Failed to save article extras (edit)')
+
             flash('Blog post updated successfully.', 'success')
             return redirect(url_for('blog.edit', post_id=post.id))
         except IntegrityError:
             db.session.rollback()
             flash('A post with this slug already exists. Please choose another.', 'danger')
 
-    return render_template('admin/create_post.html', form=form, post=post)
+    return render_template('admin/create_post.html', form=form, post=post, extras=extras)
 
 
 @blog_bp.route('/admin/blog/<int:post_id>/delete', methods=['POST'])

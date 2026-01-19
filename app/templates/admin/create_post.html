@@ -26,7 +26,7 @@
     </div>
     {% endif %}
 
-    <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data">
+    <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data" data-admin-article-form>
         {{ form.hidden_tag() }}
 
         <div class="admin-form__layout">
@@ -92,27 +92,140 @@
                     <div class="form-group">
                         {{ form.content.label(class="form-label") }}
                         {{ form.content(class="form-textarea js-ckeditor", rows=18) }}
+                        <p class="form-help">Autosave is local-only (your browser). Publishing is manual.</p>
                     </div>
                 </div>
 
-                <details class="form-card">
+                <details class="form-card" open>
                     <summary class="form-card__summary">SEO settings</summary>
                     <div class="form-grid form-grid--2">
                         <div class="form-group">
                             {{ form.meta_title.label(class="form-label") }}
                             {{ form.meta_title(class="form-input", placeholder="SEO title for Google") }}
+                            <p class="form-help" data-soft-warning="meta-title"></p>
                         </div>
                         <div class="form-group">
                             {{ form.meta_description.label(class="form-label") }}
                             {{ form.meta_description(class="form-textarea", rows=3, placeholder="Short description for search results") }}
+                            <p class="form-help" data-soft-warning="meta-description"></p>
+                        </div>
+                    </div>
+
+                    <details style="margin-top: 1rem;">
+                        <summary class="form-card__summary">Advanced SEO overrides (optional, non-DB)</summary>
+                        {% set _seo = (extras or {}).get('seo', {}) if extras is defined else {} %}
+                        <div class="form-grid form-grid--2" style="margin-top: .75rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_meta_title">Meta title override</label>
+                                <input class="form-input" id="extras__seo_meta_title" name="extras__seo_meta_title" value="{{ _seo.get('meta_title','') }}" placeholder="If empty, uses article title" maxlength="200">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_meta_description">Meta description override</label>
+                                <textarea class="form-textarea" id="extras__seo_meta_description" name="extras__seo_meta_description" rows="3" placeholder="If empty, uses the DB meta description">{{ _seo.get('meta_description','') }}</textarea>
+                            </div>
+                            <div class="form-group form-group--full">
+                                <label class="form-label" for="extras__seo_canonical_url">Canonical URL override</label>
+                                <input class="form-input" id="extras__seo_canonical_url" name="extras__seo_canonical_url" value="{{ _seo.get('canonical_url','') }}" placeholder="https://... (leave empty to auto-generate)" maxlength="2000">
+                                <p class="form-help">Use only when you intentionally canonicalize to another URL.</p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_robots">Robots meta (optional)</label>
+                                <input class="form-input" id="extras__seo_robots" name="extras__seo_robots" value="{{ _seo.get('robots','') }}" placeholder="index,follow | noindex,nofollow" maxlength="80">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_og_image">Open Graph image URL (optional)</label>
+                                <input class="form-input" id="extras__seo_og_image" name="extras__seo_og_image" value="{{ _seo.get('og_image','') }}" placeholder="https://..." maxlength="2000">
+                            </div>
+                        </div>
+                    </details>
+                </details>
+
+                <details class="form-card">
+                    <summary class="form-card__summary">Affiliate links (optional)</summary>
+                    {% set _aff = (extras or {}).get('affiliate', {}) if extras is defined else {} %}
+                    <div class="form-grid form-grid--2" style="margin-top: .75rem;">
+                        <div class="form-group">
+                            <label class="form-label" for="extras__affiliate_product_title">Product title</label>
+                            <input class="form-input" id="extras__affiliate_product_title" name="extras__affiliate_product_title" value="{{ _aff.get('product_title','') }}" placeholder="e.g. Favorite construction toolkit" maxlength="200">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="extras__affiliate_url">Affiliate URL</label>
+                            <input class="form-input" id="extras__affiliate_url" name="extras__affiliate_url" value="{{ _aff.get('affiliate_url','') }}" placeholder="https://..." maxlength="2000">
+                        </div>
+                        <div class="form-group form-group--full">
+                            <label class="form-label" for="extras__affiliate_short_description">Short description</label>
+                            <textarea class="form-textarea" id="extras__affiliate_short_description" name="extras__affiliate_short_description" rows="3" placeholder="1–2 lines to explain the value">{{ _aff.get('short_description','') }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="extras__affiliate_button_text">Button text</label>
+                            <input class="form-input" id="extras__affiliate_button_text" name="extras__affiliate_button_text" value="{{ _aff.get('button_text','') }}" placeholder="Shop now" maxlength="60">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="extras__affiliate_position">Display position</label>
+                            <select class="form-select" id="extras__affiliate_position" name="extras__affiliate_position">
+                                {% set _pos = _aff.get('display_position','after') %}
+                                <option value="before" {% if _pos == 'before' %}selected{% endif %}>Before content</option>
+                                <option value="after" {% if _pos == 'after' %}selected{% endif %}>After content</option>
+                            </select>
                         </div>
                     </div>
                 </details>
 
-                <div class="form-actions">
+                <details class="form-card">
+                    <summary class="form-card__summary">FAQ section (optional)</summary>
+                    {% set _faq = (extras or {}).get('faq', []) if extras is defined else [] %}
+                    <p class="form-help" style="margin-top:.75rem;">If you leave questions/answers empty, nothing is rendered on the frontend. FAQ schema is generated only when at least one Q/A exists.</p>
+                    <input type="hidden" name="extras__faq_json" value="" data-faq-json>
+                    <div class="faq-editor" data-faq-editor>
+                        <div class="faq-editor__rows" data-faq-rows>
+                            {% for item in (_faq if _faq else []) %}
+                                <div class="faq-row" data-faq-row>
+                                    <div class="form-grid form-grid--2">
+                                        <div class="form-group">
+                                            <label class="form-label">Question</label>
+                                            <input class="form-input" value="{{ item.get('question','') }}" data-faq-q>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Answer</label>
+                                            <textarea class="form-textarea" rows="2" data-faq-a>{{ item.get('answer','') }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                                        <button class="btn btn-ghost" type="button" data-faq-remove>Remove</button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top: .75rem;">
+                            <button class="btn btn-secondary" type="button" data-faq-add>Add FAQ</button>
+                            <span class="form-help">No-JS fallback: you can still save the article; FAQ editing just won’t be enhanced.</span>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="form-card">
+                    <summary class="form-card__summary">Image management (optional)</summary>
+                    {% set _img = (extras or {}).get('images', {}) if extras is defined else {} %}
+                    <div class="form-grid form-grid--2" style="margin-top:.75rem;">
+                        <div class="form-group form-group--full">
+                            <label class="form-label" for="extras__featured_image">Featured image URL (optional)</label>
+                            <input class="form-input" id="extras__featured_image" name="extras__featured_image" value="{{ _img.get('featured','') }}" placeholder="https://..." maxlength="2000">
+                            <p class="form-help">Used as Open Graph image fallback and optional in-page media (does not replace existing inline images).</p>
+                        </div>
+                        <div class="form-group form-group--full">
+                            <label class="form-label" for="extras__gallery_images">Gallery images (one URL per line)</label>
+                            <textarea class="form-textarea" id="extras__gallery_images" name="extras__gallery_images" rows="5" placeholder="https://...\nhttps://...">{% if _img.get('gallery') %}{{ _img.get('gallery')|join('\n') }}{% endif %}</textarea>
+                            <p class="form-help">Reordering is enhanced with JS; without JS, the line order is used.</p>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="form-actions form-actions--sticky" data-sticky-save>
                     <div class="form-submit__row">
                         {{ form.submit(class="btn btn-primary") }}
                         <a class="btn btn-ghost" href="{{ url_for('blog.index') }}">Back to blog</a>
+                        <span class="form-help" style="margin-left:auto" data-autosave-status></span>
                     </div>
                 </div>
             </div>
@@ -232,6 +345,176 @@
 
         input.addEventListener('change', updateLabel);
         updateLabel();
+    })();
+
+    (function () {
+        // Soft SEO warnings (non-blocking)
+        const titleInput = document.querySelector('input[name="meta_title"]');
+        const descInput = document.querySelector('textarea[name="meta_description"]');
+        const titleWarn = document.querySelector('[data-soft-warning="meta-title"]');
+        const descWarn = document.querySelector('[data-soft-warning="meta-description"]');
+
+        function warn(el, target, min, max) {
+            if (!el || !target) return;
+            const len = (el.value || '').trim().length;
+            if (!len) {
+                target.textContent = '';
+                return;
+            }
+            if (len < min) target.textContent = `Tip: ${len} chars (try ${min}-${max}).`;
+            else if (len > max) target.textContent = `Warning: ${len} chars (try ${min}-${max}).`;
+            else target.textContent = `OK: ${len} chars.`;
+        }
+
+        function update() {
+            warn(titleInput, titleWarn, 30, 60);
+            warn(descInput, descWarn, 90, 160);
+        }
+
+        if (titleInput) titleInput.addEventListener('input', update);
+        if (descInput) descInput.addEventListener('input', update);
+        update();
+    })();
+
+    (function () {
+        // Admin autosave (localStorage only). Never blocks submit.
+        const form = document.querySelector('[data-admin-article-form]');
+        if (!form) return;
+
+        const status = document.querySelector('[data-autosave-status]');
+        const key = (() => {
+            // Prefer stable key for edits; fall back to URL for create.
+            const postId = (document.querySelector('input[name="post_id"]') || {}).value;
+            return postId ? `admin_blog_draft_${postId}` : `admin_blog_draft_${location.pathname}`;
+        })();
+
+        function setStatus(text) {
+            if (status) status.textContent = text;
+        }
+
+        function snapshot() {
+            const data = {};
+            const fields = form.querySelectorAll('input, textarea, select');
+            fields.forEach((el) => {
+                if (!el.name) return;
+                if (el.type === 'password' || el.type === 'file') return;
+                data[el.name] = el.value;
+            });
+            return data;
+        }
+
+        let saveTimer = null;
+        function scheduleSave() {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                try {
+                    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: snapshot() }));
+                    setStatus('Draft saved locally');
+                } catch (e) {
+                    // ignore
+                }
+            }, 450);
+        }
+
+        form.addEventListener('input', scheduleSave);
+
+        // Optional restore UI (non-intrusive)
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.data) {
+                    const restoreBtn = document.createElement('button');
+                    restoreBtn.type = 'button';
+                    restoreBtn.className = 'btn btn-ghost';
+                    restoreBtn.textContent = 'Restore autosave';
+                    restoreBtn.addEventListener('click', () => {
+                        try {
+                            const data = parsed.data || {};
+                            Object.keys(data).forEach((name) => {
+                                const el = form.querySelector(`[name="${CSS.escape(name)}"]`);
+                                if (el && el.type !== 'file') el.value = data[name];
+                            });
+                            setStatus('Autosave restored');
+                        } catch (e) {
+                            // ignore
+                        }
+                    });
+                    const row = form.querySelector('.form-submit__row');
+                    if (row) row.insertBefore(restoreBtn, row.children[1] || null);
+                    setStatus('Autosave available');
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        form.addEventListener('submit', () => {
+            // Keep the autosave copy (in case submit fails).
+            setStatus('Saving…');
+        });
+    })();
+
+    (function () {
+        // FAQ repeatable fields (progressive enhancement)
+        const root = document.querySelector('[data-faq-editor]');
+        if (!root) return;
+        const rows = root.querySelector('[data-faq-rows]');
+        const addBtn = root.querySelector('[data-faq-add]');
+        const hidden = document.querySelector('[data-faq-json]');
+        if (!rows || !addBtn || !hidden) return;
+
+        function serialize() {
+            const items = [];
+            rows.querySelectorAll('[data-faq-row]').forEach((row) => {
+                const q = (row.querySelector('[data-faq-q]') || {}).value || '';
+                const a = (row.querySelector('[data-faq-a]') || {}).value || '';
+                const qq = q.trim();
+                const aa = a.trim();
+                if (qq && aa) items.push({ question: qq, answer: aa });
+            });
+            hidden.value = JSON.stringify(items);
+        }
+
+        function bindRow(row) {
+            const remove = row.querySelector('[data-faq-remove]');
+            if (remove) {
+                remove.addEventListener('click', () => {
+                    row.remove();
+                    serialize();
+                });
+            }
+            row.addEventListener('input', serialize);
+        }
+
+        rows.querySelectorAll('[data-faq-row]').forEach(bindRow);
+
+        addBtn.addEventListener('click', () => {
+            const row = document.createElement('div');
+            row.className = 'faq-row';
+            row.setAttribute('data-faq-row', '');
+            row.innerHTML = `
+                <div class="form-grid form-grid--2">
+                    <div class="form-group">
+                        <label class="form-label">Question</label>
+                        <input class="form-input" value="" data-faq-q>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Answer</label>
+                        <textarea class="form-textarea" rows="2" data-faq-a></textarea>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                    <button class="btn btn-ghost" type="button" data-faq-remove>Remove</button>
+                </div>
+            `;
+            rows.appendChild(row);
+            bindRow(row);
+            serialize();
+        });
+
+        // Initial sync so server receives structured FAQ even if fields prefilled.
+        serialize();
     })();
 </script>
 {% endblock %}
