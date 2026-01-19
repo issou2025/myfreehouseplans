@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 
-{% block extra_css %}
-<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js" defer></script>
-{% endblock %}
-
 {% block content %}
 <div class="shell admin-shell">
     <header class="admin-header admin-header--form">
@@ -126,14 +122,23 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script>
     (function () {
         const textarea = document.querySelector('textarea.js-ckeditor[name="content"]');
-        if (!textarea) return;
+        if (!textarea) {
+            console.error('CKEditor: textarea not found');
+            return;
+        }
+        console.log('CKEditor: textarea found', textarea);
 
         // Progressive enhancement: if the CDN fails or is blocked by CSP,
         // the textarea remains fully functional.
-        if (typeof ClassicEditor === 'undefined') return;
+        if (typeof ClassicEditor === 'undefined') {
+            console.error('CKEditor: ClassicEditor not loaded from CDN');
+            return;
+        }
+        console.log('CKEditor: ClassicEditor is available, initializing...');
 
         const originalValue = textarea.value;
         let dirty = false;
