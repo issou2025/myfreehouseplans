@@ -41,6 +41,16 @@
         {% set _extras = extras if extras is defined else {} %}
         {% set _aff = (_extras or {}).get('affiliate', {}) %}
         {% set _img = (_extras or {}).get('images', {}) %}
+        {% set _media = (_extras or {}).get('media', {}) %}
+        {% set _recs_all = (_extras or {}).get('recommendations', []) %}
+        {% set ns = namespace(recs=[]) %}
+        {% for rec in (_recs_all if _recs_all else []) %}
+            {% if rec and rec.get('active', True) and rec.get('url') and rec.get('title') %}
+                {% set ns.recs = ns.recs + [rec] %}
+            {% endif %}
+        {% endfor %}
+        {% set _recs = ns.recs[:3] %}
+        {% set _has_recs = _recs and _recs|length > 0 %}
         {% set _faq = (_extras or {}).get('faq', []) %}
 
         <article class="blog-article__main" itemscope itemtype="https://schema.org/Article">
@@ -54,13 +64,21 @@
                 <figure class="blog-article__cover">
                     <img src="{{ upload_url(post.cover_image) }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
                 </figure>
+            {% elif (_media or {}).get('featured', {}).get('url') %}
+                {% set _f = (_media or {}).get('featured', {}) %}
+                <figure class="blog-article__cover">
+                    <img src="{{ _f.get('url') }}" alt="{{ _f.get('alt') or post.title }}" loading="lazy" decoding="async" itemprop="image">
+                    {% if _f.get('caption') %}
+                        <figcaption style="opacity:.85; margin-top:.35rem;">{{ _f.get('caption') }}</figcaption>
+                    {% endif %}
+                </figure>
             {% elif _img.get('featured') %}
                 <figure class="blog-article__cover">
                     <img src="{{ _img.get('featured') }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
                 </figure>
             {% endif %}
 
-            {% if _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') == 'before') %}
+            {% if (not _has_recs) and _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') == 'before') %}
                 <section class="blog-affiliate" aria-label="Recommended product">
                     <div class="blog-affiliate__card">
                         <p class="eyebrow"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Recommended</p>
@@ -79,7 +97,7 @@
                     {{ post.content|safe }}
                 </div>
 
-            {% if _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') != 'before') %}
+            {% if (not _has_recs) and _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') != 'before') %}
                 <section class="blog-affiliate" aria-label="Recommended product">
                     <div class="blog-affiliate__card">
                         <p class="eyebrow"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Recommended</p>
@@ -94,7 +112,23 @@
                 </section>
             {% endif %}
 
-            {% if _img.get('gallery') and _img.get('gallery')|length > 0 %}
+            {% if (_media or {}).get('gallery') and (_media or {}).get('gallery')|length > 0 %}
+                <section class="blog-gallery" aria-label="Gallery">
+                    <h2 class="blog-gallery__title">Gallery</h2>
+                    <div class="blog-gallery__grid">
+                        {% for img in (_media or {}).get('gallery') %}
+                            {% if img and img.get('url') %}
+                                <figure class="blog-gallery__item">
+                                    <img src="{{ img.get('url') }}" alt="{{ img.get('alt') or post.title }}" loading="lazy" decoding="async">
+                                    {% if img.get('caption') %}
+                                        <figcaption style="opacity:.85; padding:.5rem .75rem;">{{ img.get('caption') }}</figcaption>
+                                    {% endif %}
+                                </figure>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% elif _img.get('gallery') and _img.get('gallery')|length > 0 %}
                 <section class="blog-gallery" aria-label="Gallery">
                     <h2 class="blog-gallery__title">Gallery</h2>
                     <div class="blog-gallery__grid">
@@ -120,6 +154,24 @@
                                     </div>
                                 </details>
                             {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if _has_recs %}
+                <section class="blog-recs" aria-label="Recommendations">
+                    <h2 class="blog-recs__title">Recommendations</h2>
+                    <div class="blog-recs__list">
+                        {% for rec in _recs %}
+                            <div class="blog-affiliate__card">
+                                <p class="eyebrow"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Recommended</p>
+                                <h3 class="blog-affiliate__title">{{ rec.get('title') }}</h3>
+                                {% if rec.get('justification') %}
+                                    <p class="blog-affiliate__desc">{{ rec.get('justification') }}</p>
+                                {% endif %}
+                                <a class="btn btn-primary" href="{{ rec.get('url') }}" target="_blank" rel="sponsored noopener noreferrer">Learn more</a>
+                            </div>
                         {% endfor %}
                     </div>
                 </section>

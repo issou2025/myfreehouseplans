@@ -16,6 +16,7 @@ from app.utils.uploads import save_uploaded_file
 from app.utils.article_extras import (
     extract_article_extras_from_form,
     load_article_extras,
+    normalize_article_extras,
     save_article_extras,
 )
 
@@ -113,7 +114,7 @@ def detail(slug):
 
     extras = {}
     try:
-        extras = load_article_extras(slug=post.slug, post_id=post.id)
+        extras = normalize_article_extras(load_article_extras(slug=post.slug, post_id=post.id))
     except Exception:
         extras = {}
 
@@ -130,7 +131,9 @@ def detail(slug):
     og_image = seo_overrides.get('og_image')
     if not og_image:
         try:
-            featured = (extras or {}).get('images', {}).get('featured')
+            featured = (extras or {}).get('media', {}).get('featured', {}).get('url')
+            if not featured:
+                featured = (extras or {}).get('images', {}).get('featured')
         except Exception:
             featured = None
         og_image = featured or post.cover_image
@@ -193,7 +196,8 @@ def create():
             # Save optional extras (filesystem only). Never blocks DB success.
             try:
                 extras_payload = extract_article_extras_from_form(request.form)
-                if extras_payload:
+                full_mode = (request.form.get('extras__present') or '').strip() == '1'
+                if full_mode or extras_payload:
                     save_article_extras(extras_payload, slug=post.slug, post_id=post.id)
             except Exception:
                 current_app.logger.exception('Failed to save article extras (create)')
@@ -245,7 +249,7 @@ def edit(post_id):
 
     extras = {}
     try:
-        extras = load_article_extras(slug=post.slug, post_id=post.id)
+        extras = normalize_article_extras(load_article_extras(slug=post.slug, post_id=post.id))
     except Exception:
         extras = {}
 
@@ -272,7 +276,8 @@ def edit(post_id):
             # Save optional extras (filesystem only). Never blocks DB success.
             try:
                 extras_payload = extract_article_extras_from_form(request.form)
-                if extras_payload:
+                full_mode = (request.form.get('extras__present') or '').strip() == '1'
+                if full_mode or extras_payload:
                     save_article_extras(extras_payload, slug=post.slug, post_id=post.id)
             except Exception:
                 current_app.logger.exception('Failed to save article extras (edit)')

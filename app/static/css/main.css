@@ -8481,6 +8481,20 @@ body {
 	opacity: .92;
 }
 
+.blog-recs {
+	margin: 1.75rem 0;
+}
+
+.blog-recs__title {
+	margin: 0 0 .75rem 0;
+	font-family: 'Playfair Display', serif;
+}
+
+.blog-recs__list {
+	display: grid;
+	gap: 1rem;
+}
+
 .blog-gallery {
 	margin: 1.75rem 0;
 }

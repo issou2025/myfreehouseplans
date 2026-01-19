@@ -28,6 +28,7 @@
 
     <form class="admin-form admin-form--add-plan" method="post" enctype="multipart/form-data" data-admin-article-form>
         {{ form.hidden_tag() }}
+        <input type="hidden" name="extras__present" value="1">
 
         <div class="admin-form__layout">
             <div class="admin-form__main">
@@ -36,11 +37,12 @@
                         <div class="form-card__heading">
                             <div class="form-card__icon">📰</div>
                             <div>
-                                <h2 class="form-card__title">Article details</h2>
-                                <p class="form-card__subtitle">Title, slug, and plan linking.</p>
+                                <h2 class="form-card__title">Article information</h2>
+                                <p class="form-card__subtitle">Editorial intent, status, and linking.</p>
                             </div>
                         </div>
                     </div>
+                    {% set _intent = (extras or {}).get('intent', 'other') if extras is defined else 'other' %}
                     <div class="form-grid form-grid--2">
                         <div class="form-group">
                             {{ form.title.label(class="form-label") }}
@@ -49,6 +51,18 @@
                         <div class="form-group">
                             {{ form.slug.label(class="form-label") }}
                             {{ form.slug(class="form-input", placeholder="auto-generated if empty") }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="extras__intent">Article intent</label>
+                            <select class="form-select" id="extras__intent" name="extras__intent">
+                                <option value="guide" {% if _intent == 'guide' %}selected{% endif %}>Guide (educate)</option>
+                                <option value="howto" {% if _intent == 'howto' %}selected{% endif %}>How-to (steps)</option>
+                                <option value="inspiration" {% if _intent == 'inspiration' %}selected{% endif %}>Inspiration (ideas)</option>
+                                <option value="review" {% if _intent == 'review' %}selected{% endif %}>Review (balanced)</option>
+                                <option value="news" {% if _intent == 'news' %}selected{% endif %}>News / update</option>
+                                <option value="other" {% if _intent == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                            <p class="form-help">Keeps the article focused and trustworthy.</p>
                         </div>
                         <div class="form-group form-group--full">
                             {{ form.plan_id.label(class="form-label") }}
@@ -84,8 +98,8 @@
                         <div class="form-card__heading">
                             <div class="form-card__icon">✍️</div>
                             <div>
-                                <h2 class="form-card__title">Content</h2>
-                                <p class="form-card__subtitle">Use rich text to build a readable article.</p>
+                                <h2 class="form-card__title">Main editorial content</h2>
+                                <p class="form-card__subtitle">Editorial text only — keep affiliate links in the Recommendations section.</p>
                             </div>
                         </div>
                     </div>
@@ -93,80 +107,71 @@
                         {{ form.content.label(class="form-label") }}
                         {{ form.content(class="form-textarea js-ckeditor", rows=18) }}
                         <p class="form-help">Autosave is local-only (your browser). Publishing is manual.</p>
+                        <p class="form-help" data-soft-warning="editorial-affiliate"></p>
                     </div>
                 </div>
 
-                <details class="form-card" open>
-                    <summary class="form-card__summary">SEO settings</summary>
-                    <div class="form-grid form-grid--2">
-                        <div class="form-group">
-                            {{ form.meta_title.label(class="form-label") }}
-                            {{ form.meta_title(class="form-input", placeholder="SEO title for Google") }}
-                            <p class="form-help" data-soft-warning="meta-title"></p>
-                        </div>
-                        <div class="form-group">
-                            {{ form.meta_description.label(class="form-label") }}
-                            {{ form.meta_description(class="form-textarea", rows=3, placeholder="Short description for search results") }}
-                            <p class="form-help" data-soft-warning="meta-description"></p>
-                        </div>
-                    </div>
-
-                    <details style="margin-top: 1rem;">
-                        <summary class="form-card__summary">Advanced SEO overrides (optional, non-DB)</summary>
-                        {% set _seo = (extras or {}).get('seo', {}) if extras is defined else {} %}
-                        <div class="form-grid form-grid--2" style="margin-top: .75rem;">
-                            <div class="form-group">
-                                <label class="form-label" for="extras__seo_meta_title">Meta title override</label>
-                                <input class="form-input" id="extras__seo_meta_title" name="extras__seo_meta_title" value="{{ _seo.get('meta_title','') }}" placeholder="If empty, uses article title" maxlength="200">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="extras__seo_meta_description">Meta description override</label>
-                                <textarea class="form-textarea" id="extras__seo_meta_description" name="extras__seo_meta_description" rows="3" placeholder="If empty, uses the DB meta description">{{ _seo.get('meta_description','') }}</textarea>
-                            </div>
-                            <div class="form-group form-group--full">
-                                <label class="form-label" for="extras__seo_canonical_url">Canonical URL override</label>
-                                <input class="form-input" id="extras__seo_canonical_url" name="extras__seo_canonical_url" value="{{ _seo.get('canonical_url','') }}" placeholder="https://... (leave empty to auto-generate)" maxlength="2000">
-                                <p class="form-help">Use only when you intentionally canonicalize to another URL.</p>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="extras__seo_robots">Robots meta (optional)</label>
-                                <input class="form-input" id="extras__seo_robots" name="extras__seo_robots" value="{{ _seo.get('robots','') }}" placeholder="index,follow | noindex,nofollow" maxlength="80">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="extras__seo_og_image">Open Graph image URL (optional)</label>
-                                <input class="form-input" id="extras__seo_og_image" name="extras__seo_og_image" value="{{ _seo.get('og_image','') }}" placeholder="https://..." maxlength="2000">
-                            </div>
-                        </div>
-                    </details>
-                </details>
-
                 <details class="form-card">
-                    <summary class="form-card__summary">Affiliate links (optional)</summary>
-                    {% set _aff = (extras or {}).get('affiliate', {}) if extras is defined else {} %}
-                    <div class="form-grid form-grid--2" style="margin-top: .75rem;">
-                        <div class="form-group">
-                            <label class="form-label" for="extras__affiliate_product_title">Product title</label>
-                            <input class="form-input" id="extras__affiliate_product_title" name="extras__affiliate_product_title" value="{{ _aff.get('product_title','') }}" placeholder="e.g. Favorite construction toolkit" maxlength="200">
+                    <summary class="form-card__summary">Recommendations & affiliate links (optional)</summary>
+                    <p class="form-help" style="margin-top:.75rem;">Separate “educate” from “recommend”. Keep wording calm and factual. Recommendations are never inserted into the editorial text automatically.</p>
+
+                    {% set _recs = (extras or {}).get('recommendations', []) if extras is defined else [] %}
+                    <textarea class="form-textarea" name="extras__recs_json" rows="4" style="display:none" data-recs-json>{{ (_recs|default([]))|tojson }}</textarea>
+
+                    <div class="recs-editor" data-recs-editor>
+                        <div class="form-help" data-recs-warning></div>
+                        <div class="recs-editor__rows" data-recs-rows>
+                            {% for rec in (_recs if _recs else []) %}
+                                <div class="recs-row" data-recs-row>
+                                    <div class="form-grid form-grid--2">
+                                        <div class="form-group">
+                                            <label class="form-label">Type</label>
+                                            {% set _t = rec.get('type','resource') %}
+                                            <select class="form-select" data-rec-type>
+                                                <option value="product" {% if _t == 'product' %}selected{% endif %}>Product</option>
+                                                <option value="tool" {% if _t == 'tool' %}selected{% endif %}>Tool</option>
+                                                <option value="service" {% if _t == 'service' %}selected{% endif %}>Service</option>
+                                                <option value="resource" {% if _t == 'resource' %}selected{% endif %}>Resource</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Display title (neutral)</label>
+                                            <input class="form-input" value="{{ rec.get('title','') }}" placeholder="e.g. Building cost calculator" data-rec-title>
+                                        </div>
+                                        <div class="form-group form-group--full">
+                                            <label class="form-label">Affiliate URL</label>
+                                            <input class="form-input" value="{{ rec.get('url','') }}" placeholder="https://..." data-rec-url>
+                                        </div>
+                                        <div class="form-group form-group--full">
+                                            <label class="form-label">Short justification (why it helps)</label>
+                                            <textarea class="form-textarea" rows="2" placeholder="1–2 sentences. Keep it factual." data-rec-justification>{{ rec.get('justification','') }}</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Display position</label>
+                                            {% set _p = rec.get('position','end') %}
+                                            <select class="form-select" data-rec-position>
+                                                <option value="end" {% if _p == 'end' %}selected{% endif %}>End of article</option>
+                                                <option value="dedicated" {% if _p == 'dedicated' %}selected{% endif %}>Dedicated block</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Active</label>
+                                            <select class="form-select" data-rec-active>
+                                                <option value="1" {% if rec.get('active', True) %}selected{% endif %}>Active</option>
+                                                <option value="0" {% if not rec.get('active', True) %}selected{% endif %}>Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                                        <button class="btn btn-ghost" type="button" data-rec-remove>Remove</button>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="extras__affiliate_url">Affiliate URL</label>
-                            <input class="form-input" id="extras__affiliate_url" name="extras__affiliate_url" value="{{ _aff.get('affiliate_url','') }}" placeholder="https://..." maxlength="2000">
-                        </div>
-                        <div class="form-group form-group--full">
-                            <label class="form-label" for="extras__affiliate_short_description">Short description</label>
-                            <textarea class="form-textarea" id="extras__affiliate_short_description" name="extras__affiliate_short_description" rows="3" placeholder="1–2 lines to explain the value">{{ _aff.get('short_description','') }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="extras__affiliate_button_text">Button text</label>
-                            <input class="form-input" id="extras__affiliate_button_text" name="extras__affiliate_button_text" value="{{ _aff.get('button_text','') }}" placeholder="Shop now" maxlength="60">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="extras__affiliate_position">Display position</label>
-                            <select class="form-select" id="extras__affiliate_position" name="extras__affiliate_position">
-                                {% set _pos = _aff.get('display_position','after') %}
-                                <option value="before" {% if _pos == 'before' %}selected{% endif %}>Before content</option>
-                                <option value="after" {% if _pos == 'after' %}selected{% endif %}>After content</option>
-                            </select>
+
+                        <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top: .75rem;">
+                            <button class="btn btn-secondary" type="button" data-rec-add>Add recommendation</button>
+                            <span class="form-help">Limit is 3 (soft warning). Only the first 3 active are shown publicly.</span>
                         </div>
                     </div>
                 </details>
@@ -205,19 +210,123 @@
                 </details>
 
                 <details class="form-card">
-                    <summary class="form-card__summary">Image management (optional)</summary>
-                    {% set _img = (extras or {}).get('images', {}) if extras is defined else {} %}
-                    <div class="form-grid form-grid--2" style="margin-top:.75rem;">
-                        <div class="form-group form-group--full">
-                            <label class="form-label" for="extras__featured_image">Featured image URL (optional)</label>
-                            <input class="form-input" id="extras__featured_image" name="extras__featured_image" value="{{ _img.get('featured','') }}" placeholder="https://..." maxlength="2000">
-                            <p class="form-help">Used as Open Graph image fallback and optional in-page media (does not replace existing inline images).</p>
+                    <summary class="form-card__summary">Images & media (optional)</summary>
+                    {% set _media = (extras or {}).get('media', {}) if extras is defined else {} %}
+                    {% set _featured = _media.get('featured', {}) if _media else {} %}
+                    {% set _gallery = _media.get('gallery', []) if _media else [] %}
+                    <textarea class="form-textarea" name="extras__media_json" rows="4" style="display:none" data-media-json>{{ (_media|default({}))|tojson }}</textarea>
+
+                    <div class="media-editor" data-media-editor style="margin-top:.75rem;">
+                        <div class="form-grid form-grid--2">
+                            <div class="form-group form-group--full">
+                                <label class="form-label">Featured image URL</label>
+                                <input class="form-input" value="{{ _featured.get('url','') }}" placeholder="https://..." data-featured-url>
+                                <p class="form-help">Optional. Used as Open Graph fallback and as featured media when no cover image exists.</p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Featured alt text</label>
+                                <input class="form-input" value="{{ _featured.get('alt','') }}" placeholder="Describe the image" data-featured-alt>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Featured caption (optional)</label>
+                                <input class="form-input" value="{{ _featured.get('caption','') }}" placeholder="Short caption" data-featured-caption>
+                            </div>
                         </div>
-                        <div class="form-group form-group--full">
-                            <label class="form-label" for="extras__gallery_images">Gallery images (one URL per line)</label>
-                            <textarea class="form-textarea" id="extras__gallery_images" name="extras__gallery_images" rows="5" placeholder="https://...\nhttps://...">{% if _img.get('gallery') %}{{ _img.get('gallery')|join('\n') }}{% endif %}</textarea>
-                            <p class="form-help">Reordering is enhanced with JS; without JS, the line order is used.</p>
+
+                        <div style="margin-top:1rem;">
+                            <p class="form-help">Gallery is optional. Provide alt/caption for accessibility and long-term SEO.</p>
+                            <div class="media-editor__rows" data-gallery-rows>
+                                {% for img in (_gallery if _gallery else []) %}
+                                    <div class="media-row" data-gallery-row>
+                                        <div class="form-grid form-grid--2">
+                                            <div class="form-group form-group--full">
+                                                <label class="form-label">Image URL</label>
+                                                <input class="form-input" value="{{ img.get('url','') }}" placeholder="https://..." data-gallery-url>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Alt text</label>
+                                                <input class="form-input" value="{{ img.get('alt','') }}" placeholder="Describe the image" data-gallery-alt>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Caption</label>
+                                                <input class="form-input" value="{{ img.get('caption','') }}" placeholder="Optional" data-gallery-caption>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                                            <button class="btn btn-ghost" type="button" data-gallery-remove>Remove</button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:.75rem;">
+                                <button class="btn btn-secondary" type="button" data-gallery-add>Add gallery image</button>
+                                <span class="form-help">No-JS fallback: media still saves, but reordering isn’t enhanced.</span>
+                            </div>
                         </div>
+                    </div>
+                </details>
+
+                <details class="form-card" open>
+                    <summary class="form-card__summary">SEO & visibility</summary>
+                    <div class="form-grid form-grid--2">
+                        <div class="form-group">
+                            {{ form.meta_title.label(class="form-label") }}
+                            {{ form.meta_title(class="form-input", placeholder="SEO title for Google") }}
+                            <p class="form-help" data-soft-warning="meta-title"></p>
+                        </div>
+                        <div class="form-group">
+                            {{ form.meta_description.label(class="form-label") }}
+                            {{ form.meta_description(class="form-textarea", rows=3, placeholder="Short description for search results") }}
+                            <p class="form-help" data-soft-warning="meta-description"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-card" style="margin-top: 1rem; padding: 1rem;">
+                        <h3 style="margin:0 0 .25rem 0;">Search preview</h3>
+                        <p class="form-help" style="margin:0 0 .75rem 0;">A preview to help editors write clearly (non-blocking).</p>
+                        <div class="seo-preview" data-seo-preview>
+                            <div class="seo-preview__title" data-preview-title></div>
+                            <div class="seo-preview__url" style="opacity:.8; font-size:.9rem;">{{ request.host_url.rstrip('/') }}/blog/<span style="opacity:.9">{{ (post.slug if post else 'your-slug') }}</span></div>
+                            <div class="seo-preview__desc" style="opacity:.92" data-preview-desc></div>
+                        </div>
+                    </div>
+
+                    <details style="margin-top: 1rem;">
+                        <summary class="form-card__summary">Advanced SEO overrides (optional, non-DB)</summary>
+                        {% set _seo = (extras or {}).get('seo', {}) if extras is defined else {} %}
+                        <div class="form-grid form-grid--2" style="margin-top: .75rem;">
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_meta_title">Meta title override</label>
+                                <input class="form-input" id="extras__seo_meta_title" name="extras__seo_meta_title" value="{{ _seo.get('meta_title','') }}" placeholder="If empty, uses article title" maxlength="200">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_meta_description">Meta description override</label>
+                                <textarea class="form-textarea" id="extras__seo_meta_description" name="extras__seo_meta_description" rows="3" placeholder="If empty, uses the DB meta description">{{ _seo.get('meta_description','') }}</textarea>
+                            </div>
+                            <div class="form-group form-group--full">
+                                <label class="form-label" for="extras__seo_canonical_url">Canonical URL override</label>
+                                <input class="form-input" id="extras__seo_canonical_url" name="extras__seo_canonical_url" value="{{ _seo.get('canonical_url','') }}" placeholder="https://... (leave empty to auto-generate)" maxlength="2000">
+                                <p class="form-help">Use only when you intentionally canonicalize to another URL.</p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_robots">Robots meta (optional)</label>
+                                <input class="form-input" id="extras__seo_robots" name="extras__seo_robots" value="{{ _seo.get('robots','') }}" placeholder="index,follow | noindex,nofollow" maxlength="80">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="extras__seo_og_image">Open Graph image URL (optional)</label>
+                                <input class="form-input" id="extras__seo_og_image" name="extras__seo_og_image" value="{{ _seo.get('og_image','') }}" placeholder="https://..." maxlength="2000">
+                            </div>
+                        </div>
+                    </details>
+                </details>
+
+                <details class="form-card">
+                    <summary class="form-card__summary">Internal editorial notes (optional)</summary>
+                    {% set _notes = (extras or {}).get('notes', '') if extras is defined else '' %}
+                    <p class="form-help" style="margin-top:.75rem;">Not visible publicly. Use for reminders, fact checks, and future edits.</p>
+                    <div class="form-group" style="margin-top:.75rem;">
+                        <label class="form-label" for="extras__notes">Editor notes</label>
+                        <textarea class="form-textarea" id="extras__notes" name="extras__notes" rows="4" placeholder="Intent, updates to make, facts to verify…">{{ _notes }}</textarea>
                     </div>
                 </details>
 
@@ -256,6 +365,34 @@
         const originalValue = textarea.value;
         let dirty = false;
         let ignoreChanges = true;
+
+        const editorialWarn = document.querySelector('[data-soft-warning="editorial-affiliate"]');
+        function scanAffiliateLikeUrls(html) {
+            if (!editorialWarn) return;
+            const text = String(html || '').toLowerCase();
+            const patterns = [
+                'amzn.to',
+                'amazon.',
+                'bit.ly',
+                't.co/',
+                'ref=',
+                'utm_',
+                'affiliate',
+                'tag=',
+                'aff=',
+                'affid=',
+                'partner',
+                'sponsored',
+            ];
+            const has = patterns.some((p) => text.includes(p));
+            editorialWarn.textContent = has
+                ? 'Soft warning: the editorial body contains link patterns that look like affiliate/tracking URLs. Keep affiliate links in “Recommendations”.'
+                : '';
+        }
+
+        // Non-CKEditor fallback: still warn on manual edits.
+        textarea.addEventListener('input', () => scanAffiliateLikeUrls(textarea.value));
+        scanAffiliateLikeUrls(originalValue);
 
         ClassicEditor
             .create(textarea, {
@@ -297,6 +434,7 @@
                     if (ignoreChanges) return;
                     dirty = true;
                     textarea.value = editor.getData();
+                    scanAffiliateLikeUrls(textarea.value);
                 });
 
                 const form = textarea.closest('form');
@@ -374,6 +512,234 @@
         if (titleInput) titleInput.addEventListener('input', update);
         if (descInput) descInput.addEventListener('input', update);
         update();
+    })();
+
+    (function () {
+        // Search preview (non-blocking)
+        const titleField = document.querySelector('input[name="title"]');
+        const metaTitle = document.querySelector('input[name="meta_title"]');
+        const metaDesc = document.querySelector('textarea[name="meta_description"]');
+        const previewTitle = document.querySelector('[data-preview-title]');
+        const previewDesc = document.querySelector('[data-preview-desc]');
+        if (!previewTitle || !previewDesc) return;
+
+        function clamp(str, max) {
+            const s = String(str || '').trim();
+            if (!s) return '';
+            return s.length > max ? (s.slice(0, max - 1) + '…') : s;
+        }
+
+        function update() {
+            const t = (metaTitle && metaTitle.value.trim()) || (titleField && titleField.value.trim()) || 'Article title';
+            const d = (metaDesc && metaDesc.value.trim()) || '';
+            previewTitle.textContent = clamp(t, 70);
+            previewDesc.textContent = clamp(d || 'Add a short meta description to improve click-through rate.', 170);
+        }
+
+        if (titleField) titleField.addEventListener('input', update);
+        if (metaTitle) metaTitle.addEventListener('input', update);
+        if (metaDesc) metaDesc.addEventListener('input', update);
+        update();
+    })();
+
+    (function () {
+        // Recommendations editor (progressive enhancement)
+        const root = document.querySelector('[data-recs-editor]');
+        if (!root) return;
+        const rows = root.querySelector('[data-recs-rows]');
+        const addBtn = root.querySelector('[data-rec-add]');
+        const hidden = document.querySelector('[data-recs-json]');
+        const warning = root.querySelector('[data-recs-warning]');
+        if (!rows || !addBtn || !hidden) return;
+
+        function toBool(value) {
+            return String(value || '').trim() === '1';
+        }
+
+        function serialize() {
+            const items = [];
+            rows.querySelectorAll('[data-recs-row]').forEach((row) => {
+                const type = (row.querySelector('[data-rec-type]') || {}).value || 'resource';
+                const title = ((row.querySelector('[data-rec-title]') || {}).value || '').trim();
+                const url = ((row.querySelector('[data-rec-url]') || {}).value || '').trim();
+                const justification = ((row.querySelector('[data-rec-justification]') || {}).value || '').trim();
+                const position = (row.querySelector('[data-rec-position]') || {}).value || 'end';
+                const active = toBool((row.querySelector('[data-rec-active]') || {}).value);
+
+                // Skip truly empty rows.
+                if (!title && !url && !justification) return;
+
+                items.push({ type, title, url, justification, position, active });
+            });
+            hidden.value = JSON.stringify(items);
+
+            if (warning) {
+                const activeCount = items.filter((r) => r.active && r.url && r.title).length;
+                const missingJustification = items.some((r) => r.active && r.url && r.title && !r.justification);
+                const missingUrl = items.some((r) => r.active && r.title && !r.url);
+                const missingTitle = items.some((r) => r.active && r.url && !r.title);
+                const parts = [];
+                if (activeCount > 3) parts.push(`Soft warning: ${activeCount} active recommendations (only first 3 show).`);
+                if (missingJustification) parts.push('Soft warning: some active items are missing justification.');
+                if (missingUrl) parts.push('Soft warning: some active items are missing URLs.');
+                if (missingTitle) parts.push('Soft warning: some active items are missing titles.');
+                warning.textContent = parts.join(' ');
+            }
+        }
+
+        function bindRow(row) {
+            const remove = row.querySelector('[data-rec-remove]');
+            if (remove) {
+                remove.addEventListener('click', () => {
+                    row.remove();
+                    serialize();
+                });
+            }
+            row.addEventListener('input', serialize);
+            row.addEventListener('change', serialize);
+        }
+
+        rows.querySelectorAll('[data-recs-row]').forEach(bindRow);
+
+        addBtn.addEventListener('click', () => {
+            const row = document.createElement('div');
+            row.className = 'recs-row';
+            row.setAttribute('data-recs-row', '');
+            row.innerHTML = `
+                <div class="form-grid form-grid--2">
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" data-rec-type>
+                            <option value="product">Product</option>
+                            <option value="tool">Tool</option>
+                            <option value="service">Service</option>
+                            <option value="resource" selected>Resource</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Display title (neutral)</label>
+                        <input class="form-input" value="" placeholder="e.g. Building cost calculator" data-rec-title>
+                    </div>
+                    <div class="form-group form-group--full">
+                        <label class="form-label">Affiliate URL</label>
+                        <input class="form-input" value="" placeholder="https://..." data-rec-url>
+                    </div>
+                    <div class="form-group form-group--full">
+                        <label class="form-label">Short justification (why it helps)</label>
+                        <textarea class="form-textarea" rows="2" placeholder="1–2 sentences. Keep it factual." data-rec-justification></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Display position</label>
+                        <select class="form-select" data-rec-position>
+                            <option value="end" selected>End of article</option>
+                            <option value="dedicated">Dedicated block</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Active</label>
+                        <select class="form-select" data-rec-active>
+                            <option value="1" selected>Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                    <button class="btn btn-ghost" type="button" data-rec-remove>Remove</button>
+                </div>
+            `;
+            rows.appendChild(row);
+            bindRow(row);
+            serialize();
+        });
+
+        // Ensure hidden JSON is up-to-date even if server rendered rows.
+        serialize();
+    })();
+
+    (function () {
+        // Media editor (progressive enhancement)
+        const root = document.querySelector('[data-media-editor]');
+        if (!root) return;
+        const hidden = document.querySelector('[data-media-json]');
+        const galleryRows = root.querySelector('[data-gallery-rows]');
+        const addBtn = root.querySelector('[data-gallery-add]');
+        if (!hidden) return;
+
+        function serialize() {
+            const featuredUrl = ((root.querySelector('[data-featured-url]') || {}).value || '').trim();
+            const featuredAlt = ((root.querySelector('[data-featured-alt]') || {}).value || '').trim();
+            const featuredCaption = ((root.querySelector('[data-featured-caption]') || {}).value || '').trim();
+
+            const payload = {};
+            if (featuredUrl || featuredAlt || featuredCaption) {
+                payload.featured = { url: featuredUrl, alt: featuredAlt, caption: featuredCaption };
+            }
+
+            if (galleryRows) {
+                const gallery = [];
+                galleryRows.querySelectorAll('[data-gallery-row]').forEach((row) => {
+                    const url = ((row.querySelector('[data-gallery-url]') || {}).value || '').trim();
+                    const alt = ((row.querySelector('[data-gallery-alt]') || {}).value || '').trim();
+                    const caption = ((row.querySelector('[data-gallery-caption]') || {}).value || '').trim();
+                    if (!url) return;
+                    gallery.push({ url, alt, caption });
+                });
+                if (gallery.length) payload.gallery = gallery;
+            }
+
+            hidden.value = JSON.stringify(payload);
+        }
+
+        function bindGalleryRow(row) {
+            const remove = row.querySelector('[data-gallery-remove]');
+            if (remove) {
+                remove.addEventListener('click', () => {
+                    row.remove();
+                    serialize();
+                });
+            }
+            row.addEventListener('input', serialize);
+            row.addEventListener('change', serialize);
+        }
+
+        root.addEventListener('input', serialize);
+        root.addEventListener('change', serialize);
+
+        if (galleryRows) {
+            galleryRows.querySelectorAll('[data-gallery-row]').forEach(bindGalleryRow);
+        }
+
+        if (addBtn && galleryRows) {
+            addBtn.addEventListener('click', () => {
+                const row = document.createElement('div');
+                row.className = 'media-row';
+                row.setAttribute('data-gallery-row', '');
+                row.innerHTML = `
+                    <div class="form-grid form-grid--2">
+                        <div class="form-group form-group--full">
+                            <label class="form-label">Image URL</label>
+                            <input class="form-input" value="" placeholder="https://..." data-gallery-url>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Alt text</label>
+                            <input class="form-input" value="" placeholder="Describe the image" data-gallery-alt>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Caption</label>
+                            <input class="form-input" value="" placeholder="Optional" data-gallery-caption>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:.5rem;">
+                        <button class="btn btn-ghost" type="button" data-gallery-remove>Remove</button>
+                    </div>
+                `;
+                galleryRows.appendChild(row);
+                bindGalleryRow(row);
+                serialize();
+            });
+        }
+
+        serialize();
     })();
 
     (function () {
