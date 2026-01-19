@@ -47,10 +47,12 @@
                         <div class="form-group">
                             {{ form.title.label(class="form-label") }}
                             {{ form.title(class="form-input", placeholder="A modern layout for compact family homes") }}
+                            <p class="form-help">Titre visible sur le site et dans Google. Clair, spécifique, sans promesse excessive.</p>
                         </div>
                         <div class="form-group">
                             {{ form.slug.label(class="form-label") }}
                             {{ form.slug(class="form-input", placeholder="auto-generated if empty") }}
+                            <p class="form-help">Texte dans l’URL (ex: "maison-compacte-3-chambres"). Laisse vide pour auto-génération.</p>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="extras__intent">Article intent</label>
@@ -62,15 +64,17 @@
                                 <option value="news" {% if _intent == 'news' %}selected{% endif %}>News / update</option>
                                 <option value="other" {% if _intent == 'other' %}selected{% endif %}>Other</option>
                             </select>
-                            <p class="form-help">Keeps the article focused and trustworthy.</p>
+                            <p class="form-help">But de l’article (guide, how-to…). Aide à garder un ton éditorial cohérent.</p>
                         </div>
                         <div class="form-group form-group--full">
                             {{ form.plan_id.label(class="form-label") }}
                             {{ form.plan_id(class="form-select") }}
+                            <p class="form-help">Plan mis en avant dans le bloc "Featured Plan" (optionnel). Choisir un plan pertinent.</p>
                         </div>
                         <div class="form-group">
                             {{ form.status.label(class="form-label") }}
                             {{ form.status(class="form-select") }}
+                            <p class="form-help">Brouillon = non public. Publié = visible sur le site.</p>
                         </div>
                     </div>
                 </div>
@@ -88,7 +92,7 @@
                     <div class="form-group dropzone" data-dropzone>
                         {{ form.cover_image.label(class="form-label") }}
                         {{ form.cover_image(class="form-input", data_drop_input="true") }}
-                        <p class="form-help">Drag and drop an image or click to browse.</p>
+                        <p class="form-help">Image principale de l’article (idéalement 1200×630). Glisser-déposer ou cliquer pour choisir.</p>
                         <span class="dropzone__file" data-dropzone-filename>No file selected</span>
                     </div>
                 </div>
@@ -106,7 +110,7 @@
                     <div class="form-group">
                         {{ form.content.label(class="form-label") }}
                         {{ form.content(class="form-textarea js-ckeditor", rows=18) }}
-                        <p class="form-help">Autosave is local-only (your browser). Publishing is manual.</p>
+                        <p class="form-help">Contenu éditorial uniquement (pas de liens affiliés ici). Autosave = uniquement dans ton navigateur.</p>
                         <p class="form-help" data-soft-warning="editorial-affiliate"></p>
                     </div>
                 </div>
@@ -133,18 +137,22 @@
                                                 <option value="service" {% if _t == 'service' %}selected{% endif %}>Service</option>
                                                 <option value="resource" {% if _t == 'resource' %}selected{% endif %}>Resource</option>
                                             </select>
+                                            <p class="form-help">Catégorie de recommandation (produit, outil, service, ressource).</p>
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">Display title (neutral)</label>
                                             <input class="form-input" value="{{ rec.get('title','') }}" placeholder="e.g. Building cost calculator" data-rec-title>
+                                            <p class="form-help">Titre neutre (sans marketing). Ex: "Calculateur de coût".</p>
                                         </div>
                                         <div class="form-group form-group--full">
                                             <label class="form-label">Affiliate URL</label>
                                             <input class="form-input" value="{{ rec.get('url','') }}" placeholder="https://..." data-rec-url>
+                                            <p class="form-help">Lien à ouvrir dans un nouvel onglet. Utiliser une URL complète https://…</p>
                                         </div>
                                         <div class="form-group form-group--full">
                                             <label class="form-label">Short justification (why it helps)</label>
                                             <textarea class="form-textarea" rows="2" placeholder="1–2 sentences. Keep it factual." data-rec-justification>{{ rec.get('justification','') }}</textarea>
+                                            <p class="form-help">1–2 phrases factuelles: pourquoi c’est utile, pour qui, dans quel cas.</p>
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">Display position</label>
@@ -153,6 +161,7 @@
                                                 <option value="end" {% if _p == 'end' %}selected{% endif %}>End of article</option>
                                                 <option value="dedicated" {% if _p == 'dedicated' %}selected{% endif %}>Dedicated block</option>
                                             </select>
+                                            <p class="form-help">Où afficher: fin d’article ou bloc dédié.</p>
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">Active</label>
@@ -160,6 +169,7 @@
                                                 <option value="1" {% if rec.get('active', True) %}selected{% endif %}>Active</option>
                                                 <option value="0" {% if not rec.get('active', True) %}selected{% endif %}>Inactive</option>
                                             </select>
+                                            <p class="form-help">Actif = affiché publiquement (dans la limite des 3 premiers actifs).</p>
                                         </div>
                                     </div>
                                     <div style="display:flex; justify-content:flex-end; gap:.5rem;">
@@ -221,15 +231,17 @@
                             <div class="form-group form-group--full">
                                 <label class="form-label">Featured image URL</label>
                                 <input class="form-input" value="{{ _featured.get('url','') }}" placeholder="https://..." data-featured-url>
-                                <p class="form-help">Optional. Used as Open Graph fallback and as featured media when no cover image exists.</p>
+                                <p class="form-help">Optionnel. Utilisé comme image Open Graph si aucune cover n’est uploadée.</p>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Featured alt text</label>
                                 <input class="form-input" value="{{ _featured.get('alt','') }}" placeholder="Describe the image" data-featured-alt>
+                                <p class="form-help">Texte pour l’accessibilité (décrire l’image en 1 phrase).</p>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Featured caption (optional)</label>
                                 <input class="form-input" value="{{ _featured.get('caption','') }}" placeholder="Short caption" data-featured-caption>
+                                <p class="form-help">Légende courte (optionnelle) affichée sous l’image.</p>
                             </div>
                         </div>
 
@@ -242,14 +254,17 @@
                                             <div class="form-group form-group--full">
                                                 <label class="form-label">Image URL</label>
                                                 <input class="form-input" value="{{ img.get('url','') }}" placeholder="https://..." data-gallery-url>
+                                                <p class="form-help">Lien direct vers l’image (https://…).</p>
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">Alt text</label>
                                                 <input class="form-input" value="{{ img.get('alt','') }}" placeholder="Describe the image" data-gallery-alt>
+                                                <p class="form-help">Décrire ce qu’on voit. Important pour SEO + accessibilité.</p>
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">Caption</label>
                                                 <input class="form-input" value="{{ img.get('caption','') }}" placeholder="Optional" data-gallery-caption>
+                                                <p class="form-help">Légende (optionnelle).</p>
                                             </div>
                                         </div>
                                         <div style="display:flex; justify-content:flex-end; gap:.5rem;">
@@ -273,11 +288,13 @@
                             {{ form.meta_title.label(class="form-label") }}
                             {{ form.meta_title(class="form-input", placeholder="SEO title for Google") }}
                             <p class="form-help" data-soft-warning="meta-title"></p>
+                            <p class="form-help">Recommandé: 30–60 caractères. Si vide, le titre de l’article peut être utilisé.</p>
                         </div>
                         <div class="form-group">
                             {{ form.meta_description.label(class="form-label") }}
                             {{ form.meta_description(class="form-textarea", rows=3, placeholder="Short description for search results") }}
                             <p class="form-help" data-soft-warning="meta-description"></p>
+                            <p class="form-help">Recommandé: 90–160 caractères. Résumer l’article en 1–2 phrases.</p>
                         </div>
                     </div>
 
@@ -298,10 +315,12 @@
                             <div class="form-group">
                                 <label class="form-label" for="extras__seo_meta_title">Meta title override</label>
                                 <input class="form-input" id="extras__seo_meta_title" name="extras__seo_meta_title" value="{{ _seo.get('meta_title','') }}" placeholder="If empty, uses article title" maxlength="200">
+                                <p class="form-help">Optionnel. Remplace le meta title calculé.</p>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="extras__seo_meta_description">Meta description override</label>
                                 <textarea class="form-textarea" id="extras__seo_meta_description" name="extras__seo_meta_description" rows="3" placeholder="If empty, uses the DB meta description">{{ _seo.get('meta_description','') }}</textarea>
+                                <p class="form-help">Optionnel. Remplace la meta description DB.</p>
                             </div>
                             <div class="form-group form-group--full">
                                 <label class="form-label" for="extras__seo_canonical_url">Canonical URL override</label>
@@ -311,10 +330,12 @@
                             <div class="form-group">
                                 <label class="form-label" for="extras__seo_robots">Robots meta (optional)</label>
                                 <input class="form-input" id="extras__seo_robots" name="extras__seo_robots" value="{{ _seo.get('robots','') }}" placeholder="index,follow | noindex,nofollow" maxlength="80">
+                                <p class="form-help">Exemples: "index,follow" ou "noindex,nofollow".</p>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="extras__seo_og_image">Open Graph image URL (optional)</label>
                                 <input class="form-input" id="extras__seo_og_image" name="extras__seo_og_image" value="{{ _seo.get('og_image','') }}" placeholder="https://..." maxlength="2000">
+                                <p class="form-help">Image pour partage (Facebook/WhatsApp). Si vide, utilise cover/featured.</p>
                             </div>
                         </div>
                     </details>
@@ -323,10 +344,11 @@
                 <details class="form-card">
                     <summary class="form-card__summary">Internal editorial notes (optional)</summary>
                     {% set _notes = (extras or {}).get('notes', '') if extras is defined else '' %}
-                    <p class="form-help" style="margin-top:.75rem;">Not visible publicly. Use for reminders, fact checks, and future edits.</p>
+                    <p class="form-help" style="margin-top:.75rem;">Non visible publiquement. Pour checklist, fact-check, idées de mise à jour.</p>
                     <div class="form-group" style="margin-top:.75rem;">
                         <label class="form-label" for="extras__notes">Editor notes</label>
                         <textarea class="form-textarea" id="extras__notes" name="extras__notes" rows="4" placeholder="Intent, updates to make, facts to verify…">{{ _notes }}</textarea>
+                        <p class="form-help">Ex: sources à ajouter, chiffres à vérifier, améliorations SEO à faire.</p>
                     </div>
                 </details>
 
