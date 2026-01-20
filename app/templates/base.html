@@ -107,13 +107,13 @@
                             <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                             <span>Compare</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint and (current_endpoint.startswith('planner.') or current_endpoint.startswith('space_planner.')) %}is-active{% endif %}" href="{{ url_for('planner.index') }}" {% if current_endpoint and (current_endpoint.startswith('planner.') or current_endpoint.startswith('space_planner.')) %}aria-current="page"{% endif %}>
-                            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-                            <span>Room Planner</span>
+                        <a class="nav-link {% if current_endpoint and (current_endpoint.startswith('space_planner.') or current_endpoint.startswith('room_checker.') or current_endpoint.startswith('planner.')) %}is-active{% endif %}" href="{{ url_for('space_planner.index') }}" {% if current_endpoint and (current_endpoint.startswith('space_planner.') or current_endpoint.startswith('room_checker.') or current_endpoint.startswith('planner.')) %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-compass" aria-hidden="true"></i>
+                            <span>Space Planner</span>
                         </a>
-                        <a class="nav-link {% if current_endpoint and current_endpoint.startswith('room_checker.') %}is-active{% endif %}" href="{{ url_for('room_checker.index') }}" {% if current_endpoint and current_endpoint.startswith('room_checker.') %}aria-current="page"{% endif %}>
-                            <i class="fa-solid fa-square-check" aria-hidden="true"></i>
-                            <span>Room Size Checker</span>
+                        <a class="nav-link {% if current_endpoint and (current_endpoint.startswith('planner.') or current_endpoint == 'space_planner.furniture_fit') %}is-active{% endif %}" href="{{ url_for('space_planner.furniture_fit') }}" {% if current_endpoint and (current_endpoint.startswith('planner.') or current_endpoint == 'space_planner.furniture_fit') %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                            <span>Furniture Fit</span>
                         </a>
                     </div>
                 </div>

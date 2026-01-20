@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from flask import flash, render_template, request, url_for
+from flask import redirect, flash, render_template, request, url_for
 
 from app.seo import generate_meta_tags
 
@@ -65,6 +65,16 @@ def _build_micro_tools(*, room: RoomType) -> list[dict]:
 @room_checker_bp.route('', methods=['GET', 'POST'])
 @room_checker_bp.route('/', methods=['GET', 'POST'])
 def index():
+    # Repositioning: keep legacy URL working, but make the Space Planner URL canonical.
+    # - GET: 301 redirect (share links preserved)
+    # - POST: 302 redirect (turn form submit into a shareable URL)
+    if request.method == 'GET':
+        params = {k: v for k, v in request.args.items() if v}
+        return redirect(url_for('space_planner.room_size', **params), code=301)
+    if request.method == 'POST':
+        params = {k: v for k, v in request.form.items() if v}
+        return redirect(url_for('space_planner.room_size', **params), code=302)
+
     room_slug = (request.values.get('room') or '').strip()
     room = ROOMS.get(room_slug) if room_slug else None
 

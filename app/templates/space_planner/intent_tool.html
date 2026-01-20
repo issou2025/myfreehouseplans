@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='room_checker/room_checker.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function(){
+    // Search-to-filter for the room dropdown
+    const search = document.getElementById('roomSearch');
+    const select = document.getElementById('room');
+    if(search && select){
+      search.addEventListener('input', function(){
+        const q = (search.value || '').toLowerCase().trim();
+        for(const opt of select.options){
+          if(!opt.value){ continue; }
+          const text = (opt.textContent || '').toLowerCase();
+          opt.hidden = q && !text.includes(q);
+        }
+      });
+    }
+
+    // Input method show/hide
+    function applyMethod(){
+      const method = document.querySelector('input[name="method"]:checked');
+      const m = method ? method.value : 'dims';
+      document.querySelectorAll('.rc-dims').forEach(el => el.style.display = (m === 'dims' ? '' : 'none'));
+      document.querySelectorAll('.rc-area').forEach(el => el.style.display = (m === 'area' ? '' : 'none'));
+    }
+    document.querySelectorAll('input[name="method"]').forEach(r => r.addEventListener('change', applyMethod));
+    applyMethod();
+
+    // Share link helper
+    const copyBtn = document.getElementById('rcCopyLink');
+    const statusEl = document.getElementById('rcCopyStatus');
+    function buildShareUrl(){
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+      const fields = ['room','units','method','length','width','area','area_length','area_width'];
+      for(const f of fields){
+        const el = document.querySelector('[name="' + f + '"]');
+        if(el && el.value){ params.set(f, el.value); }
+      }
+      url.search = params.toString();
+      return url.toString();
+    }
+    async function copyShareLink(){
+      if(!copyBtn) return;
+      const link = buildShareUrl();
+      try{
+        await navigator.clipboard.writeText(link);
+        if(statusEl) statusEl.textContent = 'Copied.';
+      }catch(e){
+        if(statusEl) statusEl.textContent = 'Copy failed — you can manually copy the URL.';
+      }
+    }
+    if(copyBtn){ copyBtn.addEventListener('click', copyShareLink); }
+
+    // Mobile UX: scroll to results after compute
+    const result = document.getElementById('spResult');
+    if(result){
+      setTimeout(() => { result.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    }
+  })();
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.25rem 0 1.15rem 0;">
+  <div class="glass" style="padding: 1.6rem; border-radius: 1rem;">
+    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+      <i class="fa-solid fa-compass" aria-hidden="true"></i>
+      Space Planner
+    </p>
+    <h1 style="margin: 0 0 .6rem 0; font-family: 'Playfair Display', serif;">{{ page_title }}</h1>
+    <p style="margin: 0; opacity: .92; max-width: 78ch;">{{ page_intro }}</p>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3.25rem 0;">
+  <div class="rc-layout">
+    <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+      <h2 class="rc-h2">Start with one room</h2>
+
+      <div class="rc-search">
+        <label class="rc-label" for="roomSearch">Search a room type</label>
+        <input class="rc-input" id="roomSearch" type="text" placeholder="Type to filter (e.g., kitchen, bedroom, garage)">
+      </div>
+
+      <form method="post" class="rc-form" novalidate>
+        <div class="rc-grid">
+          <div class="rc-field rc-field--full">
+            <label class="rc-label" for="room">Room type</label>
+            <select class="rc-input" id="room" name="room" required>
+              <option value="" {% if not form.room %}selected{% endif %}>Choose a room…</option>
+              {% for r in rooms %}
+                <option value="{{ r.slug }}" {% if form.room == r.slug %}selected{% endif %}>{{ r.label }}</option>
+              {% endfor %}
+            </select>
+            <div class="rc-help">Tip: type in the search box above to quickly find a room.</div>
+          </div>
+
+          <div class="rc-field">
+            <label class="rc-label" for="units">Units</label>
+            <select class="rc-input" id="units" name="units">
+              {% for u in unit_options %}
+                <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (m / m²)' if u.key == 'metric' else 'Imperial (ft / ft²)' }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="rc-field">
+            <label class="rc-label">Input method</label>
+            <div class="rc-toggle">
+              <label class="rc-chip">
+                <input type="radio" name="method" value="dims" {% if form.method == 'dims' %}checked{% endif %}>
+                Length + width
+              </label>
+              <label class="rc-chip">
+                <input type="radio" name="method" value="area" {% if form.method == 'area' %}checked{% endif %}>
+                Total surface only
+              </label>
+            </div>
+          </div>
+
+          <div class="rc-field rc-dims">
+            <label class="rc-label" for="length">Length ({{ units.length_label }})</label>
+            <input class="rc-input" id="length" name="length" type="number" step="0.01" value="{{ form.length }}" placeholder="{{ units.placeholder_length }}">
+          </div>
+          <div class="rc-field rc-dims">
+            <label class="rc-label" for="width">Width ({{ units.length_label }})</label>
+            <input class="rc-input" id="width" name="width" type="number" step="0.01" value="{{ form.width }}" placeholder="{{ units.placeholder_length }}">
+          </div>
+
+          <div class="rc-field rc-area rc-field--full">
+            <label class="rc-label" for="area">Total surface ({{ units.area_label }})</label>
+            <input class="rc-input" id="area" name="area" type="number" step="0.01" value="{{ form.area }}" placeholder="{{ units.placeholder_area }}">
+            <div class="rc-help">Optional: if you know one side, add it below — we’ll use it quietly to improve the feedback.</div>
+          </div>
+
+          <div class="rc-field rc-area">
+            <label class="rc-label" for="area_length">Known side (optional) ({{ units.length_label }})</label>
+            <input class="rc-input" id="area_length" name="area_length" type="number" step="0.01" value="{{ form.area_length }}" placeholder="{{ units.placeholder_length }}">
+          </div>
+          <div class="rc-field rc-area">
+            <label class="rc-label" for="area_width">Known side (optional) ({{ units.length_label }})</label>
+            <input class="rc-input" id="area_width" name="area_width" type="number" step="0.01" value="{{ form.area_width }}" placeholder="{{ units.placeholder_length }}">
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-check" aria-hidden="true"></i>
+            Get result
+          </button>
+          <a class="btn btn-secondary" href="{{ request.path }}">Reset</a>
+        </div>
+
+        <p class="rc-help" style="margin-top: .85rem;">
+          Goal: understand the space in under 10 seconds.
+        </p>
+      </form>
+    </div>
+
+    <div>
+      {% if recommendation %}
+        <div id="spResult" class="glass rc-result rc-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
+          <div class="rc-verdict">
+            <div class="rc-verdict__icon" aria-hidden="true">
+              {% if recommendation.status == 'ok' %}
+                <i class="fa-solid fa-circle-check"></i>
+              {% elif recommendation.status == 'warning' %}
+                <i class="fa-solid fa-circle-exclamation"></i>
+              {% else %}
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              {% endif %}
+            </div>
+            <div>
+              <div class="rc-result__title">{{ recommendation.verdict }}</div>
+              <div class="rc-result__subtitle">
+                {% if recommendation.status == 'ok' %}
+                  Green means safe and comfortable.
+                {% elif recommendation.status == 'warning' %}
+                  Orange means it works, but may feel tight.
+                {% else %}
+                  Red means not recommended for long-term use.
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <h3 class="rc-h2" style="margin-top: 1rem;">Daily life</h3>
+          <p class="rc-result__summary">{{ recommendation.daily_life }}</p>
+
+          <h3 class="rc-h2" style="margin-top: 1rem;">Next steps</h3>
+          <ul class="rc-result__bullets">
+            {% for b in recommendation.room_recommendations %}
+              <li>{{ b }}</li>
+            {% endfor %}
+          </ul>
+
+          <h3 class="rc-h2" style="margin-top: 1rem;">Pro advice</h3>
+          <p class="rc-result__summary" style="margin-bottom: .5rem;">{{ recommendation.pro_advice }}</p>
+
+          <div class="rc-result__note" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+            <strong>Share:</strong>
+            <button class="btn btn-secondary" type="button" id="rcCopyLink">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              Copy share link
+            </button>
+            <span id="rcCopyStatus" style="opacity:.85;"></span>
+          </div>
+
+          <p class="rc-help" style="margin-top: .75rem;">{{ recommendation.seo_line }}</p>
+        </div>
+
+        <div class="glass rc-micro" style="margin-top: 1rem; padding: 1.25rem; border-radius: 1rem;">
+          <h2 class="rc-h2" style="margin-bottom: .65rem;">Try one more action</h2>
+          <div class="rc-micro__grid">
+            {% if room %}
+              <a class="rc-micro__card rc-micro__card--info" href="{{ url_for('planner.room', room_slug=room.slug) }}" aria-label="Check furniture fit">
+                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
+                <div>
+                  <div class="rc-micro__title">Check furniture fit</div>
+                  <div class="rc-micro__body">Turn this space into real life: test furniture and appliances.</div>
+                  <div class="rc-micro__cta"><span>Open Furniture Fit</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+                </div>
+              </a>
+              <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.room', room_slug=room.slug) }}" aria-label="Open the full planner for this room">
+                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
+                <div>
+                  <div class="rc-micro__title">Open this room planner</div>
+                  <div class="rc-micro__body">See all checks for {{ room.label }} in one place.</div>
+                  <div class="rc-micro__cta"><span>View room page</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+                </div>
+              </a>
+            {% else %}
+              <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.index') }}" aria-label="Go back to Space Planner">
+                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
+                <div>
+                  <div class="rc-micro__title">Browse Space Planner</div>
+                  <div class="rc-micro__body">Pick a room and plan comfort in minutes.</div>
+                  <div class="rc-micro__cta"><span>Open hub</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+                </div>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+      {% else %}
+        <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+          <h2 class="rc-h2">What you’ll get</h2>
+          <ul class="rc-result__bullets" style="margin-bottom: 0;">
+            <li>One clear verdict with a strong green/orange/red signal.</li>
+            <li>Plain-language guidance focused on daily life.</li>
+            <li>A natural next step (furniture fit, circulation, or comfort).</li>
+          </ul>
+        </div>
+      {% endif %}
+
+      <div class="glass rc-note" style="margin-top: 1rem;">
+        <p style="margin: 0; opacity: .92;">
+          <strong>Quick note:</strong> Space planning is about comfort and usability — not regulations.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

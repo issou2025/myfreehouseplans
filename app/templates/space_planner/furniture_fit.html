@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Space Planner — Furniture Fit — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/space_planner.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.25rem 0 1.25rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+      <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+      Space Planner
+    </p>
+    <h1 style="margin: 0 0 .65rem 0; font-family: 'Playfair Display', serif;">Furniture Fit</h1>
+    <p style="margin: 0; opacity: .92; max-width: 78ch;">
+      Pick a room, then test furniture and appliances with real-life movement clearances.
+      This helps you plan a layout that feels good to live in — not just “fits on paper”.
+    </p>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3rem 0;">
+  <div class="sp-grid" aria-label="Choose a room type">
+    {% for r in rooms %}
+      <a class="sp-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open furniture fit for {{ r.label }}">
+        <div class="sp-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+        <div class="sp-card__body">
+          <div class="sp-card__title">{{ r.label }}</div>
+          <div class="sp-card__desc">Start with furniture fit and see what feels comfortable.</div>
+          <div class="sp-card__cta">
+            <span>Open furniture fit</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="glass sp-note" style="margin-top: 1.25rem;">
+    <p style="margin: 0; opacity: .92;">
+      <strong>Tip:</strong> If you’re still deciding the room size, start with
+      <a href="{{ url_for('space_planner.room_size') }}">Room Size</a> first — then come back here.
+    </p>
+  </div>
+</section>
+{% endblock %}

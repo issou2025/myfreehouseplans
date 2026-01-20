@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ room.label }} Space Planner — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/space_planner.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='room_checker/room_checker.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.25rem 0 1.15rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <div style="display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+      <div style="min-width: 16rem;">
+        <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+          <i class="{{ room.icon }}" aria-hidden="true"></i>
+          Space Planner
+        </p>
+        <h1 style="margin: 0 0 .5rem 0; font-family: 'Playfair Display', serif;">{{ room.label }}</h1>
+        <p style="margin: 0; opacity: .92; max-width: 78ch;">{{ room.description }}</p>
+      </div>
+      <div>
+        <a class="btn btn-secondary" href="{{ url_for('space_planner.index') }}">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          Space Planner hub
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3.25rem 0;">
+  <div class="rc-micro__grid">
+    <a class="rc-micro__card rc-micro__card--info" href="{{ url_for('space_planner.room_size', room=room.slug) }}">
+      <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-square-check"></i></div>
+      <div>
+        <div class="rc-micro__title">Room size comfort</div>
+        <div class="rc-micro__body">Check if the space will feel comfortable, tight, or not recommended.</div>
+        <div class="rc-micro__cta"><span>Open room size</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.circulation', room=room.slug) }}">
+      <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-route"></i></div>
+      <div>
+        <div class="rc-micro__title">Circulation</div>
+        <div class="rc-micro__body">A quick check for daily movement comfort.</div>
+        <div class="rc-micro__cta"><span>Open circulation</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.comfort_check', room=room.slug) }}">
+      <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-heart"></i></div>
+      <div>
+        <div class="rc-micro__title">Comfort check</div>
+        <div class="rc-micro__body">An overall usability summary for everyday life.</div>
+        <div class="rc-micro__cta"><span>Open comfort check</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="rc-micro__card rc-micro__card--info" href="{{ url_for('planner.room', room_slug=room.slug) }}">
+      <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
+      <div>
+        <div class="rc-micro__title">Furniture fit</div>
+        <div class="rc-micro__body">Test real furniture and appliances to plan a layout that feels right.</div>
+        <div class="rc-micro__cta"><span>Open furniture fit</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="glass rc-note" style="margin-top: 1rem;">
+    <p style="margin: 0; opacity: .92;">
+      <strong>Planning tip:</strong> Start with room size → then furniture fit → then refine circulation.
+    </p>
+  </div>
+</section>
+{% endblock %}
