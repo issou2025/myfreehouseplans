@@ -57,7 +57,28 @@
             <header class="blog-article__header">
                 <p class="eyebrow"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Editorial</p>
                 <h1 id="article-heading" itemprop="headline">{{ post.title }}</h1>
-                <p class="blog-article__meta">{{ post.created_at.strftime('%B %d, %Y') }}</p>
+                <div class="blog-article__meta-row">
+                    <span class="blog-article__meta-pill">{{ post.created_at.strftime('%B %d, %Y') }}</span>
+                    <span class="blog-article__meta-pill" data-reading-time>Estimated reading time</span>
+                </div>
+                <div class="blog-share" role="group" aria-label="Share this article">
+                    <a class="blog-share__btn" href="#" data-share="twitter" target="_blank" rel="noopener noreferrer" aria-label="Share on X">
+                        <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                        <span>Share</span>
+                    </a>
+                    <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">
+                        <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
+                        <span>LinkedIn</span>
+                    </a>
+                    <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">
+                        <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+                        <span>Facebook</span>
+                    </a>
+                    <button class="blog-share__btn" type="button" data-share="copy" aria-label="Copy link">
+                        <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                        <span>Copy link</span>
+                    </button>
+                </div>
             </header>
 
             {% if post.cover_image %}
@@ -69,7 +90,7 @@
                 <figure class="blog-article__cover">
                     <img src="{{ _f.get('url') }}" alt="{{ _f.get('alt') or post.title }}" loading="lazy" decoding="async" itemprop="image">
                     {% if _f.get('caption') %}
-                        <figcaption style="opacity:.85; margin-top:.35rem;">{{ _f.get('caption') }}</figcaption>
+                        <figcaption>{{ _f.get('caption') }}</figcaption>
                     {% endif %}
                 </figure>
             {% elif _img.get('featured') %}
@@ -77,6 +98,11 @@
                     <img src="{{ _img.get('featured') }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
                 </figure>
             {% endif %}
+
+            <nav class="blog-toc blog-toc--inline" aria-label="Table of contents" data-toc>
+                <h2 class="blog-toc__title">On this page</h2>
+                <ul class="blog-toc__list" data-toc-list></ul>
+            </nav>
 
             {% if (not _has_recs) and _aff and _aff.get('affiliate_url') and (_aff.get('display_position','after') == 'before') %}
                 <section class="blog-affiliate" aria-label="Recommended product">
@@ -204,6 +230,31 @@
         </article>
 
         <aside class="blog-article__aside" aria-label="Sidebar">
+            <div class="aside-card blog-toc blog-toc--aside" aria-label="Table of contents" data-toc>
+                <h3 class="blog-toc__title">On this page</h3>
+                <ul class="blog-toc__list" data-toc-list></ul>
+            </div>
+            <div class="aside-card blog-share-card" aria-label="Share this article">
+                <h3>Share</h3>
+                <div class="blog-share blog-share--stack">
+                    <a class="blog-share__btn" href="#" data-share="twitter" target="_blank" rel="noopener noreferrer" aria-label="Share on X">
+                        <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                        <span>Share</span>
+                    </a>
+                    <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">
+                        <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
+                        <span>LinkedIn</span>
+                    </a>
+                    <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">
+                        <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+                        <span>Facebook</span>
+                    </a>
+                    <button class="blog-share__btn" type="button" data-share="copy" aria-label="Copy link">
+                        <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                        <span>Copy link</span>
+                    </button>
+                </div>
+            </div>
             <div class="aside-card">
                 <h3>Most popular plans</h3>
                 <ul class="blog-aside-list">
@@ -218,23 +269,115 @@
         </aside>
     </div>
 </section>
+
+<button class="back-to-top" type="button" data-back-to-top aria-label="Back to top">
+    <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+</button>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     (function () {
         const bar = document.querySelector('[data-reading-progress]');
-        if (!bar) return;
-        function update() {
+        const content = document.querySelector('.blog-article__content');
+        const readingTimeEl = document.querySelector('[data-reading-time]');
+        const backToTop = document.querySelector('[data-back-to-top]');
+        const tocContainers = document.querySelectorAll('[data-toc]');
+        const shareButtons = document.querySelectorAll('[data-share]');
+
+        function updateProgress() {
+            if (!bar) return;
             const doc = document.documentElement;
             const scrollTop = doc.scrollTop || document.body.scrollTop;
             const scrollHeight = doc.scrollHeight - doc.clientHeight;
             const percent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
             bar.style.width = `${percent}%`;
         }
-        document.addEventListener('scroll', update, { passive: true });
-        window.addEventListener('resize', update);
-        update();
+
+        function updateBackToTop() {
+            if (!backToTop) return;
+            const show = window.scrollY > 500;
+            backToTop.classList.toggle('is-visible', show);
+        }
+
+        function initReadingTime() {
+            if (!content || !readingTimeEl) return;
+            const text = content.textContent || '';
+            const words = text.trim().split(/\s+/).filter(Boolean).length;
+            const minutes = Math.max(1, Math.ceil(words / 220));
+            readingTimeEl.textContent = `${minutes} min read`;
+        }
+
+        function initToc() {
+            if (!content || !tocContainers.length) return;
+            const headings = content.querySelectorAll('h2, h3');
+            if (!headings.length) {
+                tocContainers.forEach(container => container.classList.add('is-empty'));
+                return;
+            }
+            headings.forEach((heading, index) => {
+                if (!heading.id) {
+                    heading.id = `section-${index + 1}`;
+                }
+            });
+            tocContainers.forEach(container => {
+                const list = container.querySelector('[data-toc-list]');
+                if (!list) return;
+                list.innerHTML = '';
+                headings.forEach(heading => {
+                    const li = document.createElement('li');
+                    li.className = `toc-item toc-${heading.tagName.toLowerCase()}`;
+                    const link = document.createElement('a');
+                    link.href = `#${heading.id}`;
+                    link.textContent = heading.textContent || '';
+                    li.appendChild(link);
+                    list.appendChild(li);
+                });
+            });
+        }
+
+        function initShare() {
+            if (!shareButtons.length) return;
+            const url = encodeURIComponent(window.location.href);
+            const title = encodeURIComponent(document.title);
+            shareButtons.forEach(btn => {
+                const platform = btn.getAttribute('data-share');
+                if (platform === 'twitter') {
+                    btn.href = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
+                }
+                if (platform === 'linkedin') {
+                    btn.href = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+                }
+                if (platform === 'facebook') {
+                    btn.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                }
+                if (platform === 'copy') {
+                    btn.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(window.location.href);
+                            btn.classList.add('is-copied');
+                            setTimeout(() => btn.classList.remove('is-copied'), 1500);
+                        } catch (err) {
+                            window.prompt('Copy this link:', window.location.href);
+                        }
+                    });
+                }
+            });
+        }
+
+        document.addEventListener('scroll', () => {
+            updateProgress();
+            updateBackToTop();
+        }, { passive: true });
+        window.addEventListener('resize', updateProgress);
+        if (backToTop) {
+            backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
+        initReadingTime();
+        initToc();
+        initShare();
+        updateProgress();
+        updateBackToTop();
     })();
 </script>
 {% endblock %}
