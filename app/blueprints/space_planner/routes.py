@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from flask import flash, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for
 
 from app.seo import generate_meta_tags
 
@@ -95,15 +95,7 @@ def _furniture_options_for(room: RoomType, catalog: Dict[str, FurnitureType]):
 @space_planner_bp.get('')
 @space_planner_bp.get('/')
 def index():
-    meta = generate_meta_tags(
-        title='Space Planner',
-        description='Check furniture fit and circulation in a room — like an architect, without the calculations.',
-        url=url_for('space_planner.index', _external=True),
-    )
-
-    rooms = list(ROOMS.values())
-
-    return render_template('space_planner/index.html', rooms=rooms, meta=meta)
+    return redirect(url_for('planner.index'), code=302)
 
 
 @space_planner_bp.route('/bedroom', methods=['GET', 'POST'], defaults={'room_slug': 'bedroom'})
@@ -116,7 +108,9 @@ def room(room_slug: str):
     room_type = ROOMS.get(room_slug)
     if room_type is None:
         flash('Unknown room type.', 'warning')
-        return render_template('space_planner/index.html', rooms=list(ROOMS.values()))
+        return redirect(url_for('planner.index'), code=302)
+
+    return redirect(url_for('planner.room', room_slug=room_type.slug), code=302)
 
     catalog = get_furniture_catalog()
     furniture_options = _furniture_options_for(room_type, catalog)

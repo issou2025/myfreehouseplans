@@ -511,6 +511,7 @@ def register_blueprints(app):
     from app.routes.health import health_bp
     from app.routes.blog import blog_bp
     from app.blueprints.space_planner import space_planner_bp
+    from app.blueprints.planner import planner_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -518,6 +519,7 @@ def register_blueprints(app):
     app.register_blueprint(health_bp)  # No prefix - accessible at /health
     app.register_blueprint(blog_bp)
     app.register_blueprint(space_planner_bp, url_prefix='/space-planner')
+    app.register_blueprint(planner_bp, url_prefix='/planner')
 
 
 def register_error_handlers(app):

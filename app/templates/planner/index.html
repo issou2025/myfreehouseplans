@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Room Planner — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='planner/planner.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+      <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+      Digital Space Assistant
+    </p>
+    <h1 style="margin: 0 0 .75rem 0; font-family: 'Playfair Display', serif;">Room Planner</h1>
+    <p style="margin: 0; opacity: .9; max-width: 72ch;">
+      Pick a room, enter the room size and your item size, then click <strong>Check fit</strong>.
+      We’ll give you a clear answer in plain language.
+    </p>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3rem 0;">
+  <div class="pl-grid" aria-label="Choose a room type">
+    {% for r in rooms %}
+      <a class="pl-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open {{ r.label }} planner">
+        <div class="pl-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+        <div class="pl-card__body">
+          <div class="pl-card__title">{{ r.label }}</div>
+          <div class="pl-card__desc">{{ r.description }}</div>
+          <div class="pl-card__cta">
+            <span>Open</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="glass pl-note" style="margin-top: 1.25rem;">
+    <p style="margin: 0; opacity: .92;">
+      <strong>Simple rule:</strong> if it doesn’t feel easy to walk around in real life, the planner will flag it as “tight”.
+    </p>
+  </div>
+</section>
+{% endblock %}

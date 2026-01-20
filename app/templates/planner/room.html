@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Room Planner — {{ room.label }} — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='planner/planner.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <div style="display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+      <div style="min-width: 16rem;">
+        <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+          <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+          Room Planner
+        </p>
+        <h1 style="margin: 0 0 .5rem 0; font-family: 'Playfair Display', serif;">{{ room.label }}</h1>
+        <p style="margin: 0; opacity: .9; max-width: 70ch;">{{ room.description }}</p>
+      </div>
+      <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+        <a class="btn btn-secondary" href="{{ url_for('planner.index') }}">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          All rooms
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3.25rem 0;">
+  <div class="pl-layout">
+    <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+      <h2 class="pl-h2">Check fit</h2>
+
+      <form method="post" class="pl-form" novalidate>
+        <div class="pl-form__grid">
+          <div class="pl-field pl-field--full">
+            <label class="pl-label" for="units">Units</label>
+            <select class="pl-input" id="units" name="units">
+              {% for u in unit_options %}
+                <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (cm)' if u.key == 'metric' else 'Imperial (ft)' }}</option>
+              {% endfor %}
+            </select>
+            <div class="pl-help">Pick the unit you’re comfortable with — we’ll keep everything consistent.</div>
+          </div>
+
+          <div class="pl-field">
+            <label class="pl-label" for="room_length">Room length ({{ units.length_label }})</label>
+            <input class="pl-input" id="room_length" name="room_length" type="number" step="0.01" value="{{ form.room_length }}" placeholder="{{ units.placeholder_room }}" required>
+          </div>
+          <div class="pl-field">
+            <label class="pl-label" for="room_width">Room width ({{ units.length_label }})</label>
+            <input class="pl-input" id="room_width" name="room_width" type="number" step="0.01" value="{{ form.room_width }}" placeholder="{{ units.placeholder_room }}" required>
+          </div>
+
+          <div class="pl-field pl-field--full">
+            <label class="pl-label" for="item_key">Item</label>
+            <select class="pl-input" id="item_key" name="item_key" required>
+              {% for k, it in items.items() %}
+                <option value="{{ k }}" data-default-length-cm="{{ it.default_length_cm }}" data-default-width-cm="{{ it.default_width_cm }}" {% if form.item_key == k %}selected{% endif %}>{{ it.label }}</option>
+              {% endfor %}
+            </select>
+            <div class="pl-help">We prefill typical sizes — you can edit them to match your real furniture.</div>
+          </div>
+
+          <div class="pl-field">
+            <label class="pl-label" for="item_length">Item length ({{ units.length_label }})</label>
+            <input class="pl-input" id="item_length" name="item_length" type="number" step="0.01" value="{{ form.item_length }}" placeholder="{{ units.placeholder_item }}" required>
+          </div>
+          <div class="pl-field">
+            <label class="pl-label" for="item_width">Item width / depth ({{ units.length_label }})</label>
+            <input class="pl-input" id="item_width" name="item_width" type="number" step="0.01" value="{{ form.item_width }}" placeholder="{{ units.placeholder_item }}" required>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-check" aria-hidden="true"></i>
+            Check fit
+          </button>
+          <a class="btn btn-secondary" href="{{ url_for('planner.room', room_slug=room.slug, units=form.units) }}">Reset</a>
+        </div>
+      </form>
+
+      <p class="pl-help" style="margin-top: .85rem;">
+        You’ll get one clear answer: comfortable, tight, or not recommended.
+      </p>
+    </div>
+
+    <div>
+      {% if recommendation %}
+        <div class="glass pl-result pl-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
+          <div class="pl-result__title">{{ recommendation.title }}</div>
+          <p class="pl-result__summary">{{ recommendation.summary }}</p>
+          <ul class="pl-result__bullets">
+            {% for b in recommendation.bullets %}
+              <li>{{ b }}</li>
+            {% endfor %}
+          </ul>
+          {% if recommendation.tip %}
+            <div class="pl-result__note">{{ recommendation.tip }}</div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+          <h2 class="pl-h2">What you’ll get</h2>
+          <ul class="pl-result__bullets" style="margin-bottom: 0;">
+            <li>A simple “yes / maybe / not recommended” result in plain language.</li>
+            <li>We automatically test rotating the item, and suggest the better option.</li>
+            <li>Extra tips if the room is likely to feel crowded.</li>
+          </ul>
+        </div>
+      {% endif %}
+
+      <div class="glass pl-note" style="margin-top: 1rem;">
+        <p style="margin: 0; opacity: .92;">
+          <strong>Quick note:</strong> Door and window positions matter. This is a fast, reliable “does this feel workable?” check.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% block extra_js %}
+<script>
+  (function(){
+    const unitsSelect = document.getElementById('units');
+    const itemSelect = document.getElementById('item_key');
+    const lenInput = document.getElementById('item_length');
+    const widInput = document.getElementById('item_width');
+
+    function cmToUnits(cm){
+      const u = unitsSelect ? unitsSelect.value : 'metric';
+      if(u === 'imperial') return (cm / 30.48);
+      return cm;
+    }
+
+    function format(v){
+      if(!isFinite(v)) return '';
+      const s = (Math.round(v * 100) / 100).toString();
+      return s;
+    }
+
+    function applyDefaults(){
+      if(!itemSelect || !lenInput || !widInput) return;
+      const opt = itemSelect.options[itemSelect.selectedIndex];
+      if(!opt) return;
+      const dl = parseFloat(opt.getAttribute('data-default-length-cm') || '');
+      const dw = parseFloat(opt.getAttribute('data-default-width-cm') || '');
+      if(isFinite(dl)) lenInput.value = format(cmToUnits(dl));
+      if(isFinite(dw)) widInput.value = format(cmToUnits(dw));
+    }
+
+    if(itemSelect){
+      itemSelect.addEventListener('change', applyDefaults);
+    }
+    if(unitsSelect){
+      unitsSelect.addEventListener('change', applyDefaults);
+    }
+  })();
+</script>
+{% endblock %}
+
+{% endblock %}
