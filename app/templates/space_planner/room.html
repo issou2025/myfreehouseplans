@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Space Planner — {{ room.label }} — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/space_planner.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <div style="display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+      <div style="min-width: 16rem;">
+        <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+          <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+          Space Planner
+        </p>
+        <h1 style="margin: 0 0 .5rem 0; font-family: 'Playfair Display', serif;">{{ room.label }}</h1>
+        <p style="margin: 0; opacity: .9; max-width: 70ch;">{{ room.description }}</p>
+      </div>
+      <div>
+        <a class="btn btn-secondary" href="{{ url_for('space_planner.index') }}">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          All rooms
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3.25rem 0;">
+  <div class="sp-layout">
+    <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+      <h2 class="sp-h2">Check fit</h2>
+      <form method="post" class="sp-form">
+        <div class="sp-form__grid">
+          <div class="sp-field">
+            <label class="sp-label" for="room_length_cm">Room length (cm)</label>
+            <input class="sp-input" id="room_length_cm" name="room_length_cm" type="number" step="0.1" min="30" max="5000" value="{{ form.room_length_cm }}" placeholder="e.g., 420" required>
+          </div>
+          <div class="sp-field">
+            <label class="sp-label" for="room_width_cm">Room width (cm)</label>
+            <input class="sp-input" id="room_width_cm" name="room_width_cm" type="number" step="0.1" min="30" max="5000" value="{{ form.room_width_cm }}" placeholder="e.g., 360" required>
+          </div>
+
+          <div class="sp-field sp-field--full">
+            <label class="sp-label" for="furniture_key">Furniture type</label>
+            <select class="sp-input" id="furniture_key" name="furniture_key" required>
+              {% for f in furniture_options %}
+                <option value="{{ f.key }}" {% if form.furniture_key == f.key %}selected{% endif %}>{{ f.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="sp-field">
+            <label class="sp-label" for="furniture_length_cm">Furniture length (cm)</label>
+            <input class="sp-input" id="furniture_length_cm" name="furniture_length_cm" type="number" step="0.1" min="30" max="5000" value="{{ form.furniture_length_cm }}" placeholder="e.g., 200" required>
+          </div>
+          <div class="sp-field">
+            <label class="sp-label" for="furniture_width_cm">Furniture width/depth (cm)</label>
+            <input class="sp-input" id="furniture_width_cm" name="furniture_width_cm" type="number" step="0.1" min="30" max="5000" value="{{ form.furniture_width_cm }}" placeholder="e.g., 160" required>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-check" aria-hidden="true"></i>
+            Check fit
+          </button>
+          <a class="btn btn-secondary" href="{{ url_for('space_planner.room', room_slug=room.slug) }}">Reset</a>
+        </div>
+      </form>
+
+      <p class="sp-help" style="margin-top: .85rem;">
+        We automatically apply functional clearances and test both orientations — you only enter dimensions.
+      </p>
+    </div>
+
+    <div>
+      {% if recommendation %}
+        <div class="glass sp-result sp-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
+          <div class="sp-result__title">{{ recommendation.title }}</div>
+          <p class="sp-result__summary">{{ recommendation.summary }}</p>
+          <ul class="sp-result__bullets">
+            {% for b in recommendation.bullets %}
+              <li>{{ b }}</li>
+            {% endfor %}
+          </ul>
+          {% if recommendation.note %}
+            <div class="sp-result__note">{{ recommendation.note }}</div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
+          <h2 class="sp-h2">How it works</h2>
+          <ul class="sp-result__bullets" style="margin-bottom: 0;">
+            <li>We add the right clearance for the selected furniture (circulation, access, door swing tolerance).</li>
+            <li>We test normal placement and a 90° rotation automatically.</li>
+            <li>You get one clear answer: comfortable, tight, or not suitable — plus a professional recommendation.</li>
+          </ul>
+        </div>
+      {% endif %}
+
+      <div class="glass sp-note" style="margin-top: 1rem;">
+        <p style="margin: 0; opacity: .92;">
+          <strong>Architect note:</strong> This assistant checks furniture footprint + human movement. Door positions and windows
+          can change the best placement, so treat the recommendation as a fast, professional feasibility check.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -36,6 +36,32 @@ import re
 main_bp = Blueprint('main', __name__)
 
 
+@main_bp.route('/offline')
+def offline():
+    """Offline fallback page (used by the service worker)."""
+
+    meta = generate_meta_tags(
+        title='Offline',
+        description='You appear to be offline. Please reconnect and try again.',
+        url=url_for('main.offline', _external=True)
+    )
+    return render_template('offline.html', meta=meta)
+
+
+@main_bp.route('/sw.js')
+def service_worker():
+    """Serve the service worker from the site root for full-scope control."""
+
+    sw_path = os.path.join(current_app.static_folder, 'sw.js')
+    if not os.path.exists(sw_path):
+        abort(404)
+
+    resp = send_file(sw_path, mimetype='application/javascript')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['Service-Worker-Allowed'] = '/'
+    return resp
+
+
 _SPAM_URL_PATTERN = re.compile(r'(https?://|www\.)', re.IGNORECASE)
 
 

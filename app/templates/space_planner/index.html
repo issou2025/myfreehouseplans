@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Space Planner — {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/space_planner.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
+  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
+    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+      <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+      Furniture Fit & Space Planning Assistant
+    </p>
+    <h1 style="margin: 0 0 .75rem 0; font-family: 'Playfair Display', serif;">Plan like a professional architect</h1>
+    <p style="margin: 0; opacity: .9; max-width: 70ch;">
+      Pick a room, enter the room size and your furniture dimensions, and we’ll automatically apply functional clearances
+      to tell you if it fits comfortably.
+    </p>
+  </div>
+</section>
+
+<section class="shell" style="padding: 0 0 3rem 0;">
+  <div class="sp-grid" aria-label="Choose a room type">
+    {% for r in rooms %}
+      <a class="sp-card" href="{{ url_for('space_planner.room', room_slug=r.slug) }}" aria-label="Open {{ r.label }} planner">
+        <div class="sp-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+        <div class="sp-card__body">
+          <div class="sp-card__title">{{ r.label }}</div>
+          <div class="sp-card__desc">{{ r.description }}</div>
+          <div class="sp-card__cta">
+            <span>Open planner</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="glass sp-note" style="margin-top: 1.25rem;">
+    <p style="margin: 0; opacity: .92;">
+      <strong>Tip:</strong> Enter dimensions in <strong>centimeters (cm)</strong>. We test both orientations automatically
+      and recommend the best layout.
+    </p>
+  </div>
+</section>
+{% endblock %}

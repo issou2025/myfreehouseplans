@@ -34,6 +34,10 @@
     
     {# Favicon #}
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    {# PWA #}
+    <meta name="theme-color" content="#0b1220">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
     
     {# Stylesheets #}
     <meta name="color-scheme" content="light dark">
@@ -102,6 +106,10 @@
                         <a class="nav-link {% if current_endpoint in ['main.compare'] %}is-active{% endif %}" href="{{ url_for('main.compare') }}" {% if current_endpoint in ['main.compare'] %}aria-current="page"{% endif %}>
                             <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
                             <span>Compare</span>
+                        </a>
+                        <a class="nav-link {% if current_endpoint and current_endpoint.startswith('space_planner.') %}is-active{% endif %}" href="{{ url_for('space_planner.index') }}" {% if current_endpoint and current_endpoint.startswith('space_planner.') %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                            <span>Space Planner</span>
                         </a>
                     </div>
                 </div>
@@ -309,6 +317,15 @@
 
     {# JavaScript #}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // PWA-lite: register service worker (root scope)
+        (function(){
+            if (!('serviceWorker' in navigator)) return;
+            window.addEventListener('load', function(){
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+            });
+        })();
+    </script>
     <script>
         // Mobile navigation with slide-in menu
         (function(){

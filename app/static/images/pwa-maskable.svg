@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MyFreeHousePlan maskable icon">
+  <!-- Maskable icon: keep artwork inside safe zone. -->
+  <rect width="512" height="512" fill="#0b1220"/>
+  <g transform="translate(0,0)">
+    <circle cx="256" cy="256" r="220" fill="#1e2a44"/>
+    <path d="M256 150 150 235v135c0 10.5 8.5 19 19 19h68v-86c0-16.6 13.4-30 30-30h-22c16.6 0 30 13.4 30 30v86h68c10.5 0 19-8.5 19-19V235L256 150z" fill="#ffffff" opacity="0.96"/>
+  </g>
+</svg>
