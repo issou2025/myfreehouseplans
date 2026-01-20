@@ -91,16 +91,40 @@
     <div>
       {% if recommendation %}
         <div class="glass pl-result pl-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
-          <div class="pl-result__title">{{ recommendation.title }}</div>
-          <p class="pl-result__summary">{{ recommendation.summary }}</p>
+          <div class="pl-result__title">{{ recommendation.verdict }}</div>
+
+          <div class="pl-result__note" style="margin-top: .75rem;">
+            Based strictly on your {{ room.label.lower() }} size and your {{ item.label.lower() }} size.
+          </div>
+
+          <h3 class="pl-h2" style="margin-top: 1rem;">Daily life</h3>
+          <p class="pl-result__summary">{{ recommendation.daily_life }}</p>
+
+          <h3 class="pl-h2" style="margin-top: 1rem;">{{ room.label }} recommendations</h3>
           <ul class="pl-result__bullets">
-            {% for b in recommendation.bullets %}
+            {% for b in recommendation.room_recommendations %}
               <li>{{ b }}</li>
             {% endfor %}
           </ul>
-          {% if recommendation.tip %}
-            <div class="pl-result__note">{{ recommendation.tip }}</div>
-          {% endif %}
+
+          <h3 class="pl-h2" style="margin-top: 1rem;">Better layout option</h3>
+          <div class="pl-result__note">{{ recommendation.better_layout }}</div>
+
+          <h3 class="pl-h2" style="margin-top: 1rem;">Pro advice</h3>
+          <p class="pl-result__summary" style="margin-bottom: .5rem;">{{ recommendation.human_advice }}</p>
+
+          <div class="pl-result__note" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+            <strong>Share:</strong>
+            <button class="btn btn-secondary" type="button" id="plCopyLink">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              Copy share link
+            </button>
+            <span id="plCopyStatus" style="opacity:.85;"></span>
+          </div>
+
+          <p class="pl-help" style="margin-top: .75rem;">
+            {{ recommendation.seo_line }}
+          </p>
         </div>
       {% else %}
         <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
@@ -157,6 +181,40 @@
     }
     if(unitsSelect){
       unitsSelect.addEventListener('change', applyDefaults);
+    }
+
+    // Share link helper: encodes the current selection so the same result can be opened again.
+    const copyBtn = document.getElementById('plCopyLink');
+    const statusEl = document.getElementById('plCopyStatus');
+    function buildShareUrl(){
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+
+      const fields = ['units','room_length','room_width','item_key','item_length','item_width'];
+      for(const f of fields){
+        const el = document.querySelector('[name="' + f + '"]');
+        if(el && el.value){
+          params.set(f, el.value);
+        }
+      }
+
+      url.search = params.toString();
+      return url.toString();
+    }
+
+    async function copyShareLink(){
+      if(!copyBtn) return;
+      const link = buildShareUrl();
+      try{
+        await navigator.clipboard.writeText(link);
+        if(statusEl) statusEl.textContent = 'Copied.';
+      }catch(e){
+        if(statusEl) statusEl.textContent = 'Copy failed — you can manually copy the URL.';
+      }
+    }
+
+    if(copyBtn){
+      copyBtn.addEventListener('click', copyShareLink);
     }
   })();
 </script>

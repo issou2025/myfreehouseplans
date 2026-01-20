@@ -12,20 +12,23 @@ from .logic import UNITS, FitAnalysis, UnitSystem, evaluate_fit, from_cm, to_cm
 from .recommendations import Recommendation, build_recommendation
 
 
-def _parse_positive_number(value: str, field_name: str) -> Optional[float]:
+def _parse_positive_number(value: str, field_name: str, *, flash_errors: bool) -> Optional[float]:
     raw = (value or '').strip().replace(',', '.')
     if not raw:
-        flash(f"Please enter {field_name}.", 'warning')
+        if flash_errors:
+            flash(f"Please enter {field_name}.", 'warning')
         return None
 
     try:
         num = float(raw)
     except ValueError:
-        flash(f"{field_name} must be a number.", 'warning')
+        if flash_errors:
+            flash(f"{field_name} must be a number.", 'warning')
         return None
 
     if num <= 0:
-        flash(f"{field_name} must be greater than 0.", 'warning')
+        if flash_errors:
+            flash(f"{field_name} must be greater than 0.", 'warning')
         return None
 
     return num
@@ -88,13 +91,28 @@ def room(room_slug: str):
     analysis: Optional[FitAnalysis] = None
     rec: Optional[Recommendation] = None
 
-    if request.method == 'POST':
-        room_length = _parse_positive_number(form['room_length'], f"room length ({units.length_label})")
-        room_width = _parse_positive_number(form['room_width'], f"room width ({units.length_label})")
-        item_length = _parse_positive_number(form['item_length'], f"{item.label.lower()} length ({units.length_label})" if item else f"item length ({units.length_label})")
-        item_width = _parse_positive_number(form['item_width'], f"{item.label.lower()} width ({units.length_label})" if item else f"item width ({units.length_label})")
+    # Compute results on POST, and also on GET when a share link includes all params.
+    should_compute = request.method == 'POST'
+    if not should_compute:
+        required_fields = ('room_length', 'room_width', 'item_length', 'item_width', 'item_key')
+        should_compute = all((request.values.get(k) or '').strip() for k in required_fields)
 
-        if item is None:
+    if should_compute:
+        flash_errors = request.method == 'POST'
+        room_length = _parse_positive_number(form['room_length'], f"room length ({units.length_label})", flash_errors=flash_errors)
+        room_width = _parse_positive_number(form['room_width'], f"room width ({units.length_label})", flash_errors=flash_errors)
+        item_length = _parse_positive_number(
+            form['item_length'],
+            f"{item.label.lower()} length ({units.length_label})" if item else f"item length ({units.length_label})",
+            flash_errors=flash_errors,
+        )
+        item_width = _parse_positive_number(
+            form['item_width'],
+            f"{item.label.lower()} width ({units.length_label})" if item else f"item width ({units.length_label})",
+            flash_errors=flash_errors,
+        )
+
+        if item is None and flash_errors:
             flash('Please choose an item.', 'warning')
 
         if all(v is not None for v in (room_length, room_width, item_length, item_width)) and item is not None:
@@ -114,11 +132,18 @@ def room(room_slug: str):
                 )
                 rec = build_recommendation(analysis)
             except Exception:
-                flash('Something went wrong. Please double-check your inputs.', 'danger')
+                if flash_errors:
+                    flash('Something went wrong. Please double-check your inputs.', 'danger')
+
+    page_title = f"Room Planner — {room_spec.label}"
+    page_desc = f"Check if furniture fits comfortably in a {room_spec.label.lower()}."
+    if rec and item:
+        page_title = f"{rec.verdict} — {room_spec.label} — {item.label}"
+        page_desc = f"{rec.verdict}: {rec.seo_line}"
 
     meta = generate_meta_tags(
-        title=f"Room Planner — {room_spec.label}",
-        description=f"Check if furniture fits comfortably in a {room_spec.label.lower()}.",
+        title=page_title,
+        description=page_desc,
         url=url_for('planner.room', room_slug=room_spec.slug, _external=True),
     )
 
