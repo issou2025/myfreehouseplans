@@ -111,6 +111,10 @@
                             <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                             <span>Room Planner</span>
                         </a>
+                        <a class="nav-link {% if current_endpoint and current_endpoint.startswith('room_checker.') %}is-active{% endif %}" href="{{ url_for('room_checker.index') }}" {% if current_endpoint and current_endpoint.startswith('room_checker.') %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-square-check" aria-hidden="true"></i>
+                            <span>Room Size Checker</span>
+                        </a>
                     </div>
                 </div>
                 <div class="nav__group" aria-label="Company">

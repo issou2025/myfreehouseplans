@@ -512,6 +512,7 @@ def register_blueprints(app):
     from app.routes.blog import blog_bp
     from app.blueprints.space_planner import space_planner_bp
     from app.blueprints.planner import planner_bp
+    from app.blueprints.room_checker import room_checker_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -520,6 +521,7 @@ def register_blueprints(app):
     app.register_blueprint(blog_bp)
     app.register_blueprint(space_planner_bp, url_prefix='/space-planner')
     app.register_blueprint(planner_bp, url_prefix='/planner')
+    app.register_blueprint(room_checker_bp, url_prefix='/room-checker')
 
 
 def register_error_handlers(app):
