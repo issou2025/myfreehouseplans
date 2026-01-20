@@ -91,7 +91,29 @@
     <div>
       {% if recommendation %}
         <div class="glass pl-result pl-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
-          <div class="pl-result__title">{{ recommendation.verdict }}</div>
+          <div class="pl-verdict">
+            <div class="pl-verdict__icon" aria-hidden="true">
+              {% if recommendation.status == 'ok' %}
+                <i class="fa-solid fa-circle-check"></i>
+              {% elif recommendation.status == 'warning' %}
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              {% else %}
+                <i class="fa-solid fa-circle-xmark"></i>
+              {% endif %}
+            </div>
+            <div>
+              <div class="pl-result__title">{{ recommendation.verdict }}</div>
+              <div class="pl-result__subtitle">
+                {% if recommendation.status == 'ok' %}
+                  Green means safe and comfortable.
+                {% elif recommendation.status == 'warning' %}
+                  Orange means it works, but may feel tight.
+                {% else %}
+                  Red means not recommended for long-term use.
+                {% endif %}
+              </div>
+            </div>
+          </div>
 
           <div class="pl-result__note" style="margin-top: .75rem;">
             Based strictly on your {{ room.label.lower() }} size and your {{ item.label.lower() }} size.
@@ -126,6 +148,8 @@
             {{ recommendation.seo_line }}
           </p>
         </div>
+
+        {% include 'planner/_micro_tools.html' %}
       {% else %}
         <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
           <h2 class="pl-h2">What you’ll get</h2>
@@ -135,6 +159,8 @@
             <li>Extra tips if the room is likely to feel crowded.</li>
           </ul>
         </div>
+
+        {% include 'planner/_micro_tools.html' %}
       {% endif %}
 
       <div class="glass pl-note" style="margin-top: 1rem;">

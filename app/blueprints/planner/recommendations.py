@@ -14,7 +14,7 @@ class Recommendation:
     """
 
     verdict: str  # Comfortable | Acceptable but tight | Not recommended
-    status: str  # comfortable | tight | not_suitable
+    status: str  # ok | warning | not_ok
 
     daily_life: str
     room_recommendations: List[str]
@@ -223,6 +223,12 @@ def build_recommendation(analysis: FitAnalysis) -> Recommendation:
         'not_suitable': 'Not recommended',
     }.get(v, 'Not recommended')
 
+    status_flag = {
+        'comfortable': 'ok',
+        'tight': 'warning',
+        'not_suitable': 'not_ok',
+    }.get(v, 'not_ok')
+
     daily_life = _daily_life_text(analysis)
     room_recs = _room_specific_recommendations(analysis)
     better_layout = _better_layout_line(analysis)
@@ -239,7 +245,7 @@ def build_recommendation(analysis: FitAnalysis) -> Recommendation:
 
     return Recommendation(
         verdict=verdict_label,
-        status=v,
+        status=status_flag,
         daily_life=daily_life,
         room_recommendations=room_recs,
         better_layout=better_layout,

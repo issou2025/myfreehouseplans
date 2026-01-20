@@ -1,0 +1,22 @@
+{# Reusable “try one more thing” module for planner room pages #}
+
+{% if micro_tools %}
+  <div class="glass pl-micro" style="margin-top: 1rem; padding: 1.25rem; border-radius: 1rem;">
+    <h2 class="pl-h2" style="margin-bottom: .65rem;">Try one more quick check</h2>
+    <div class="pl-micro__grid">
+      {% for t in micro_tools %}
+        <a class="pl-micro__card pl-micro__card--{{ t.tone }}" href="{{ t.href }}" aria-label="{{ t.title }}">
+          <div class="pl-micro__icon" aria-hidden="true"><i class="{{ t.icon }}"></i></div>
+          <div>
+            <div class="pl-micro__title">{{ t.title }}</div>
+            <div class="pl-micro__body">{{ t.body }}</div>
+            <div class="pl-micro__cta">
+              <span>{{ t.cta }}</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
