@@ -9328,6 +9328,112 @@ button:active {
 	padding: 0;
 	background: transparent;
 	border: none;
+}
+
+/* ============================================
+   PREMIUM DESIGN SYSTEM: COLORFUL & NATURAL
+   ============================================ */
+
+/* 1) SOFT GRADIENT BACKGROUNDS */
+.hero--immersive {
+	background: linear-gradient(135deg, #f8fbff 0%, #ffffff 50%, #f0f7ff 100%);
+}
+
+.section--trust,
+.section--experience,
+.section--proof {
+	background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+	position: relative;
+}
+
+.section--cta {
+	background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+	position: relative;
+}
+
+.section--cta::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(ellipse at top, rgba(14, 165, 233, 0.08), transparent 70%);
+	pointer-events: none;
+}
+
+/* 2) PREMIUM BUTTON SYSTEM */
+.btn-primary {
+	background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+	border: none;
+	box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
+	position: relative;
+	overflow: hidden;
+	transition: all var(--transition-base) ease;
+}
+
+.btn-primary::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+	transition: left 0.5s ease;
+}
+
+.btn-primary:hover::after {
+	left: 100%;
+}
+
+.btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+}
+
+/* 3) MOBILE-FIRST FULL-WIDTH BUTTONS */
+@media (max-width: 768px) {
+	.hero__actions .btn,
+	.cta__actions .btn,
+	.about-cta__actions .btn {
+		width: 100%;
+		text-align: center;
+	}
+}
+
+/* 4) IMAGE GLOW EFFECTS */
+.plan-tech__gallery {
+	position: relative;
+}
+
+.plan-tech__gallery::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 120%;
+	height: 120%;
+	background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.08), transparent 70%);
+	pointer-events: none;
+	z-index: -1;
+}
+
+/* 5) CATEGORY COLOR TAG SYSTEM */
+.plan-badge--category {
+	font-weight: 600;
+	border-radius: 6px;
+	padding: 4px 12px;
+	font-size: 0.875rem;
+	display: inline-block;
+	transition: all var(--transition-base) ease;
+}
+
+.plan-badge--category:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 	box-shadow: none;
 	min-height: auto;
 	display: flex;

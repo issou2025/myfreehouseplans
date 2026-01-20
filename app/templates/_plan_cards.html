@@ -52,7 +52,7 @@
             <p class="plan-card__eyebrow">
                 {% if plan.categories %}
                     {% for c in plan.categories %}
-                        <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
+                        <a href="{{ url_for('main.plans_by_category', slug=c.slug) }}" class="plan-badge--category" style="{{ get_category_style(c.name) }}">{{ c.name }}</a>{% if not loop.last %} · {% endif %}
                     {% endfor %}
                 {% else %}
                     Thoughtful living

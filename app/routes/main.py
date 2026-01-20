@@ -438,16 +438,16 @@ def index():
     """Homepage route"""
     
     try:
-        # Get featured plans
+        # Get featured plans (randomized for fresh gallery feel)
         featured_plans = HousePlan.query.filter_by(
             is_published=True,
             is_featured=True
-        ).limit(6).all()
+        ).order_by(func.random()).limit(6).all()
         
-        # Get recent plans
+        # Get recent plans (randomized for dynamic experience)
         recent_plans = HousePlan.query.filter_by(
             is_published=True
-        ).order_by(HousePlan.created_at.desc()).limit(8).all()
+        ).order_by(func.random()).limit(8).all()
     except Exception as e:
         current_app.logger.warning(f'Database query failed on homepage: {e}. Returning empty results.')
         featured_plans = []

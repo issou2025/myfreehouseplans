@@ -31,7 +31,7 @@
 
   <header class="plan-tech__header" aria-label="Plan technical header">
     <div class="plan-tech__badges">
-      <span class="plan-badge plan-badge--category">
+      <span class="plan-badge plan-badge--category" style="{{ get_category_style(plan.category.name) if plan.category else get_category_style('default') }}">
         <i class="fa-solid fa-tag" aria-hidden="true"></i>
         {{ plan.category.name if plan.category else 'Non classé' }}
       </span>

@@ -550,6 +550,7 @@ def register_template_processors(app):
         from flask import request
         from app.utils.geoip import get_country_for_ip, resolve_client_ip
         from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers, visible_starting_price
+        from app.utils.category_colors import get_category_color, get_category_style
 
         def render_richtext(value):
             """Render blog content with paragraph breaks.
@@ -615,6 +616,8 @@ def register_template_processors(app):
             'client_ip': visitor_ip,
             'visitor_country': visitor_country,
             'geoip_country': get_country_for_ip,
+            'get_category_color': get_category_color,
+            'get_category_style': get_category_style,
         }
 
     @app.context_processor
