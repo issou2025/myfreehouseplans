@@ -22,6 +22,15 @@
 </section>
 
 <section class="shell" style="padding: 0 0 3rem 0;">
+  {% if learn_article %}
+    <div class="glass sp-note" style="margin-bottom: 1rem;">
+      <p style="margin: 0; opacity: .92;">
+        <strong>{{ learn_article.heading }}:</strong>
+        <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+      </p>
+    </div>
+  {% endif %}
+
   <div class="sp-grid" aria-label="Choose a room type">
     {% for r in rooms %}
       <a class="sp-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open furniture fit for {{ r.label }}">

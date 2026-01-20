@@ -13,6 +13,7 @@ from app.forms import PowerfulPostForm
 from app.models import BlogPost, HousePlan, Category
 from app.seo import generate_meta_tags
 from app.utils.uploads import save_uploaded_file
+from app.utils.experience_links import experience_for_article_slug
 from app.utils.article_extras import (
     extract_article_extras_from_form,
     load_article_extras,
@@ -146,6 +147,12 @@ def detail(slug):
         type='article',
     )
 
+    related_experience = None
+    try:
+        related_experience = experience_for_article_slug(post.slug)
+    except Exception:
+        related_experience = None
+
     popular_plans = HousePlan.query.filter_by(is_published=True).order_by(HousePlan.views_count.desc()).limit(4).all()
 
     return render_template(
@@ -154,6 +161,7 @@ def detail(slug):
         popular_plans=popular_plans,
         meta=meta,
         extras=extras,
+        related_experience=related_experience,
     )
 
 

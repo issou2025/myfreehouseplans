@@ -18,6 +18,11 @@
       Pick a room, enter the room size and your item size, then click <strong>Check fit</strong>.
       We’ll give you a clear answer in plain language.
     </p>
+    {% if learn_article %}
+      <p style="margin: .9rem 0 0 0; opacity: .92;">
+        <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+      </p>
+    {% endif %}
   </div>
 </section>
 

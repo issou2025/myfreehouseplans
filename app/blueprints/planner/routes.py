@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from flask import flash, redirect, render_template, request, url_for
 
 from app.seo import generate_meta_tags
+from app.utils.experience_links import article_for_space_planner
 
 from . import planner_bp
 from .data import ITEMS, ROOMS, ItemSpec, RoomSpec
@@ -194,13 +195,14 @@ def _build_micro_tools(
 @planner_bp.get('')
 @planner_bp.get('/')
 def index():
+    learn_article = article_for_space_planner(intent='furniture-fit', room_slug=None)
     meta = generate_meta_tags(
         title='Room Planner',
         description='A human-friendly room planner that helps you check if furniture and appliances will feel comfortable in a space.',
         url=url_for('planner.index', _external=True),
     )
 
-    return render_template('planner/index.html', rooms=_room_list(), meta=meta)
+    return render_template('planner/index.html', rooms=_room_list(), learn_article=learn_article, meta=meta)
 
 
 @planner_bp.route('/<room_slug>', methods=['GET', 'POST'])
@@ -248,6 +250,8 @@ def room(room_slug: str):
         room_length=form['room_length'],
         room_width=form['room_width'],
     )
+
+    learn_article = article_for_space_planner(intent='furniture-fit', room_slug=room_spec.slug)
 
     # Compute results on POST, and also on GET when a share link includes all params.
     should_compute = request.method == 'POST'
@@ -316,5 +320,6 @@ def room(room_slug: str):
         analysis=analysis,
         recommendation=rec,
         micro_tools=micro_tools,
+        learn_article=learn_article,
         meta=meta,
     )

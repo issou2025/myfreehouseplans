@@ -30,6 +30,15 @@
 </section>
 
 <section class="shell" style="padding: 0 0 3.25rem 0;">
+  {% if learn_article %}
+    <div class="glass sp-note" style="margin-bottom: 1rem;">
+      <p style="margin: 0; opacity: .92;">
+        <strong>{{ learn_article.heading }}:</strong>
+        <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+      </p>
+    </div>
+  {% endif %}
+
   <div class="rc-micro__grid">
     <a class="rc-micro__card rc-micro__card--info" href="{{ url_for('space_planner.room_size', room=room.slug) }}">
       <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-square-check"></i></div>

@@ -8,6 +8,7 @@ from app.seo import generate_meta_tags
 
 from app.blueprints.room_checker.data import ROOMS as SIZE_ROOMS, ROOM_ORDER as SIZE_ROOM_ORDER, RoomType
 from app.blueprints.room_checker.logic import UNITS, RoomSizeInputs, UnitSystem, evaluate_room_quality
+from app.utils.experience_links import article_for_space_planner, room_guidance_line
 
 from . import space_planner_bp
 from .intent_recommendations import IntentRecommendation, build_intent_recommendation
@@ -63,6 +64,8 @@ def _intent_shell(
 ):
     room_slug = (request.values.get('room') or '').strip()
     room: Optional[RoomType] = SIZE_ROOMS.get(room_slug) if room_slug else None
+
+    learn_article = article_for_space_planner(intent=intent, room_slug=(room.slug if room else None))
 
     units, method = _parse_units_and_method()
 
@@ -138,13 +141,20 @@ def _intent_shell(
         url=request.base_url,
     )
 
+    room_hints = {
+        r.slug: room_guidance_line(r.slug, r.label)
+        for r in _room_list()
+    }
+
     return render_template(
         'space_planner/intent_tool.html',
         page_title=title,
         page_intro=intro,
         intent=intent,
+        learn_article=learn_article,
         rooms=_room_list(),
         room=room,
+        room_hints=room_hints,
         units=units,
         unit_options=list(UNITS.values()),
         form=form,
@@ -197,12 +207,13 @@ def comfort_check():
 
 @space_planner_bp.get('/furniture-fit')
 def furniture_fit():
+    learn_article = article_for_space_planner(intent='furniture-fit', room_slug=None)
     meta = generate_meta_tags(
         title='Space Planner — Furniture Fit',
         description='Choose a room to check if furniture and appliances fit comfortably with realistic daily-life clearances.',
         url=url_for('space_planner.furniture_fit', _external=True),
     )
-    return render_template('space_planner/furniture_fit.html', rooms=_room_list(), meta=meta)
+    return render_template('space_planner/furniture_fit.html', rooms=_room_list(), learn_article=learn_article, meta=meta)
 
 
 @space_planner_bp.get('/<room_slug>')
@@ -218,4 +229,7 @@ def room(room_slug: str):
         url=url_for('space_planner.room', room_slug=room_type.slug, _external=True),
     )
 
-    return render_template('space_planner/room_overview.html', room=room_type, meta=meta)
+    # Prefer a room-specific room-size guide when available.
+    learn_article = article_for_space_planner(intent='room-size', room_slug=room_type.slug)
+
+    return render_template('space_planner/room_overview.html', room=room_type, learn_article=learn_article, meta=meta)

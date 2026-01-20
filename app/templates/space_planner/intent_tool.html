@@ -12,6 +12,7 @@
     // Search-to-filter for the room dropdown
     const search = document.getElementById('roomSearch');
     const select = document.getElementById('room');
+    const roomHint = document.getElementById('rcRoomHint');
     if(search && select){
       search.addEventListener('input', function(){
         const q = (search.value || '').toLowerCase().trim();
@@ -21,6 +22,17 @@
           opt.hidden = q && !text.includes(q);
         }
       });
+    }
+
+    function updateRoomHint(){
+      if(!select || !roomHint) return;
+      const opt = select.options[select.selectedIndex];
+      const hint = opt ? (opt.getAttribute('data-hint') || '') : '';
+      roomHint.textContent = hint || 'Helps you make a comfortable real‑life decision.';
+    }
+    if(select){
+      select.addEventListener('change', updateRoomHint);
+      updateRoomHint();
     }
 
     // Input method show/hide
@@ -83,7 +95,15 @@
 <section class="shell" style="padding: 0 0 3.25rem 0;">
   <div class="rc-layout">
     <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
-      <h2 class="rc-h2">Start with one room</h2>
+      <div style="display:flex; gap:.75rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+        <h2 class="rc-h2" style="margin-bottom: .35rem;">Start with one room</h2>
+        {% if learn_article %}
+          <a class="btn btn-secondary" href="{{ learn_article.href }}" style="white-space:nowrap;">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            Learn how this works
+          </a>
+        {% endif %}
+      </div>
 
       <div class="rc-search">
         <label class="rc-label" for="roomSearch">Search a room type</label>
@@ -97,10 +117,17 @@
             <select class="rc-input" id="room" name="room" required>
               <option value="" {% if not form.room %}selected{% endif %}>Choose a room…</option>
               {% for r in rooms %}
-                <option value="{{ r.slug }}" {% if form.room == r.slug %}selected{% endif %}>{{ r.label }}</option>
+                <option value="{{ r.slug }}" data-hint="{{ (room_hints.get(r.slug) if room_hints else '')|e }}" {% if form.room == r.slug %}selected{% endif %}>{{ r.label }}</option>
               {% endfor %}
             </select>
-            <div class="rc-help">Tip: type in the search box above to quickly find a room.</div>
+            <div class="rc-help">Pick the room you want to check.</div>
+            <div class="rc-help" id="rcRoomHint" style="margin-top: .35rem;">
+              {% if room %}
+                {{ room_hints.get(room.slug) if room_hints else '' }}
+              {% else %}
+                Helps you make a comfortable real‑life decision.
+              {% endif %}
+            </div>
           </div>
 
           <div class="rc-field">
@@ -110,6 +137,7 @@
                 <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (m / m²)' if u.key == 'metric' else 'Imperial (ft / ft²)' }}</option>
               {% endfor %}
             </select>
+            <div class="rc-help">Choose what you’re most comfortable with.</div>
           </div>
 
           <div class="rc-field">
@@ -124,26 +152,30 @@
                 Total surface only
               </label>
             </div>
+            <div class="rc-help">Pick whichever is easiest — you’ll get the same kind of answer.</div>
           </div>
 
           <div class="rc-field rc-dims">
             <label class="rc-label" for="length">Length ({{ units.length_label }})</label>
             <input class="rc-input" id="length" name="length" type="number" step="0.01" value="{{ form.length }}" placeholder="{{ units.placeholder_length }}">
+            <div class="rc-help">Wall‑to‑wall length of the room.</div>
           </div>
           <div class="rc-field rc-dims">
             <label class="rc-label" for="width">Width ({{ units.length_label }})</label>
             <input class="rc-input" id="width" name="width" type="number" step="0.01" value="{{ form.width }}" placeholder="{{ units.placeholder_length }}">
+            <div class="rc-help">Side‑to‑side width of the room.</div>
           </div>
 
           <div class="rc-field rc-area rc-field--full">
             <label class="rc-label" for="area">Total surface ({{ units.area_label }})</label>
             <input class="rc-input" id="area" name="area" type="number" step="0.01" value="{{ form.area }}" placeholder="{{ units.placeholder_area }}">
-            <div class="rc-help">Optional: if you know one side, add it below — we’ll use it quietly to improve the feedback.</div>
+            <div class="rc-help">If you already know the total size, enter it directly.</div>
           </div>
 
           <div class="rc-field rc-area">
             <label class="rc-label" for="area_length">Known side (optional) ({{ units.length_label }})</label>
             <input class="rc-input" id="area_length" name="area_length" type="number" step="0.01" value="{{ form.area_length }}" placeholder="{{ units.placeholder_length }}">
+            <div class="rc-help">Optional — helps us notice “long and narrow” shapes.</div>
           </div>
           <div class="rc-field rc-area">
             <label class="rc-label" for="area_width">Known side (optional) ({{ units.length_label }})</label>
@@ -159,9 +191,7 @@
           <a class="btn btn-secondary" href="{{ request.path }}">Reset</a>
         </div>
 
-        <p class="rc-help" style="margin-top: .85rem;">
-          Goal: understand the space in under 10 seconds.
-        </p>
+        <p class="rc-help" style="margin-top: .85rem;">You’ll get one clear answer: comfortable, tight, or not recommended.</p>
       </form>
     </div>
 
@@ -215,6 +245,13 @@
           </div>
 
           <p class="rc-help" style="margin-top: .75rem;">{{ recommendation.seo_line }}</p>
+
+          {% if learn_article %}
+            <div class="glass" style="margin-top: 1rem; padding: 1rem; border-radius: .85rem;">
+              <p style="margin: 0 0 .5rem 0;"><strong>{{ learn_article.heading }}</strong></p>
+              <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+            </div>
+          {% endif %}
         </div>
 
         <div class="glass rc-micro" style="margin-top: 1rem; padding: 1.25rem; border-radius: 1rem;">

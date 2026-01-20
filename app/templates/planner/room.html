@@ -13,10 +13,15 @@
       <div style="min-width: 16rem;">
         <p class="eyebrow" style="margin: 0 0 .5rem 0;">
           <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-          Room Planner
+          Furniture Fit
         </p>
         <h1 style="margin: 0 0 .5rem 0; font-family: 'Playfair Display', serif;">{{ room.label }}</h1>
         <p style="margin: 0; opacity: .9; max-width: 70ch;">{{ room.description }}</p>
+        {% if learn_article %}
+          <p style="margin: .75rem 0 0 0; opacity: .92;">
+            <a href="{{ learn_article.href }}">Learn how this works</a>
+          </p>
+        {% endif %}
       </div>
       <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
         <a class="btn btn-secondary" href="{{ url_for('planner.index') }}">
@@ -42,16 +47,18 @@
                 <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (cm)' if u.key == 'metric' else 'Imperial (ft)' }}</option>
               {% endfor %}
             </select>
-            <div class="pl-help">Pick the unit you’re comfortable with — we’ll keep everything consistent.</div>
+            <div class="pl-help">Choose what you’re most comfortable with.</div>
           </div>
 
           <div class="pl-field">
             <label class="pl-label" for="room_length">Room length ({{ units.length_label }})</label>
             <input class="pl-input" id="room_length" name="room_length" type="number" step="0.01" value="{{ form.room_length }}" placeholder="{{ units.placeholder_room }}" required>
+            <div class="pl-help">Wall‑to‑wall length of the room.</div>
           </div>
           <div class="pl-field">
             <label class="pl-label" for="room_width">Room width ({{ units.length_label }})</label>
             <input class="pl-input" id="room_width" name="room_width" type="number" step="0.01" value="{{ form.room_width }}" placeholder="{{ units.placeholder_room }}" required>
+            <div class="pl-help">Side‑to‑side width of the room.</div>
           </div>
 
           <div class="pl-field pl-field--full">
@@ -61,16 +68,18 @@
                 <option value="{{ k }}" data-default-length-cm="{{ it.default_length_cm }}" data-default-width-cm="{{ it.default_width_cm }}" {% if form.item_key == k %}selected{% endif %}>{{ it.label }}</option>
               {% endfor %}
             </select>
-            <div class="pl-help">We prefill typical sizes — you can edit them to match your real furniture.</div>
+            <div class="pl-help">Start from a typical size, then adjust to match your real item.</div>
           </div>
 
           <div class="pl-field">
             <label class="pl-label" for="item_length">Item length ({{ units.length_label }})</label>
             <input class="pl-input" id="item_length" name="item_length" type="number" step="0.01" value="{{ form.item_length }}" placeholder="{{ units.placeholder_item }}" required>
+            <div class="pl-help">Longest side of the item.</div>
           </div>
           <div class="pl-field">
             <label class="pl-label" for="item_width">Item width / depth ({{ units.length_label }})</label>
             <input class="pl-input" id="item_width" name="item_width" type="number" step="0.01" value="{{ form.item_width }}" placeholder="{{ units.placeholder_item }}" required>
+            <div class="pl-help">Front‑to‑back depth (or the other side).</div>
           </div>
         </div>
 
@@ -147,6 +156,13 @@
           <p class="pl-help" style="margin-top: .75rem;">
             {{ recommendation.seo_line }}
           </p>
+
+          {% if learn_article %}
+            <div class="glass" style="margin-top: 1rem; padding: 1rem; border-radius: .85rem;">
+              <p style="margin: 0 0 .5rem 0;"><strong>Why this recommendation?</strong></p>
+              <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+            </div>
+          {% endif %}
         </div>
 
         {% include 'planner/_micro_tools.html' %}

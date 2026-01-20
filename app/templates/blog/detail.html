@@ -81,6 +81,20 @@
                 </div>
             </header>
 
+            {% if related_experience %}
+                <section class="blog-cta" aria-label="Apply this to your room" style="margin: 1rem 0 1.25rem 0;">
+                    <div class="blog-cta__content">
+                        <p class="eyebrow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Space planning</p>
+                        <h2 style="margin: 0 0 .5rem 0;">{{ related_experience.heading }}</h2>
+                        <p style="margin: 0 0 1rem 0;">{{ related_experience.body }}</p>
+                        <div class="blog-cta__actions">
+                            <a class="btn btn-primary" href="{{ related_experience.href }}">{{ related_experience.cta }}</a>
+                            <a class="btn btn-ghost" href="{{ url_for('space_planner.index') }}">Browse Space Planner</a>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
             {% if post.cover_image %}
                 <figure class="blog-article__cover">
                     <img src="{{ upload_url(post.cover_image) }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">
