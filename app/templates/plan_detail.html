@@ -42,6 +42,14 @@
     </div>
     <h1 class="plan-tech__title">{{ plan.title|default('Plan', true) }}</h1>
     <p class="plan-tech__subtitle">
+      {% set meta = namespace(sep='') %}
+      <span class="plan-tech__subtitle-meta" aria-label="Key project summary">
+        {% if area_m2 %}{{ meta.sep }}{{ area_m2|round(0)|int }} m²{% set meta.sep = ' · ' %}{% endif %}
+        {% if beds is not none %}{{ meta.sep }}{{ beds }} beds{% set meta.sep = ' · ' %}{% endif %}
+        {% if baths is not none %}{{ meta.sep }}{{ baths }} baths{% set meta.sep = ' · ' %}{% endif %}
+        {% if floors is not none %}{{ meta.sep }}{{ floors }} floor{% if floors != 1 %}s{% endif %}{% set meta.sep = ' · ' %}{% endif %}
+      </span>
+      <span class="plan-tech__subtitle-text">
       {% if plan.architectural_summary %}
         {{ plan.architectural_summary }}
       {% elif plan.short_description %}
@@ -49,6 +57,7 @@
       {% else %}
         A technical, build-ready plan overview.
       {% endif %}
+      </span>
     </p>
   </header>
 
