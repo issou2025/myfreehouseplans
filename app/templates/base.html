@@ -115,6 +115,10 @@
                             <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                             <span>Furniture Fit</span>
                         </a>
+                        <a class="nav-link {% if current_endpoint and current_endpoint.startswith('reality_check.') %}is-active{% endif %}" href="{{ url_for('reality_check.landing') }}" {% if current_endpoint and current_endpoint.startswith('reality_check.') %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+                            <span>Reality Check</span>
+                        </a>
                     </div>
                 </div>
                 <div class="nav__group" aria-label="Company">

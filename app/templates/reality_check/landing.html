@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='reality_check/reality_check.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="rc-hero">
+  <div class="rc-shell">
+    <div class="rc-hero__grid">
+      <div>
+        <div class="rc-eyebrow">
+          <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+          <span>Decision-prevention system • No prices • No jargon</span>
+        </div>
+        <h1 class="rc-title">Can you really finish your construction?</h1>
+        <p class="rc-lead">A reality check before you start. We don’t estimate costs — we estimate the risk of running out of strength and resources near the end.</p>
+
+        <div class="rc-hero__cta">
+          <a class="btn btn-primary" href="{{ url_for('reality_check.start') }}">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            Start (2 questions)
+          </a>
+          <a class="btn btn-secondary" href="{{ url_for('reality_check.how_it_works') }}">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            How it works
+          </a>
+        </div>
+        <p class="rc-hero__micro">Takes ~30 seconds. Always free. You’ll get a clear zone: green / orange / red.</p>
+      </div>
+
+      <aside class="rc-panel" aria-label="What you get">
+        <h2 class="rc-panel__title">What you get</h2>
+        <ul class="rc-panel__list">
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A decision zone, not a false-precise number</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Human explanation, non-judgmental</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Personalized advice to reduce risk</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A beautiful PDF “Reality Report” to share</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="rc-section">
+  <div class="rc-shell">
+    <div class="rc-section__head">
+      <h2 class="rc-h2">Why this exists</h2>
+      <p class="rc-muted">Most unfinished builds don’t fail at the start. They fail near the end — when the last stretch demands the most discipline.</p>
+    </div>
+
+    <div class="rc-cards" role="list">
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
+        <h3>Reality over fantasy</h3>
+        <p>No guessing exact prices. We focus on failure risk — early enough to change your project.</p>
+      </div>
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-handshake" aria-hidden="true"></i></div>
+        <h3>Trust first</h3>
+        <p>Honest zones with clear limitations. This is a prevention tool, not a promise.</p>
+      </div>
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i></div>
+        <h3>Extreme simplicity</h3>
+        <p>Just surface and levels. No construction vocabulary required.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

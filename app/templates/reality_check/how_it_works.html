@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='reality_check/reality_check.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="rc-hero" style="padding-bottom: 0;">
+  <div class="rc-shell">
+    <div class="rc-eyebrow">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <span>Transparency • Trust • No false precision</span>
+    </div>
+    <h1 class="rc-title" style="font-size: clamp(28px, 3.5vw, 44px);">How it works</h1>
+    <p class="rc-lead">This is a prevention system against unfinished projects. It does not calculate prices.</p>
+  </div>
+</section>
+
+<section class="rc-section">
+  <div class="rc-shell">
+    <div class="rc-cards" role="list">
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-ruler" aria-hidden="true"></i></div>
+        <h3>1) Surface increases stress</h3>
+        <p>Big projects last longer. That increases fatigue, coordination load, and the chance of running out near the end.</p>
+      </div>
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-building" aria-hidden="true"></i></div>
+        <h3>2) Levels multiply complexity</h3>
+        <p>Height adds time and coordination. More levels means more moments where the project can become fragile.</p>
+      </div>
+      <div class="rc-card" role="listitem">
+        <div class="rc-card__icon"><i class="fa-solid fa-globe" aria-hidden="true"></i></div>
+        <h3>3) Country adjusts pressure</h3>
+        <p>We may adjust risk slightly based on context pressure (not cost). If unknown, we use a neutral default.</p>
+      </div>
+    </div>
+
+    <div class="rc-panel" style="margin-top: 16px;">
+      <h2 class="rc-panel__title">What the zones mean</h2>
+      <ul class="rc-panel__list">
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span><strong>Green:</strong> strong chance of completion — if you keep scope stable.</span></li>
+        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span><strong>Orange:</strong> possible, but fragile — protect the finish and avoid expansions.</span></li>
+        <li><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> <span><strong>Red:</strong> high risk — reduce surface/levels or split into finishable milestones.</span></li>
+      </ul>
+    </div>
+
+    <div class="rc-links" style="margin-top: 14px;">
+      <a href="{{ url_for('reality_check.start') }}">Run the reality check</a>
+      <a href="{{ url_for('reality_check.limitations') }}">Read limitations</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

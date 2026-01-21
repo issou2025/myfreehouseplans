@@ -29,5 +29,9 @@ pillow-avif-plugin==1.4.6  # AVIF encoding/decoding for responsive media variant
 cloudinary==1.39.1  # Cloud uploads (Render-friendly)
 geoip2==4.8.0
 
+# PDF generation (Reality Check reports)
+weasyprint==62.3
+reportlab==4.2.5
+
 # Date and Time
 python-dateutil==2.8.2

@@ -1,0 +1,30 @@
+{
+  "Global": {
+    "financial_pressure": 0.50,
+    "volatility": 0.50,
+    "logistics_difficulty": 0.50
+  },
+  "Unknown country": {
+    "financial_pressure": 0.50,
+    "volatility": 0.50,
+    "logistics_difficulty": 0.50
+  },
+  "United States": {"financial_pressure": 0.45, "volatility": 0.35, "logistics_difficulty": 0.25},
+  "Canada": {"financial_pressure": 0.42, "volatility": 0.32, "logistics_difficulty": 0.28},
+  "United Kingdom": {"financial_pressure": 0.50, "volatility": 0.38, "logistics_difficulty": 0.30},
+  "France": {"financial_pressure": 0.48, "volatility": 0.35, "logistics_difficulty": 0.28},
+  "Germany": {"financial_pressure": 0.46, "volatility": 0.33, "logistics_difficulty": 0.27},
+  "Spain": {"financial_pressure": 0.50, "volatility": 0.38, "logistics_difficulty": 0.30},
+  "Italy": {"financial_pressure": 0.52, "volatility": 0.40, "logistics_difficulty": 0.30},
+  "Morocco": {"financial_pressure": 0.62, "volatility": 0.55, "logistics_difficulty": 0.55},
+  "Algeria": {"financial_pressure": 0.62, "volatility": 0.58, "logistics_difficulty": 0.58},
+  "Tunisia": {"financial_pressure": 0.62, "volatility": 0.58, "logistics_difficulty": 0.55},
+  "Nigeria": {"financial_pressure": 0.75, "volatility": 0.72, "logistics_difficulty": 0.65},
+  "Niger": {"financial_pressure": 0.72, "volatility": 0.70, "logistics_difficulty": 0.75},
+  "Ghana": {"financial_pressure": 0.68, "volatility": 0.60, "logistics_difficulty": 0.58},
+  "Senegal": {"financial_pressure": 0.66, "volatility": 0.60, "logistics_difficulty": 0.60},
+  "South Africa": {"financial_pressure": 0.66, "volatility": 0.60, "logistics_difficulty": 0.55},
+  "India": {"financial_pressure": 0.70, "volatility": 0.60, "logistics_difficulty": 0.55},
+  "China": {"financial_pressure": 0.62, "volatility": 0.50, "logistics_difficulty": 0.45},
+  "Brazil": {"financial_pressure": 0.72, "volatility": 0.65, "logistics_difficulty": 0.55}
+}
