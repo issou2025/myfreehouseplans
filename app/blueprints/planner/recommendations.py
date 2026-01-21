@@ -238,6 +238,7 @@ def build_recommendation(analysis: FitAnalysis) -> Recommendation:
         f"Result for {room.label.lower()} + {item.label.lower()}: "
         f"{_comfort_phrase(v)} — try a better layout option if needed."
     )
+
     share_line = (
         f"My {room.label.lower()} setup with a {item.label.lower()} is {verdict_label.lower()} "
         f"({ _comfort_phrase(v) }). Want to test yours?"
@@ -252,4 +253,24 @@ def build_recommendation(analysis: FitAnalysis) -> Recommendation:
         human_advice=human_advice,
         seo_line=seo_line,
         share_line=share_line,
+    )
+
+
+def build_invalid_room_recommendation(*, room, item, reason: str) -> Recommendation:
+    room_label = getattr(room, 'label', 'room')
+    item_label = getattr(item, 'label', 'item')
+    daily = reason or 'This room is too narrow to plan furniture comfortably.'
+
+    return Recommendation(
+        verdict='Not recommended',
+        status='not_ok',
+        daily_life=daily,
+        room_recommendations=[
+            'Fix the room shape first (widen it or make it more balanced), then re-check.',
+            f"After that, test your {item_label.lower()} again — the result will be meaningful.",
+        ],
+        better_layout='Room first: adjust the room size, then test the item.',
+        human_advice='If the room itself isn’t workable, furniture checks won’t be reliable. Adjust the short side and try again.',
+        seo_line=f"Furniture fit: not recommended — the {room_label.lower()} shape isn’t realistic for daily use.",
+        share_line=f"This helped me see my {room_label.lower()} is too narrow for comfortable {item_label.lower()} planning.",
     )

@@ -171,10 +171,10 @@
               </label>
               <label class="rc-chip">
                 <input type="radio" name="method" value="area" {% if form.method == 'area' %}checked{% endif %}>
-                Total surface only
+                Total surface (+ one side)
               </label>
             </div>
-            <div class="rc-help">Pick whichever is easiest — you’ll get the same kind of answer.</div>
+            <div class="rc-help">Surface alone can’t confirm the shape — add at least one side so we can validate it realistically.</div>
           </div>
 
           <div class="rc-field rc-dims">
@@ -195,12 +195,12 @@
           </div>
 
           <div class="rc-field rc-area">
-            <label class="rc-label" for="area_length">Known side (optional) ({{ units.length_label }})</label>
+            <label class="rc-label" for="area_length">Known side (recommended) ({{ units.length_label }})</label>
             <input class="rc-input" id="area_length" name="area_length" type="number" step="0.01" value="{{ form.area_length }}" placeholder="{{ units.placeholder_length }}">
-            <div class="rc-help">Optional — helps us notice “long and narrow” shapes.</div>
+            <div class="rc-help">Add at least one side so we can confirm the room isn’t too narrow.</div>
           </div>
           <div class="rc-field rc-area">
-            <label class="rc-label" for="area_width">Known side (optional) ({{ units.length_label }})</label>
+            <label class="rc-label" for="area_width">Known side (recommended) ({{ units.length_label }})</label>
             <input class="rc-input" id="area_width" name="area_width" type="number" step="0.01" value="{{ form.area_width }}" placeholder="{{ units.placeholder_length }}">
           </div>
         </div>

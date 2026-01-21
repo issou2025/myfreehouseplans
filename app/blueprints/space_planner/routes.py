@@ -7,11 +7,12 @@ from flask import flash, redirect, render_template, request, url_for
 from app.seo import generate_meta_tags
 
 from app.blueprints.room_checker.data import ROOMS as SIZE_ROOMS, ROOM_ORDER as SIZE_ROOM_ORDER, RoomType
-from app.blueprints.room_checker.logic import UNITS, RoomSizeInputs, UnitSystem, evaluate_room_quality
+from app.blueprints.room_checker.logic import UNITS, RoomSizeInputs, UnitSystem, evaluate_room_quality, to_m, to_m2
+from app.domain.spatial_validation import validate_room_dimensions
 from app.utils.experience_links import article_for_space_planner, room_guidance_line
 
 from . import space_planner_bp
-from .intent_recommendations import IntentRecommendation, build_intent_recommendation
+from .intent_recommendations import IntentRecommendation, build_intent_recommendation, build_invalid_intent_recommendation
 
 
 def _parse_positive(value: str) -> Optional[float]:
@@ -109,12 +110,22 @@ def _intent_shell(
                         if request.method == 'POST':
                             flash('Please enter a valid length and width.', 'warning')
                     else:
-                        result = evaluate_room_quality(
-                            room=room,
-                            inputs=RoomSizeInputs(method='dims', length=length, width=width),
+                        validation = validate_room_dimensions(
+                            room_slug=room.slug,
+                            room_label=room.label,
+                            length_m=to_m(length, units.key),
+                            width_m=to_m(width, units.key),
                             units_key=units.key,
                         )
-                        rec = build_intent_recommendation(intent=intent, room=room, result=result)
+                        if not validation.ok:
+                            rec = build_invalid_intent_recommendation(intent=intent, room=room, reason=validation.reason)
+                        else:
+                            result = evaluate_room_quality(
+                                room=room,
+                                inputs=RoomSizeInputs(method='dims', length=length, width=width),
+                                units_key=units.key,
+                            )
+                            rec = build_intent_recommendation(intent=intent, room=room, result=result)
 
                 else:
                     area = _parse_positive(form['area'])
@@ -125,12 +136,36 @@ def _intent_shell(
                         if request.method == 'POST':
                             flash('Please enter a valid total surface.', 'warning')
                     else:
-                        result = evaluate_room_quality(
-                            room=room,
-                            inputs=RoomSizeInputs(method='area', area=area, length=area_len, width=area_wid),
+                        area_m2 = to_m2(area, units.key)
+
+                        length_m = None
+                        width_m = None
+                        if area_len is not None and (area_wid is None):
+                            length_m = to_m(area_len, units.key)
+                            width_m = (area_m2 / length_m) if (length_m and length_m > 0) else None
+                        elif area_wid is not None and (area_len is None):
+                            width_m = to_m(area_wid, units.key)
+                            length_m = (area_m2 / width_m) if (width_m and width_m > 0) else None
+                        elif area_len is not None and area_wid is not None:
+                            length_m = to_m(area_len, units.key)
+                            width_m = to_m(area_wid, units.key)
+
+                        validation = validate_room_dimensions(
+                            room_slug=room.slug,
+                            room_label=room.label,
+                            length_m=length_m,
+                            width_m=width_m,
                             units_key=units.key,
                         )
-                        rec = build_intent_recommendation(intent=intent, room=room, result=result)
+                        if not validation.ok:
+                            rec = build_invalid_intent_recommendation(intent=intent, room=room, reason=validation.reason)
+                        else:
+                            result = evaluate_room_quality(
+                                room=room,
+                                inputs=RoomSizeInputs(method='area', area=area, length=area_len, width=area_wid),
+                                units_key=units.key,
+                            )
+                            rec = build_intent_recommendation(intent=intent, room=room, result=result)
             except Exception:
                 if request.method == 'POST':
                     flash('Something went wrong. Please double-check your inputs.', 'danger')

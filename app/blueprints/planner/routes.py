@@ -6,11 +6,12 @@ from flask import flash, redirect, render_template, request, url_for
 
 from app.seo import generate_meta_tags
 from app.utils.experience_links import article_for_space_planner
+from app.domain.spatial_validation import validate_room_dimensions
 
 from . import planner_bp
 from .data import ITEMS, ROOMS, ItemSpec, RoomSpec
 from .logic import UNITS, FitAnalysis, UnitSystem, evaluate_fit, from_cm, to_cm
-from .recommendations import Recommendation, build_recommendation
+from .recommendations import Recommendation, build_invalid_room_recommendation, build_recommendation
 
 
 def _parse_positive_number(value: str, field_name: str, *, flash_errors: bool) -> Optional[float]:
@@ -283,19 +284,31 @@ def room(room_slug: str):
             item_length_cm = to_cm(item_length, units.key)
             item_width_cm = to_cm(item_width, units.key)
 
-            try:
-                analysis = evaluate_fit(
-                    room=room_spec,
-                    item=item,
-                    room_length_cm=room_length_cm,
-                    room_width_cm=room_width_cm,
-                    item_length_cm=item_length_cm,
-                    item_width_cm=item_width_cm,
-                )
-                rec = build_recommendation(analysis)
-            except Exception:
-                if flash_errors:
-                    flash('Something went wrong. Please double-check your inputs.', 'danger')
+            validation = validate_room_dimensions(
+                room_slug=room_spec.slug,
+                room_label=room_spec.label,
+                length_m=(room_length_cm / 100.0),
+                width_m=(room_width_cm / 100.0),
+                units_key=units.key,
+            )
+
+            if not validation.ok:
+                rec = build_invalid_room_recommendation(room=room_spec, item=item, reason=validation.reason)
+                analysis = None
+            else:
+                try:
+                    analysis = evaluate_fit(
+                        room=room_spec,
+                        item=item,
+                        room_length_cm=room_length_cm,
+                        room_width_cm=room_width_cm,
+                        item_length_cm=item_length_cm,
+                        item_width_cm=item_width_cm,
+                    )
+                    rec = build_recommendation(analysis)
+                except Exception:
+                    if flash_errors:
+                        flash('Something went wrong. Please double-check your inputs.', 'danger')
 
     page_title = f"Room Planner — {room_spec.label}"
     page_desc = f"Check if furniture fits comfortably in a {room_spec.label.lower()}."

@@ -143,3 +143,26 @@ def build_intent_recommendation(*, intent: str, room: RoomType, result: RoomQual
         pro_advice=pro,
         seo_line=seo_line,
     )
+
+
+def build_invalid_intent_recommendation(*, intent: str, room: RoomType, reason: str) -> IntentRecommendation:
+    intent_title, intent_focus = _intent_labels(intent)
+    daily = reason or 'This room shape is not recommended for daily life.'
+    recs = [
+        'Adjust the room shape first (widen it or make it more balanced), then re-check.',
+        'Once the room is valid, you can confidently plan furniture and movement.',
+    ]
+    pro = 'Fix the room shape first — then the rest of the planning becomes reliable.'
+    seo_line = (
+        f"{room.label} {intent_title.lower()}: Not recommended (unrealistic room proportions for daily use). "
+        f"Space planning before construction: check {intent_focus} in seconds."
+    )
+
+    return IntentRecommendation(
+        status='not_ok',
+        verdict='Not recommended',
+        daily_life=daily,
+        room_recommendations=recs,
+        pro_advice=pro,
+        seo_line=seo_line,
+    )
