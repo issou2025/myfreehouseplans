@@ -11,7 +11,7 @@ This blueprint handles all public-facing routes including:
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, jsonify
 from flask import send_file, abort
 from datetime import datetime
-from app.models import HousePlan, Category, Order, ContactMessage
+from app.models import HousePlan, Category, Order, ContactMessage, BlogPost
 from app.forms import ContactForm, SearchForm
 from app.extensions import db, mail, limiter
 from app.seo import generate_meta_tags, generate_product_schema, generate_breadcrumb_schema, generate_sitemap
@@ -26,6 +26,7 @@ from app.utils.uploads import save_uploaded_file, resolve_protected_upload
 from app.utils.media import is_absolute_url, upload_url
 from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers
 from app.utils.visitor_tracking import tag_visit_identity
+from app.utils.experience_links import get_search_experiences
 from werkzeug.exceptions import HTTPException
 import traceback
 from sqlalchemy.exc import SQLAlchemyError
@@ -60,6 +61,84 @@ def service_worker():
     resp.headers['Cache-Control'] = 'no-cache'
     resp.headers['Service-Worker-Allowed'] = '/'
     return resp
+
+
+@main_bp.route('/search')
+def global_search():
+    """Global search across Space Planner checks, blog articles, guides, and plan pages."""
+
+    query = (request.args.get('q') or '').strip()
+    if not query:
+        return jsonify({'query': '', 'results': {'tools': [], 'articles': [], 'pages': []}})
+
+    q_lower = query.lower()
+
+    def _matches(text: str) -> bool:
+        return q_lower in text.lower() if text else False
+
+    # Tools (Space Planner + Furniture Fit)
+    tools = []
+    try:
+        for item in get_search_experiences():
+            if _matches(item.get('title', '')) or _matches(item.get('summary', '')):
+                tools.append(item)
+    except Exception:
+        tools = []
+
+    # Articles (blog)
+    articles = []
+    try:
+        like = f"%{query}%"
+        posts = (
+            BlogPost.query
+            .filter_by(status=BlogPost.STATUS_PUBLISHED)
+            .filter(or_(BlogPost.title.ilike(like), BlogPost.meta_description.ilike(like)))
+            .order_by(BlogPost.created_at.desc())
+            .limit(8)
+            .all()
+        )
+        for post in posts:
+            articles.append({
+                'title': post.title,
+                'summary': post.meta_description or '',
+                'url': url_for('blog.detail', slug=post.slug),
+            })
+    except Exception:
+        articles = []
+
+    # Pages (guides + plan pages)
+    pages = []
+    try:
+        for slug, g in (GUIDE_ARTICLES or {}).items():
+            if _matches(g.get('title', '')) or _matches(g.get('description', '')):
+                pages.append({
+                    'title': g.get('title', ''),
+                    'summary': g.get('description', ''),
+                    'url': url_for('main.insight_page', slug=slug),
+                })
+    except Exception:
+        pages = []
+
+    try:
+        like = f"%{query}%"
+        plans = (
+            HousePlan.query
+            .filter_by(is_published=True)
+            .filter(or_(HousePlan.title.ilike(like), HousePlan.description.ilike(like)))
+            .order_by(HousePlan.created_at.desc())
+            .limit(8)
+            .all()
+        )
+        for plan in plans:
+            pages.append({
+                'title': plan.title,
+                'summary': plan.short_description or plan.description or '',
+                'url': url_for('main.pack_detail', slug=plan.slug),
+            })
+    except Exception:
+        pass
+
+    return jsonify({'query': query, 'results': {'tools': tools, 'articles': articles, 'pages': pages}})
 
 
 _SPAM_URL_PATTERN = re.compile(r'(https?://|www\.)', re.IGNORECASE)

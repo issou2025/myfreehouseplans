@@ -67,6 +67,13 @@ def _intent_shell(
 
     learn_article = article_for_space_planner(intent=intent, room_slug=(room.slug if room else None))
 
+    share_text_map = {
+        'room-size': 'I checked if this room feels comfortable in real life.',
+        'circulation': 'I checked if daily movement will feel comfortable here.',
+        'comfort-check': 'I checked the overall comfort of this room for daily life.',
+    }
+    share_text = share_text_map.get(intent, 'I checked if this space works in real life.')
+
     units, method = _parse_units_and_method()
 
     form = {
@@ -152,6 +159,7 @@ def _intent_shell(
         page_intro=intro,
         intent=intent,
         learn_article=learn_article,
+        share_text=share_text,
         rooms=_room_list(),
         room=room,
         room_hints=room_hints,

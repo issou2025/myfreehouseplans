@@ -12,6 +12,31 @@
                 <a href="{{ url_for('main.packs') }}" class="btn btn-primary btn--glow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore catalog</a>
                 <a href="{{ url_for('main.contact') }}" class="btn btn-outline btn-ghost"><i class="fa-solid fa-comments" aria-hidden="true"></i> Talk to an architect</a>
             </div>
+            <div class="hero__search" aria-label="Search the site">
+                <label class="sr-only" for="globalSearchInput">Search</label>
+                <div class="search-shell glass">
+                    <div class="search-shell__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div>
+                    <input id="globalSearchInput" class="search-shell__input" type="search" placeholder="Search rooms, comfort checks, articles, guides..." autocomplete="off">
+                    <button class="btn btn-primary" type="button" id="globalSearchBtn">Search</button>
+                </div>
+                <div id="globalSearchResults" class="search-results glass" aria-live="polite" hidden>
+                    <div class="search-results__group" data-group="tools">
+                        <h3>Tools</h3>
+                        <div class="search-results__list"></div>
+                    </div>
+                    <div class="search-results__group" data-group="articles">
+                        <h3>Articles</h3>
+                        <div class="search-results__list"></div>
+                    </div>
+                    <div class="search-results__group" data-group="pages">
+                        <h3>Pages</h3>
+                        <div class="search-results__list"></div>
+                    </div>
+                    <div class="search-results__empty" hidden>
+                        No matches yet. Try a room name or a comfort topic.
+                    </div>
+                </div>
+            </div>
             <div class="hero__metrics" aria-label="Studio metrics">
                 {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
                 <div class="metric-pill">
@@ -369,6 +394,71 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function(){
+        const input = document.getElementById('globalSearchInput');
+        const btn = document.getElementById('globalSearchBtn');
+        const panel = document.getElementById('globalSearchResults');
+        if(!input || !panel) return;
+
+        const groups = {
+            tools: panel.querySelector('[data-group="tools"] .search-results__list'),
+            articles: panel.querySelector('[data-group="articles"] .search-results__list'),
+            pages: panel.querySelector('[data-group="pages"] .search-results__list'),
+        };
+        const emptyState = panel.querySelector('.search-results__empty');
+
+        let timer;
+        function clearGroups(){
+            Object.values(groups).forEach(list => list && (list.innerHTML = ''));
+        }
+
+        function renderGroup(items, target){
+            if(!target) return 0;
+            if(!items || items.length === 0) return 0;
+            target.innerHTML = items.map(item => {
+                const summary = item.summary ? `<p>${item.summary}</p>` : '';
+                return `<a class="search-results__item" href="${item.url}"><strong>${item.title}</strong>${summary}</a>`;
+            }).join('');
+            return items.length;
+        }
+
+        async function runSearch(){
+            const q = (input.value || '').trim();
+            if(!q){
+                panel.hidden = true;
+                clearGroups();
+                return;
+            }
+            try{
+                const resp = await fetch(`/search?q=${encodeURIComponent(q)}`);
+                const data = await resp.json();
+                clearGroups();
+                const toolsCount = renderGroup(data.results.tools, groups.tools);
+                const articlesCount = renderGroup(data.results.articles, groups.articles);
+                const pagesCount = renderGroup(data.results.pages, groups.pages);
+                const total = toolsCount + articlesCount + pagesCount;
+                if(emptyState) emptyState.hidden = total > 0;
+                panel.hidden = false;
+            }catch(e){
+                panel.hidden = false;
+                if(emptyState) emptyState.hidden = false;
+            }
+        }
+
+        function debounceSearch(){
+            clearTimeout(timer);
+            timer = setTimeout(runSearch, 250);
+        }
+
+        input.addEventListener('input', debounceSearch);
+        input.addEventListener('focus', debounceSearch);
+        if(btn){ btn.addEventListener('click', runSearch); }
+    })();
+</script>
 {% endblock %}
 
 {% block extra_js %}

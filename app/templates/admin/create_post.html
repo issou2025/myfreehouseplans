@@ -339,6 +339,21 @@
                             </div>
                         </div>
                     </details>
+
+                    <details style="margin-top: 1rem;">
+                        <summary class="form-card__summary">Space Planner linking (optional)</summary>
+                        {% set _exp_key = (extras or {}).get('experience_key', '') if extras is defined else '' %}
+                        <div class="form-group" style="margin-top: .75rem;">
+                            <label class="form-label" for="extras__experience_key">Link this article to a space planning check</label>
+                            <select class="form-input" id="extras__experience_key" name="extras__experience_key">
+                                <option value="" {% if not _exp_key %}selected{% endif %}>No link</option>
+                                {% for opt in (experience_options or []) %}
+                                    <option value="{{ opt.key }}" {% if _exp_key == opt.key %}selected{% endif %}>{{ opt.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="form-help">If set, the article will show a gentle call‑to‑action back to that check. If empty, no link is shown.</p>
+                        </div>
+                    </details>
                 </details>
 
                 <details class="form-card">

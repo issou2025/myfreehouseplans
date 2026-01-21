@@ -153,6 +153,25 @@
             <span id="plCopyStatus" style="opacity:.85;"></span>
           </div>
 
+          <div class="blog-share" role="group" aria-label="Share this check" data-share-text="This helped me see if my furniture fits in real life." style="margin-top: .85rem;">
+            <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener" aria-label="Share on Facebook">
+              <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+              <span>Facebook</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="x" target="_blank" rel="noopener" aria-label="Share on X">
+              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+              <span>X</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
+              <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
+              <span>LinkedIn</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="whatsapp" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+              <span>WhatsApp</span>
+            </a>
+          </div>
+
           <p class="pl-help" style="margin-top: .75rem;">
             {{ recommendation.seo_line }}
           </p>
@@ -228,6 +247,7 @@
     // Share link helper: encodes the current selection so the same result can be opened again.
     const copyBtn = document.getElementById('plCopyLink');
     const statusEl = document.getElementById('plCopyStatus');
+    const shareWrap = document.querySelector('[data-share-text]');
     function buildShareUrl(){
       const url = new URL(window.location.href);
       const params = url.searchParams;
@@ -244,6 +264,20 @@
       return url.toString();
     }
 
+    function setShareLinks(){
+      if(!shareWrap) return;
+      const shareText = shareWrap.getAttribute('data-share-text') || 'This helped me see if my furniture fits in real life.';
+      const url = encodeURIComponent(buildShareUrl());
+      const text = encodeURIComponent(shareText);
+      shareWrap.querySelectorAll('[data-share]').forEach((el) => {
+        const network = el.getAttribute('data-share');
+        if(network === 'facebook') el.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        if(network === 'x') el.href = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+        if(network === 'linkedin') el.href = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        if(network === 'whatsapp') el.href = `https://wa.me/?text=${text}%20${url}`;
+      });
+    }
+
     async function copyShareLink(){
       if(!copyBtn) return;
       const link = buildShareUrl();
@@ -258,6 +292,13 @@
     if(copyBtn){
       copyBtn.addEventListener('click', copyShareLink);
     }
+
+    const form = document.querySelector('form.pl-form');
+    if(form){
+      form.addEventListener('input', setShareLinks);
+      form.addEventListener('change', setShareLinks);
+    }
+    setShareLinks();
   })();
 </script>
 {% endblock %}

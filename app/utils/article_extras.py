@@ -288,6 +288,14 @@ def normalize_article_extras(extras: Any) -> Dict[str, Any]:
     except Exception:
         pass
 
+    # optional experience link (article -> Space Planner)
+    try:
+        experience_key = _clean_str(extras.get("experience_key"), max_len=120)
+        if experience_key:
+            normalized["experience_key"] = experience_key
+    except Exception:
+        pass
+
     try:
         notes = _clean_str(extras.get("notes"), max_len=5000)
         if notes:
@@ -394,6 +402,19 @@ def extract_article_extras_from_form(form: Any) -> Dict[str, Any]:
     except Exception:
         try:
             current_app.logger.exception("Failed to parse intent extras")
+        except Exception:
+            pass
+
+    # Optional experience link (article -> Space Planner)
+    try:
+        experience_key = _clean_str(form.get("extras__experience_key"), max_len=120)
+        if full_mode:
+            extras["experience_key"] = experience_key or ""
+        elif experience_key:
+            extras["experience_key"] = experience_key
+    except Exception:
+        try:
+            current_app.logger.exception("Failed to parse experience link extras")
         except Exception:
             pass
 

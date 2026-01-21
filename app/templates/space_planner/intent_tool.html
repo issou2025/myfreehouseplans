@@ -48,6 +48,7 @@
     // Share link helper
     const copyBtn = document.getElementById('rcCopyLink');
     const statusEl = document.getElementById('rcCopyStatus');
+    const shareWrap = document.querySelector('[data-share-text]');
     function buildShareUrl(){
       const url = new URL(window.location.href);
       const params = url.searchParams;
@@ -58,6 +59,26 @@
       }
       url.search = params.toString();
       return url.toString();
+    }
+
+    function setShareLinks(){
+      if(!shareWrap) return;
+      const shareText = shareWrap.getAttribute('data-share-text') || 'I checked if this space works in real life.';
+      const url = encodeURIComponent(buildShareUrl());
+      const text = encodeURIComponent(shareText);
+      shareWrap.querySelectorAll('[data-share]').forEach((el) => {
+        const network = el.getAttribute('data-share');
+        if(network === 'facebook') el.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        if(network === 'x') el.href = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+        if(network === 'linkedin') el.href = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        if(network === 'whatsapp') el.href = `https://wa.me/?text=${text}%20${url}`;
+      });
+    }
+
+    const form = document.querySelector('form.rc-form');
+    if(form){
+      form.addEventListener('input', setShareLinks);
+      form.addEventListener('change', setShareLinks);
     }
     async function copyShareLink(){
       if(!copyBtn) return;
@@ -70,6 +91,7 @@
       }
     }
     if(copyBtn){ copyBtn.addEventListener('click', copyShareLink); }
+    setShareLinks();
 
     // Mobile UX: scroll to results after compute
     const result = document.getElementById('spResult');
@@ -242,6 +264,25 @@
               Copy share link
             </button>
             <span id="rcCopyStatus" style="opacity:.85;"></span>
+          </div>
+
+          <div class="blog-share" role="group" aria-label="Share this check" data-share-text="{{ share_text }}" style="margin-top: .85rem;">
+            <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener" aria-label="Share on Facebook">
+              <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+              <span>Facebook</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="x" target="_blank" rel="noopener" aria-label="Share on X">
+              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+              <span>X</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
+              <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
+              <span>LinkedIn</span>
+            </a>
+            <a class="blog-share__btn" href="#" data-share="whatsapp" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+              <span>WhatsApp</span>
+            </a>
           </div>
 
           <p class="rc-help" style="margin-top: .75rem;">{{ recommendation.seo_line }}</p>

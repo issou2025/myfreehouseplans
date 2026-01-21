@@ -13,7 +13,7 @@ from app.forms import PowerfulPostForm
 from app.models import BlogPost, HousePlan, Category
 from app.seo import generate_meta_tags
 from app.utils.uploads import save_uploaded_file
-from app.utils.experience_links import experience_for_article_slug
+from app.utils.experience_links import experience_for_article, get_experience_options
 from app.utils.article_extras import (
     extract_article_extras_from_form,
     load_article_extras,
@@ -149,7 +149,7 @@ def detail(slug):
 
     related_experience = None
     try:
-        related_experience = experience_for_article_slug(post.slug)
+        related_experience = experience_for_article(slug=post.slug, extras=extras)
     except Exception:
         related_experience = None
 
@@ -216,7 +216,12 @@ def create():
             db.session.rollback()
             flash('A post with this slug already exists. Please choose another.', 'danger')
 
-    return render_template('admin/create_post.html', form=form, extras=extras)
+    return render_template(
+        'admin/create_post.html',
+        form=form,
+        extras=extras,
+        experience_options=get_experience_options(),
+    )
 
 
 @blog_bp.route('/admin/blog')
@@ -296,7 +301,13 @@ def edit(post_id):
             db.session.rollback()
             flash('A post with this slug already exists. Please choose another.', 'danger')
 
-    return render_template('admin/create_post.html', form=form, post=post, extras=extras)
+    return render_template(
+        'admin/create_post.html',
+        form=form,
+        post=post,
+        extras=extras,
+        experience_options=get_experience_options(),
+    )
 
 
 @blog_bp.route('/admin/blog/<int:post_id>/delete', methods=['POST'])
