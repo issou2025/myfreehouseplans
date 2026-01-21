@@ -256,13 +256,54 @@ def _intent_shell(
 @space_planner_bp.get('')
 @space_planner_bp.get('/')
 def index():
+    popular_order = ['bedroom', 'living-room', 'kitchen', 'bathroom', 'office', 'garage']
+    by_slug = SIZE_ROOMS
+    popular_rooms = [by_slug[s] for s in popular_order if s in by_slug]
+    
+    quick_actions = [
+        {
+            'icon': 'fa-solid fa-bed',
+            'title': 'Is my bedroom big enough?',
+            'body': 'Quick comfort check for bedroom size — not too technical.',
+            'cta': 'Check bedroom size',
+            'href': url_for('space_planner.room_size', room='bedroom'),
+        },
+        {
+            'icon': 'fa-solid fa-couch',
+            'title': 'Will my living room feel spacious?',
+            'body': 'See if your living room dimensions work in real life.',
+            'cta': 'Check living room',
+            'href': url_for('space_planner.room_size', room='living-room'),
+        },
+        {
+            'icon': 'fa-solid fa-utensils',
+            'title': 'Can I move comfortably in my kitchen?',
+            'body': 'Test daily circulation and movement space.',
+            'cta': 'Check kitchen comfort',
+            'href': url_for('space_planner.circulation', room='kitchen'),
+        },
+        {
+            'icon': 'fa-solid fa-ruler-combined',
+            'title': 'Does my furniture really fit?',
+            'body': 'Check if furniture leaves enough space for daily use.',
+            'cta': 'Test furniture fit',
+            'href': url_for('space_planner.furniture_fit'),
+        },
+    ]
+    
     meta = generate_meta_tags(
         title='Space Planner',
         description='A human-friendly space planning assistant: room size comfort, furniture fit, circulation, and overall comfort checks.',
         url=url_for('space_planner.index', _external=True),
     )
 
-    return render_template('space_planner/index.html', rooms=_room_list(), meta=meta)
+    return render_template(
+        'space_planner/index.html',
+        rooms=_room_list(),
+        popular_rooms=popular_rooms,
+        quick_actions=quick_actions,
+        meta=meta,
+    )
 
 
 @space_planner_bp.route('/room-size', methods=['GET', 'POST'])

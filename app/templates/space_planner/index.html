@@ -7,75 +7,168 @@
 {% endblock %}
 
 {% block content %}
-<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
-  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
-    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+<section class="shell sp-hero">
+  <div class="sp-hero__inner">
+    <div class="sp-hero__badge">
       <i class="fa-solid fa-compass" aria-hidden="true"></i>
       Space Planner
-    </p>
-    <h1 style="margin: 0 0 .75rem 0; font-family: 'Playfair Display', serif;">Plan spaces that feel good to live in</h1>
-    <p style="margin: 0; opacity: .92; max-width: 78ch;">
-      This is a planning assistant — not a calculator. Choose an intent (room size, circulation, comfort),
-      then take the next natural step: furniture fit.
-    </p>
+    </div>
+
+    <h1 class="sp-hero__title">Plan Spaces That Feel Good to Live In</h1>
+    <p class="sp-hero__subtitle">Human-friendly guidance for room size, comfort, circulation, and furniture fit.</p>
+
+    <div class="sp-hero__actions">
+      <a class="btn btn-primary" href="#choose-tool">
+        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+        Start Planning
+      </a>
+    </div>
   </div>
 </section>
 
-<section class="shell" style="padding: 0 0 3rem 0;">
-  <div class="sp-grid" aria-label="Space Planner tools">
-    <a class="sp-card" href="{{ url_for('space_planner.room_size') }}" aria-label="Open Room Size">
-      <div class="sp-card__icon" aria-hidden="true"><i class="fa-solid fa-square-check"></i></div>
-      <div class="sp-card__body">
-        <div class="sp-card__title">Room size</div>
-        <div class="sp-card__desc">Check if a room will feel comfortable, tight, or not recommended — in plain language.</div>
-        <div class="sp-card__cta"><span>Start room size</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
-      </div>
-    </a>
-
-    <a class="sp-card" href="{{ url_for('space_planner.circulation') }}" aria-label="Open Circulation">
-      <div class="sp-card__icon" aria-hidden="true"><i class="fa-solid fa-route"></i></div>
-      <div class="sp-card__body">
-        <div class="sp-card__title">Circulation</div>
-        <div class="sp-card__desc">A quick movement comfort check: will daily walking and passing through feel easy?</div>
-        <div class="sp-card__cta"><span>Start circulation</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
-      </div>
-    </a>
-
-    <a class="sp-card" href="{{ url_for('space_planner.comfort_check') }}" aria-label="Open Comfort Check">
-      <div class="sp-card__icon" aria-hidden="true"><i class="fa-solid fa-heart"></i></div>
-      <div class="sp-card__body">
-        <div class="sp-card__title">Comfort check</div>
-        <div class="sp-card__desc">A simple overall usability summary with the next best action.</div>
-        <div class="sp-card__cta"><span>Start comfort check</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
-      </div>
-    </a>
-
-    <a class="sp-card" href="{{ url_for('space_planner.furniture_fit') }}" aria-label="Open Furniture Fit">
-      <div class="sp-card__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
-      <div class="sp-card__body">
-        <div class="sp-card__title">Furniture fit</div>
-        <div class="sp-card__desc">Test furniture and appliances with realistic daily-life movement clearances.</div>
-        <div class="sp-card__cta"><span>Start furniture fit</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
-      </div>
-    </a>
+<section class="shell sp-section" aria-label="Quick starts">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">What would you like to check?</h2>
+    <p class="sp-section__subtitle">Pick your starting point — we'll guide you from there.</p>
   </div>
 
-  <div class="glass sp-note" style="margin-top: 1.25rem;">
-    <p style="margin: 0; opacity: .92;">
-      <strong>Popular rooms:</strong>
-      <a href="{{ url_for('space_planner.room', room_slug='bedroom') }}">Bedroom</a>,
-      <a href="{{ url_for('space_planner.room', room_slug='kitchen') }}">Kitchen</a>,
-      <a href="{{ url_for('space_planner.room', room_slug='living-room') }}">Living room</a>,
-      <a href="{{ url_for('space_planner.room', room_slug='bathroom') }}">Bathroom</a>,
-      <a href="{{ url_for('space_planner.room', room_slug='office') }}">Office</a>,
-      <a href="{{ url_for('space_planner.room', room_slug='garage') }}">Garage</a>.
-    </p>
-  </div>
-
-  <div class="glass sp-note" style="margin-top: 1rem;">
-    <p style="margin: 0; opacity: .92;">
-      <strong>Mobile-friendly:</strong> one screen, one action, one clear result.
-    </p>
+  <div class="sp-action-grid">
+    {% for a in quick_actions %}
+      <a class="sp-action" href="{{ a.href }}" aria-label="{{ a.title }}">
+        <div class="sp-action__icon" aria-hidden="true"><i class="{{ a.icon }}"></i></div>
+        <div class="sp-action__body">
+          <div class="sp-action__title">{{ a.title }}</div>
+          <div class="sp-action__desc">{{ a.body }}</div>
+          <div class="sp-action__cta">
+            <span>{{ a.cta }}</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
   </div>
 </section>
+
+<section class="shell sp-section" id="choose-tool" aria-label="All planning tools">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">All Planning Tools</h2>
+    <p class="sp-section__subtitle">Each tool solves one question clearly — no overwhelming checklists.</p>
+  </div>
+
+  <div class="sp-tools-grid">
+    <a class="sp-tool" href="{{ url_for('space_planner.room_size') }}" aria-label="Open Room Size">
+      <div class="sp-tool__icon" aria-hidden="true"><i class="fa-solid fa-square-check"></i></div>
+      <div class="sp-tool__body">
+        <div class="sp-tool__title">Room Size</div>
+        <div class="sp-tool__desc">Check if a room will feel comfortable, tight, or not recommended — in plain language.</div>
+        <div class="sp-tool__cta"><span>Open</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="sp-tool" href="{{ url_for('space_planner.circulation') }}" aria-label="Open Circulation">
+      <div class="sp-tool__icon" aria-hidden="true"><i class="fa-solid fa-route"></i></div>
+      <div class="sp-tool__body">
+        <div class="sp-tool__title">Circulation</div>
+        <div class="sp-tool__desc">A quick movement comfort check: will daily walking and passing through feel easy?</div>
+        <div class="sp-tool__cta"><span>Open</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="sp-tool" href="{{ url_for('space_planner.comfort_check') }}" aria-label="Open Comfort Check">
+      <div class="sp-tool__icon" aria-hidden="true"><i class="fa-solid fa-heart"></i></div>
+      <div class="sp-tool__body">
+        <div class="sp-tool__title">Comfort Check</div>
+        <div class="sp-tool__desc">A simple overall usability summary with the next best action.</div>
+        <div class="sp-tool__cta"><span>Open</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+
+    <a class="sp-tool" href="{{ url_for('space_planner.furniture_fit') }}" aria-label="Open Furniture Fit">
+      <div class="sp-tool__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
+      <div class="sp-tool__body">
+        <div class="sp-tool__title">Furniture Fit</div>
+        <div class="sp-tool__desc">Test furniture and appliances with realistic daily-life movement clearances.</div>
+        <div class="sp-tool__cta"><span>Open</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="shell sp-section" aria-label="Popular rooms">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">Popular Rooms</h2>
+    <p class="sp-section__subtitle">Jump straight to a room-specific guide.</p>
+  </div>
+
+  <div class="sp-rooms-grid">
+    {% for r in popular_rooms %}
+      <a class="sp-room-card" href="{{ url_for('space_planner.room', room_slug=r.slug) }}" aria-label="Open {{ r.label }}">
+        <div class="sp-room-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+        <div class="sp-room-card__title">{{ r.label }}</div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="shell sp-section" aria-label="How it works">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">How it works</h2>
+  </div>
+
+  <div class="sp-steps" role="list">
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">1</div>
+      <div class="sp-step__title">Pick a tool or room</div>
+      <div class="sp-step__body">Start where you are — no fixed order required.</div>
+    </div>
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">2</div>
+      <div class="sp-step__title">Enter your dimensions</div>
+      <div class="sp-step__body">Metric or imperial — we handle the conversion.</div>
+    </div>
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">3</div>
+      <div class="sp-step__title">Get a clear, human result</div>
+      <div class="sp-step__body">Comfortable, tight, or not recommended — with next steps.</div>
+    </div>
+  </div>
+</section>
+
+<section class="shell sp-section" aria-label="What makes this different">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">What Makes This Different</h2>
+  </div>
+
+  <div class="sp-features-grid">
+    <div class="sp-feature">
+      <div class="sp-feature__icon" aria-hidden="true"><i class="fa-solid fa-comments"></i></div>
+      <div class="sp-feature__title">Plain language</div>
+      <div class="sp-feature__body">No jargon, no technical terms — just clear guidance.</div>
+    </div>
+    <div class="sp-feature">
+      <div class="sp-feature__icon" aria-hidden="true"><i class="fa-solid fa-mobile-screen"></i></div>
+      <div class="sp-feature__title">Mobile-friendly</div>
+      <div class="sp-feature__body">One screen, one action, one clear result.</div>
+    </div>
+    <div class="sp-feature">
+      <div class="sp-feature__icon" aria-hidden="true"><i class="fa-solid fa-globe"></i></div>
+      <div class="sp-feature__title">Metric & Imperial</div>
+      <div class="sp-feature__body">Use whatever measurement system feels natural.</div>
+    </div>
+    <div class="sp-feature">
+      <div class="sp-feature__icon" aria-hidden="true"><i class="fa-solid fa-compass-drafting"></i></div>
+      <div class="sp-feature__title">Real-life comfort</div>
+      <div class="sp-feature__body">Not just "does it fit" — will it feel good to use every day?</div>
+    </div>
+  </div>
+</section>
+
+<div class="sp-sticky-cta" role="region" aria-label="Start planning">
+  <div class="shell sp-sticky-cta__inner">
+    <a class="btn btn-primary sp-sticky-cta__btn" href="#choose-tool">
+      <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+      Start Planning
+    </a>
+  </div>
+</div>
 {% endblock %}
