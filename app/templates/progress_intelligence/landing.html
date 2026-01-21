@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress_intelligence/progress_intelligence.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="pi-hero">
+  <div class="pi-shell">
+    <div class="pi-grid">
+      <div>
+        <div class="pi-eyebrow">
+          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+          <span>Global tool • No quotes • Non-technical</span>
+        </div>
+        <h1 class="pi-title">Where will construction realistically stop?</h1>
+        <p class="pi-lead">This tool is not a cost estimator. It simulates real progression stress and shows the last phase your project tends to reach — calmly and honestly.</p>
+
+        <div class="pi-cta">
+          <a class="btn btn-primary" href="{{ url_for('progress_intelligence.start', lang=lang) }}">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            Start
+          </a>
+          <a class="btn btn-secondary" href="{{ url_for('progress_intelligence.how_it_works', lang=lang) }}">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            How it works
+          </a>
+        </div>
+        <p class="pi-micro">No login. Works for any income level. Always free PDF report.</p>
+      </div>
+
+      <aside class="pi-panel" aria-label="What you get">
+        <h2 class="pi-panel__title">What you get</h2>
+        <ul class="pi-list">
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A visual phase timeline (green / orange / red)</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A clear stopping point (core value)</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A rhythm indicator (stable / fragile / stoppage risk)</span></li>
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>A detailed, printable PDF reality report</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="pi-section">
+  <div class="pi-shell">
+    <div class="pi-panel">
+      <h2 class="pi-panel__title">Important</h2>
+      <p class="pi-lead" style="font-size: 16px;">We never show prices per phase. Your amounts are used only to simulate where projects tend to stall.</p>
+      <div class="pi-links">
+        <a href="{{ url_for('progress_intelligence.limitations', lang=lang) }}">Limitations</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

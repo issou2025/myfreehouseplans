@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress_intelligence/progress_intelligence.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="pi-hero" style="padding-bottom: 0;">
+  <div class="pi-shell">
+    <div class="pi-eyebrow">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <span>Transparency • Prevention-first • Globally usable</span>
+    </div>
+    <h1 class="pi-title" style="font-size: clamp(28px, 3.5vw, 44px);">How it works</h1>
+    <p class="pi-lead">We simulate progression behavior — not local prices. The goal is to show where projects tend to stall.</p>
+  </div>
+</section>
+
+<section class="pi-section">
+  <div class="pi-shell">
+    <div class="pi-panel">
+      <h2 class="pi-panel__title">Core principles</h2>
+      <ul class="pi-list" style="margin-top: 12px;">
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Progress is not linear: later phases often absorb more resources.</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Floors multiply complexity and late-stage risk.</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Material shifts where difficulties tend to appear (early vs late).</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Continuity matters: a fragile rhythm increases stoppage risk.</span></li>
+      </ul>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">What we show</h2>
+      <ul class="pi-list" style="margin-top: 12px;">
+        <li><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> <span><strong>Stopping point:</strong> the last phase usually reachable.</span></li>
+        <li><i class="fa-solid fa-traffic-light" aria-hidden="true"></i> <span><strong>Phase colors:</strong> green reached, orange fragile, red not reached.</span></li>
+        <li><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> <span><strong>Rhythm:</strong> stable / fragile / stoppage risk.</span></li>
+      </ul>
+    </div>
+
+    <div class="pi-links">
+      <a href="{{ url_for('progress_intelligence.start', lang=lang) }}">Run simulation</a>
+      <a href="{{ url_for('progress_intelligence.limitations', lang=lang) }}">Limitations</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

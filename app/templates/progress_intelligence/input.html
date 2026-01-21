@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress_intelligence/progress_intelligence.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="pi-hero" style="padding-bottom: 0;">
+  <div class="pi-shell">
+    <div class="pi-eyebrow">
+      <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+      <span>Simple inputs • No jargon • Honest output</span>
+    </div>
+    <h1 class="pi-title" style="font-size: clamp(28px, 3.5vw, 44px);">Start simulation</h1>
+    <p class="pi-lead">Fill what you know. Leave budget fields empty if unsure — the tool will still give a realistic warning.</p>
+  </div>
+</section>
+
+<section class="pi-section">
+  <div class="pi-shell">
+    <div class="pi-panel">
+      <form class="pi-form" method="post" action="{{ url_for('progress_intelligence.start', lang=lang) }}" novalidate>
+        <input type="hidden" name="lang" value="{{ lang }}">
+
+        <div class="pi-field">
+          <label class="pi-label" for="building_type">Building type</label>
+          <select class="pi-select" id="building_type" name="building_type" required>
+            <option value="Single-family house">Single-family house</option>
+            <option value="Multi-family building">Multi-family building</option>
+            <option value="School">School</option>
+            <option value="Health center">Health center</option>
+            <option value="Commercial building">Commercial building</option>
+            <option value="Light industrial / workshop">Light industrial / workshop</option>
+          </select>
+          <p class="pi-help">Choose what best matches your project — no need for precision.</p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="number_of_floors">Number of floors</label>
+          <select class="pi-select" id="number_of_floors" name="number_of_floors" required>
+            <option value="Ground floor only">Ground floor only</option>
+            <option value="Ground + 1 floor">Ground + 1 floor</option>
+            <option value="Ground + 2 floors">Ground + 2 floors</option>
+            <option value="Ground + 3 floors or more">Ground + 3 floors or more</option>
+          </select>
+          <p class="pi-help">More floors usually increases late-stage risk.</p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="structural_material">Structural material</label>
+          <select class="pi-select" id="structural_material" name="structural_material" required>
+            <option value="Concrete">Concrete</option>
+            <option value="Steel">Steel</option>
+            <option value="Wood">Wood</option>
+          </select>
+          <p class="pi-help">Material changes where difficulties tend to appear (early vs late).</p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="surface_area">Surface area</label>
+          <div style="display:grid; grid-template-columns: 1fr 120px; gap: 10px;">
+            <input class="pi-input" id="surface_area" name="surface_area" type="number" step="0.01" inputmode="decimal" required placeholder="Example: 120">
+            <select class="pi-select" id="surface_unit" name="surface_unit" aria-label="Unit">
+              <option value="m2">m²</option>
+              <option value="ft2">ft²</option>
+            </select>
+          </div>
+          <p class="pi-help">We normalize internally. <span id="area_hint" style="font-weight:800; color: var(--color-muted);"></span></p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="total_budget">Total available amount (optional)</label>
+          <input class="pi-input" id="total_budget" name="total_budget" type="number" step="0.01" inputmode="decimal" placeholder="Example: 20000">
+          <p class="pi-help">Enter any currency or unit you use. We never display prices per phase.</p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="monthly_contribution">Monthly contribution (optional)</label>
+          <input class="pi-input" id="monthly_contribution" name="monthly_contribution" type="number" step="0.01" inputmode="decimal" placeholder="Example: 800">
+          <p class="pi-help">This is your realistic construction effort each month — not your income.</p>
+        </div>
+
+        <div class="pi-field">
+          <label style="display:flex; gap:10px; align-items:flex-start;">
+            <input type="checkbox" name="max_monthly_effort" value="1" style="margin-top: 4px;">
+            <span>
+              <strong>This monthly contribution is my maximum effort (no margin)</strong><br>
+              <span class="pi-help">Checking this helps the tool warn about fragility under pressure.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="pi-actions">
+          <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            Run simulation
+          </button>
+          <a class="btn btn-secondary" href="{{ url_for('progress_intelligence.landing', lang=lang) }}">Back</a>
+        </div>
+
+        <div class="pi-note" role="note">
+          <strong>Country:</strong> we may auto-detect a country only to adjust realism factors. We do not use local prices.
+        </div>
+      </form>
+
+      <div class="pi-links">
+        <a href="{{ url_for('progress_intelligence.how_it_works', lang=lang) }}">How it works</a>
+        <a href="{{ url_for('progress_intelligence.limitations', lang=lang) }}">Limitations</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{{ url_for('static', filename='progress_intelligence/progress_intelligence.js') }}" defer></script>
+{% endblock %}

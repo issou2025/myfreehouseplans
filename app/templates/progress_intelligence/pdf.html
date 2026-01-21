@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Construction Progress Reality Report</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, sans-serif; color: #0b1220; }
+    .title { font-size: 22px; font-weight: 900; margin: 0 0 6px; }
+    .subtitle { margin: 0 0 16px; color: #334155; }
+    .pill { display: inline-block; padding: 8px 12px; border-radius: 999px; background: #f6f7fb; border: 1px solid rgba(16,24,40,.12); font-size: 12px; color: #334155; margin-right: 8px; margin-bottom: 8px; }
+    .card { border-radius: 14px; border: 1px solid rgba(16,24,40,.12); padding: 14px; background: #fff; margin-top: 12px; }
+    h2 { font-size: 14px; margin: 0 0 10px; }
+    p { margin: 0; color: #111827; line-height: 1.5; }
+    ul { margin: 8px 0 0; padding-left: 16px; color: #111827; }
+    li { margin: 6px 0; }
+    .muted { color: #334155; }
+    .small { font-size: 11px; }
+    .tag { font-weight: 800; }
+  </style>
+</head>
+<body>
+  <p class="title">Construction Progress Reality Report</p>
+  <p class="subtitle">A realistic projection of how far a project tends to progress — globally, without quotes.</p>
+
+  <div>
+    <span class="pill"><span class="tag">Building:</span> {{ result.inputs.building_type }}</span>
+    <span class="pill"><span class="tag">Floors:</span> {{ result.inputs.floors }}</span>
+    <span class="pill"><span class="tag">Material:</span> {{ result.inputs.material }}</span>
+    <span class="pill"><span class="tag">Area:</span> {{ '%.0f'|format(result.inputs.area_value) }} {{ result.inputs.area_unit }}</span>
+    <span class="pill"><span class="tag">Country:</span> {{ result.inputs.country_name }}</span>
+    <span class="pill"><span class="tag">Generated:</span> {{ result.created_utc }}</span>
+  </div>
+
+  <div class="card">
+    <h2>Core decision</h2>
+    <p class="muted"><strong>Stopping point tends to appear around:</strong> {{ result.stopping_phase }}</p>
+    <p class="muted" style="margin-top: 8px;">This is not a quotation and does not show prices per phase. It is a prevention tool to expose where projects usually stall.</p>
+  </div>
+
+  <div class="card">
+    <h2>Phase progression</h2>
+    <ul>
+      {% for st in result.statuses %}
+        <li><strong>{{ st.phase }}:</strong> {{ st.status|upper }} — {{ st.note }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Time and continuity</h2>
+    {% if result.rhythm == 'stable' %}
+      <p class="muted"><strong>Stable progression.</strong> Continuity looks healthy. Protect it.</p>
+    {% elif result.rhythm == 'fragile' %}
+      <p class="muted"><strong>Fragile progression.</strong> Interruptions can move the stopping point earlier.</p>
+    {% else %}
+      <p class="muted"><strong>High risk of stoppage.</strong> Without steady continuity, projects often stall for long periods.</p>
+    {% endif %}
+    {% if result.margin_flag %}
+      <p class="muted" style="margin-top: 8px;"><strong>Maximum effort without margin:</strong> you marked monthly effort as maximum. That increases fragility under pressure.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Adjustment scenarios (directional)</h2>
+    <ul>
+      {% for s in result.scenarios %}
+        <li><strong>{{ s.title }}:</strong> {{ s.effect }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Advice</h2>
+    <ul>
+      {% for item in result.advice %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Disclaimer</h2>
+    <p class="muted small">This report is an indicative simulation. It is not a quotation, not a cost estimate, and not a substitute for professional studies. It aims to prevent unfinished projects by encouraging safer scope and continuity decisions.</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress_intelligence/progress_intelligence.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="pi-hero" style="padding-bottom: 0;">
+  <div class="pi-shell">
+    <div class="pi-eyebrow">
+      <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+      <span>Honesty • Boundaries • No promises</span>
+    </div>
+    <h1 class="pi-title" style="font-size: clamp(28px, 3.5vw, 44px);">Limitations</h1>
+    <p class="pi-lead">This tool is an indicative simulation. It is not a quotation, not a cost estimate, and not a substitute for professional studies.</p>
+  </div>
+</section>
+
+<section class="pi-section">
+  <div class="pi-shell">
+    <div class="pi-panel">
+      <h2 class="pi-panel__title">What can change reality</h2>
+      <ul class="pi-list" style="margin-top: 12px;">
+        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span>Scope changes during construction.</span></li>
+        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span>Interruptions, delays, or life events.</span></li>
+        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span>Late-stage stress (the finish is fragile).</span></li>
+        <li><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> <span>Local constraints we do not model (permits, supply, workforce).</span></li>
+      </ul>
+      <p class="pi-help" style="margin-top: 10px;">Use the result to simplify early, protect continuity, and avoid late expansions.</p>
+    </div>
+
+    <div class="pi-links">
+      <a href="{{ url_for('progress_intelligence.start', lang=lang) }}">Run simulation</a>
+      <a href="{{ url_for('progress_intelligence.how_it_works', lang=lang) }}">How it works</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

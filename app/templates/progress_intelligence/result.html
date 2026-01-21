@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress_intelligence/progress_intelligence.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="pi-hero" style="padding-bottom: 0;">
+  <div class="pi-shell">
+    <div class="pi-eyebrow">
+      <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+      <span>Visual progression • Clear stopping point • Free PDF</span>
+    </div>
+    <h1 class="pi-title" style="font-size: clamp(28px, 3.5vw, 44px);">Your simulation result</h1>
+    <p class="pi-lead">The most important output is the last phase realistically reachable. This is a prevention tool, not a quote.</p>
+  </div>
+</section>
+
+<section class="pi-section">
+  <div class="pi-shell">
+    <div class="pi-panel">
+      <h2 class="pi-panel__title">Stopping point</h2>
+      <p class="pi-lead" style="font-size: 18px; margin-top: 10px;"><strong>{{ result.stopping_phase }}</strong></p>
+      <div class="pi-badge-row">
+        <span class="pi-badge"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Country: {{ result.inputs.country_name }}</span>
+        <span class="pi-badge"><i class="fa-solid fa-clock" aria-hidden="true"></i> Generated: {{ result.created_utc }}</span>
+      </div>
+      <p class="pi-help" style="margin-top: 12px;">{{ result.explanation }}</p>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">Phase progression</h2>
+      <div class="pi-timeline" style="margin-top: 12px;">
+        {% for st in result.statuses %}
+          <div class="pi-phase">
+            <div>
+              <strong>{{ st.phase }}</strong>
+              <div class="pi-help">{{ st.note }}</div>
+            </div>
+            {% if st.status == 'green' %}
+              <span class="pi-chip pi-chip--green">REACHED</span>
+            {% elif st.status == 'orange' %}
+              <span class="pi-chip pi-chip--orange">FRAGILE</span>
+            {% else %}
+              <span class="pi-chip pi-chip--red">NOT REACHED</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">Rhythm indicator</h2>
+      {% if result.rhythm == 'stable' %}
+        <p class="pi-lead" style="font-size: 16px; margin-top: 10px;"><strong>Stable progression</strong></p>
+        <p class="pi-help">Continuity looks healthy. Protect it — interruptions matter more than speed.</p>
+      {% elif result.rhythm == 'fragile' %}
+        <p class="pi-lead" style="font-size: 16px; margin-top: 10px;"><strong>Fragile progression</strong></p>
+        <p class="pi-help">A few interruptions can move the stopping point earlier. If possible, improve rhythm or reduce scope.</p>
+      {% else %}
+        <p class="pi-lead" style="font-size: 16px; margin-top: 10px;"><strong>High risk of stoppage</strong></p>
+        <p class="pi-help">Without steady continuity, projects often stall for long periods. The safest action is to simplify early.</p>
+      {% endif %}
+
+      {% if result.margin_flag %}
+        <div class="pi-note" style="margin-top: 12px;">
+          <strong>Maximum effort without margin:</strong> you marked monthly effort as maximum. That increases fragility under pressure.
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">Practical advice</h2>
+      <ul class="pi-list" style="margin-top: 12px;">
+        {% for item in result.advice %}
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>{{ item }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">Adjustment scenarios (directional)</h2>
+      <ul class="pi-list" style="margin-top: 12px;">
+        {% for s in result.scenarios %}
+          <li><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> <span><strong>{{ s.title }}:</strong> {{ s.effect }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="pi-help" style="margin-top: 10px;">These are not promises — they show how scope and rhythm usually shift outcomes.</p>
+    </div>
+
+    <div class="pi-actions" style="margin-top: 14px;">
+      <a class="btn btn-primary" href="{{ url_for('progress_intelligence.report_pdf', t=token, lang=lang) }}">
+        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+        Download PDF report
+      </a>
+      <a class="btn btn-secondary" href="{{ url_for('progress_intelligence.start', lang=lang) }}">
+        Try another scenario
+      </a>
+    </div>
+
+    <div class="pi-links">
+      <a href="{{ url_for('progress_intelligence.how_it_works', lang=lang) }}">How it works</a>
+      <a href="{{ url_for('progress_intelligence.limitations', lang=lang) }}">Limitations</a>
+    </div>
+
+    <div class="pi-note" role="note" style="margin-top: 14px;">
+      <strong>Reminder:</strong> This tool does not replace professional studies. It helps you avoid the most common failure pattern: stopping near the end.
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -115,6 +115,10 @@
                             <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                             <span>Furniture Fit</span>
                         </a>
+                        <a class="nav-link {% if current_endpoint and current_endpoint.startswith('progress_intelligence.') %}is-active{% endif %}" href="{{ url_for('progress_intelligence.landing') }}" {% if current_endpoint and current_endpoint.startswith('progress_intelligence.') %}aria-current="page"{% endif %}>
+                            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                            <span>Progress Intelligence</span>
+                        </a>
                     </div>
                 </div>
                 <div class="nav__group" aria-label="Company">

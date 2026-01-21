@@ -31,3 +31,6 @@ geoip2==4.8.0
 
 # Date and Time
 python-dateutil==2.8.2
+
+# PDF generation (Render-friendly)
+reportlab==4.2.5
