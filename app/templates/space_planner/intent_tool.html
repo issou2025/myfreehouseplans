@@ -3,7 +3,8 @@
 {% block title %}{{ page_title }} — {{ site_name }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='room_checker/room_checker.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/space_planner.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='space_planner/intent_tool.css') }}">
 {% endblock %}
 
 {% block extra_js %}
@@ -75,7 +76,7 @@
       });
     }
 
-    const form = document.querySelector('form.rc-form');
+    const form = document.querySelector('form.sp-tool-form');
     if(form){
       form.addEventListener('input', setShareLinks);
       form.addEventListener('change', setShareLinks);
@@ -103,125 +104,127 @@
 {% endblock %}
 
 {% block content %}
-<section class="shell" style="padding: 2.25rem 0 1.15rem 0;">
-  <div class="glass" style="padding: 1.6rem; border-radius: 1rem;">
-    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+<section class="shell sp-tool-hero">
+  <div class="sp-tool-hero__inner">
+    <div class="sp-tool-hero__badge">
       <i class="fa-solid fa-compass" aria-hidden="true"></i>
       Space Planner
-    </p>
-    <h1 style="margin: 0 0 .6rem 0; font-family: 'Playfair Display', serif;">{{ page_title }}</h1>
-    <p style="margin: 0; opacity: .92; max-width: 78ch;">{{ page_intro }}</p>
+    </div>
+    <h1 class="sp-tool-hero__title">{{ page_title }}</h1>
+    <p class="sp-tool-hero__subtitle">{{ page_intro }}</p>
+    {% if learn_article %}
+      <div class="sp-tool-hero__learn">
+        <a href="{{ learn_article.href }}">
+          <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+          Learn how this works
+        </a>
+      </div>
+    {% endif %}
   </div>
 </section>
 
-<section class="shell" style="padding: 0 0 3.25rem 0;">
-  <div class="rc-layout">
-    <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
-      <div style="display:flex; gap:.75rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
-        <h2 class="rc-h2" style="margin-bottom: .35rem;">Start with one room</h2>
-        {% if learn_article %}
-          <a class="btn btn-secondary" href="{{ learn_article.href }}" style="white-space:nowrap;">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-            Learn how this works
-          </a>
-        {% endif %}
-      </div>
+<section class="shell" style="padding: 0 0 var(--section-pad-lg) 0;">
+  <div class="sp-tool-layout">
+    <div class="sp-tool-form-wrap">
+      <div class="sp-tool-card">
+        <h2 class="sp-tool-card__title">Start with one room</h2>
 
-      <div class="rc-search">
-        <label class="rc-label" for="roomSearch">Search a room type</label>
-        <input class="rc-input" id="roomSearch" type="text" placeholder="Type to filter (e.g., kitchen, bedroom, garage)">
-      </div>
+        <div class="sp-tool-search">
+          <label class="sp-tool-label" for="roomSearch">Search a room type</label>
+          <input class="sp-tool-input" id="roomSearch" type="text" placeholder="Type to filter (e.g., kitchen, bedroom, garage)">
+        </div>
 
-      <form method="post" class="rc-form" novalidate>
-        <div class="rc-grid">
-          <div class="rc-field rc-field--full">
-            <label class="rc-label" for="room">Room type</label>
-            <select class="rc-input" id="room" name="room" required>
-              <option value="" {% if not form.room %}selected{% endif %}>Choose a room…</option>
-              {% for r in rooms %}
-                <option value="{{ r.slug }}" data-hint="{{ (room_hints.get(r.slug) if room_hints else '')|e }}" {% if form.room == r.slug %}selected{% endif %}>{{ r.label }}</option>
-              {% endfor %}
-            </select>
-            <div class="rc-help">Pick the room you want to check.</div>
-            <div class="rc-help" id="rcRoomHint" style="margin-top: .35rem;">
-              {% if room %}
-                {{ room_hints.get(room.slug) if room_hints else '' }}
-              {% else %}
-                Helps you make a comfortable real‑life decision.
-              {% endif %}
+        <form method="post" class="sp-tool-form" novalidate>
+          <div class="sp-tool-form-grid">
+            <div class="sp-tool-field sp-tool-field--full">
+              <label class="sp-tool-label" for="room">Room type</label>
+              <select class="sp-tool-input" id="room" name="room" required>
+                <option value="" {% if not form.room %}selected{% endif %}>Choose a room…</option>
+                {% for r in rooms %}
+                  <option value="{{ r.slug }}" data-hint="{{ (room_hints.get(r.slug) if room_hints else '')|e }}" {% if form.room == r.slug %}selected{% endif %}>{{ r.label }}</option>
+                {% endfor %}
+              </select>
+              <div class="sp-tool-help">Pick the room you want to check.</div>
+              <div class="sp-tool-hint" id="rcRoomHint">
+                {% if room %}
+                  {{ room_hints.get(room.slug) if room_hints else '' }}
+                {% else %}
+                  Helps you make a comfortable real‑life decision.
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="sp-tool-field">
+              <label class="sp-tool-label" for="units">Units</label>
+              <select class="sp-tool-input" id="units" name="units">
+                {% for u in unit_options %}
+                  <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (m / m²)' if u.key == 'metric' else 'Imperial (ft / ft²)' }}</option>
+                {% endfor %}
+              </select>
+              <div class="sp-tool-help">Choose what you're most comfortable with.</div>
+            </div>
+
+            <div class="sp-tool-field">
+              <label class="sp-tool-label">Input method</label>
+              <div class="sp-tool-toggle">
+                <label class="sp-tool-chip">
+                  <input type="radio" name="method" value="dims" {% if form.method == 'dims' %}checked{% endif %}>
+                  <span>Length + width</span>
+                </label>
+                <label class="sp-tool-chip">
+                  <input type="radio" name="method" value="area" {% if form.method == 'area' %}checked{% endif %}>
+                  <span>Total surface (+ one side)</span>
+                </label>
+              </div>
+              <div class="sp-tool-help">Surface alone can't confirm the shape — add at least one side so we can validate it realistically.</div>
+            </div>
+
+            <div class="sp-tool-field rc-dims">
+              <label class="sp-tool-label" for="length">Length ({{ units.length_label }})</label>
+              <input class="sp-tool-input" id="length" name="length" type="number" step="0.01" value="{{ form.length }}" placeholder="{{ units.placeholder_length }}">
+              <div class="sp-tool-help">Wall‑to‑wall length of the room.</div>
+            </div>
+            <div class="sp-tool-field rc-dims">
+              <label class="sp-tool-label" for="width">Width ({{ units.length_label }})</label>
+              <input class="sp-tool-input" id="width" name="width" type="number" step="0.01" value="{{ form.width }}" placeholder="{{ units.placeholder_length }}">
+              <div class="sp-tool-help">Side‑to‑side width of the room.</div>
+            </div>
+
+            <div class="sp-tool-field rc-area sp-tool-field--full">
+              <label class="sp-tool-label" for="area">Total surface ({{ units.area_label }})</label>
+              <input class="sp-tool-input" id="area" name="area" type="number" step="0.01" value="{{ form.area }}" placeholder="{{ units.placeholder_area }}">
+              <div class="sp-tool-help">If you already know the total size, enter it directly.</div>
+            </div>
+
+            <div class="sp-tool-field rc-area">
+              <label class="sp-tool-label" for="area_length">Known side (recommended) ({{ units.length_label }})</label>
+              <input class="sp-tool-input" id="area_length" name="area_length" type="number" step="0.01" value="{{ form.area_length }}" placeholder="{{ units.placeholder_length }}">
+              <div class="sp-tool-help">Add at least one side so we can confirm the room isn't too narrow.</div>
+            </div>
+            <div class="sp-tool-field rc-area">
+              <label class="sp-tool-label" for="area_width">Known side (recommended) ({{ units.length_label }})</label>
+              <input class="sp-tool-input" id="area_width" name="area_width" type="number" step="0.01" value="{{ form.area_width }}" placeholder="{{ units.placeholder_length }}">
             </div>
           </div>
 
-          <div class="rc-field">
-            <label class="rc-label" for="units">Units</label>
-            <select class="rc-input" id="units" name="units">
-              {% for u in unit_options %}
-                <option value="{{ u.key }}" {% if form.units == u.key %}selected{% endif %}>{{ 'Metric (m / m²)' if u.key == 'metric' else 'Imperial (ft / ft²)' }}</option>
-              {% endfor %}
-            </select>
-            <div class="rc-help">Choose what you’re most comfortable with.</div>
+          <div class="sp-tool-actions">
+            <button class="btn btn-primary" type="submit">
+              <i class="fa-solid fa-check" aria-hidden="true"></i>
+              Get result
+            </button>
+            <a class="btn btn-secondary" href="{{ request.path }}">Reset</a>
           </div>
 
-          <div class="rc-field">
-            <label class="rc-label">Input method</label>
-            <div class="rc-toggle">
-              <label class="rc-chip">
-                <input type="radio" name="method" value="dims" {% if form.method == 'dims' %}checked{% endif %}>
-                Length + width
-              </label>
-              <label class="rc-chip">
-                <input type="radio" name="method" value="area" {% if form.method == 'area' %}checked{% endif %}>
-                Total surface (+ one side)
-              </label>
-            </div>
-            <div class="rc-help">Surface alone can’t confirm the shape — add at least one side so we can validate it realistically.</div>
-          </div>
-
-          <div class="rc-field rc-dims">
-            <label class="rc-label" for="length">Length ({{ units.length_label }})</label>
-            <input class="rc-input" id="length" name="length" type="number" step="0.01" value="{{ form.length }}" placeholder="{{ units.placeholder_length }}">
-            <div class="rc-help">Wall‑to‑wall length of the room.</div>
-          </div>
-          <div class="rc-field rc-dims">
-            <label class="rc-label" for="width">Width ({{ units.length_label }})</label>
-            <input class="rc-input" id="width" name="width" type="number" step="0.01" value="{{ form.width }}" placeholder="{{ units.placeholder_length }}">
-            <div class="rc-help">Side‑to‑side width of the room.</div>
-          </div>
-
-          <div class="rc-field rc-area rc-field--full">
-            <label class="rc-label" for="area">Total surface ({{ units.area_label }})</label>
-            <input class="rc-input" id="area" name="area" type="number" step="0.01" value="{{ form.area }}" placeholder="{{ units.placeholder_area }}">
-            <div class="rc-help">If you already know the total size, enter it directly.</div>
-          </div>
-
-          <div class="rc-field rc-area">
-            <label class="rc-label" for="area_length">Known side (recommended) ({{ units.length_label }})</label>
-            <input class="rc-input" id="area_length" name="area_length" type="number" step="0.01" value="{{ form.area_length }}" placeholder="{{ units.placeholder_length }}">
-            <div class="rc-help">Add at least one side so we can confirm the room isn’t too narrow.</div>
-          </div>
-          <div class="rc-field rc-area">
-            <label class="rc-label" for="area_width">Known side (recommended) ({{ units.length_label }})</label>
-            <input class="rc-input" id="area_width" name="area_width" type="number" step="0.01" value="{{ form.area_width }}" placeholder="{{ units.placeholder_length }}">
-          </div>
-        </div>
-
-        <div style="margin-top: 1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
-          <button class="btn btn-primary" type="submit">
-            <i class="fa-solid fa-check" aria-hidden="true"></i>
-            Get result
-          </button>
-          <a class="btn btn-secondary" href="{{ request.path }}">Reset</a>
-        </div>
-
-        <p class="rc-help" style="margin-top: .85rem;">You’ll get one clear answer: comfortable, tight, or not recommended.</p>
-      </form>
+          <p class="sp-tool-help" style="margin-top: .85rem;">You'll get one clear answer: comfortable, tight, or not recommended.</p>
+        </form>
+      </div>
     </div>
 
-    <div>
+    <div class="sp-tool-results">
       {% if recommendation %}
-        <div id="spResult" class="glass rc-result rc-result--{{ recommendation.status }}" style="padding: 1.25rem; border-radius: 1rem;">
-          <div class="rc-verdict">
-            <div class="rc-verdict__icon" aria-hidden="true">
+        <div id="spResult" class="sp-result-card sp-result-card--{{ recommendation.status }}">
+          <div class="sp-result-verdict">
+            <div class="sp-result-verdict__icon" aria-hidden="true">
               {% if recommendation.status == 'ok' %}
                 <i class="fa-solid fa-circle-check"></i>
               {% elif recommendation.status == 'warning' %}
@@ -230,9 +233,9 @@
                 <i class="fa-solid fa-triangle-exclamation"></i>
               {% endif %}
             </div>
-            <div>
-              <div class="rc-result__title">{{ recommendation.verdict }}</div>
-              <div class="rc-result__subtitle">
+            <div class="sp-result-verdict__body">
+              <div class="sp-result-verdict__title">{{ recommendation.verdict }}</div>
+              <div class="sp-result-verdict__subtitle">
                 {% if recommendation.status == 'ok' %}
                   Green means safe and comfortable.
                 {% elif recommendation.status == 'warning' %}
@@ -244,84 +247,92 @@
             </div>
           </div>
 
-          <h3 class="rc-h2" style="margin-top: 1rem;">Daily life</h3>
-          <p class="rc-result__summary">{{ recommendation.daily_life }}</p>
-
-          <h3 class="rc-h2" style="margin-top: 1rem;">Next steps</h3>
-          <ul class="rc-result__bullets">
-            {% for b in recommendation.room_recommendations %}
-              <li>{{ b }}</li>
-            {% endfor %}
-          </ul>
-
-          <h3 class="rc-h2" style="margin-top: 1rem;">Pro advice</h3>
-          <p class="rc-result__summary" style="margin-bottom: .5rem;">{{ recommendation.pro_advice }}</p>
-
-          <div class="rc-result__note" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-            <strong>Share:</strong>
-            <button class="btn btn-secondary" type="button" id="rcCopyLink">
-              <i class="fa-solid fa-link" aria-hidden="true"></i>
-              Copy share link
-            </button>
-            <span id="rcCopyStatus" style="opacity:.85;"></span>
+          <div class="sp-result-section">
+            <h3 class="sp-result-section__title">Daily life</h3>
+            <p class="sp-result-section__body">{{ recommendation.daily_life }}</p>
           </div>
 
-          <div class="blog-share" role="group" aria-label="Share this check" data-share-text="{{ share_text }}" style="margin-top: .85rem;">
-            <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener" aria-label="Share on Facebook">
-              <i class="fa-brands fa-facebook" aria-hidden="true"></i>
-              <span>Facebook</span>
-            </a>
-            <a class="blog-share__btn" href="#" data-share="x" target="_blank" rel="noopener" aria-label="Share on X">
-              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
-              <span>X</span>
-            </a>
-            <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
-              <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
-              <span>LinkedIn</span>
-            </a>
-            <a class="blog-share__btn" href="#" data-share="whatsapp" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
-              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-              <span>WhatsApp</span>
-            </a>
+          <div class="sp-result-section">
+            <h3 class="sp-result-section__title">Next steps</h3>
+            <ul class="sp-result-section__list">
+              {% for b in recommendation.room_recommendations %}
+                <li>{{ b }}</li>
+              {% endfor %}
+            </ul>
           </div>
 
-          <p class="rc-help" style="margin-top: .75rem;">{{ recommendation.seo_line }}</p>
+          <div class="sp-result-section">
+            <h3 class="sp-result-section__title">Pro advice</h3>
+            <p class="sp-result-section__body">{{ recommendation.pro_advice }}</p>
+          </div>
+
+          <div class="sp-result-share">
+            <div class="sp-result-share__row">
+              <strong>Share:</strong>
+              <button class="btn btn-secondary btn-sm" type="button" id="rcCopyLink">
+                <i class="fa-solid fa-link" aria-hidden="true"></i>
+                Copy link
+              </button>
+              <span id="rcCopyStatus" class="sp-result-share__status"></span>
+            </div>
+
+            <div class="blog-share" role="group" aria-label="Share this check" data-share-text="{{ share_text }}">
+              <a class="blog-share__btn" href="#" data-share="facebook" target="_blank" rel="noopener" aria-label="Share on Facebook">
+                <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+                <span>Facebook</span>
+              </a>
+              <a class="blog-share__btn" href="#" data-share="x" target="_blank" rel="noopener" aria-label="Share on X">
+                <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                <span>X</span>
+              </a>
+              <a class="blog-share__btn" href="#" data-share="linkedin" target="_blank" rel="noopener" aria-label="Share on LinkedIn">
+                <i class="fa-brands fa-linkedin" aria-hidden="true"></i>
+                <span>LinkedIn</span>
+              </a>
+              <a class="blog-share__btn" href="#" data-share="whatsapp" target="_blank" rel="noopener" aria-label="Share on WhatsApp">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+
+          <p class="sp-result-seo">{{ recommendation.seo_line }}</p>
 
           {% if learn_article %}
-            <div class="glass" style="margin-top: 1rem; padding: 1rem; border-radius: .85rem;">
-              <p style="margin: 0 0 .5rem 0;"><strong>{{ learn_article.heading }}</strong></p>
+            <div class="sp-result-learn">
+              <p class="sp-result-learn__title">{{ learn_article.heading }}</p>
               <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
             </div>
           {% endif %}
         </div>
 
-        <div class="glass rc-micro" style="margin-top: 1rem; padding: 1.25rem; border-radius: 1rem;">
-          <h2 class="rc-h2" style="margin-bottom: .65rem;">Try one more action</h2>
-          <div class="rc-micro__grid">
+        <div class="sp-next-actions">
+          <h2 class="sp-next-actions__title">Try one more action</h2>
+          <div class="sp-next-actions__grid">
             {% if room %}
-              <a class="rc-micro__card rc-micro__card--info" href="{{ url_for('planner.room', room_slug=room.slug) }}" aria-label="Check furniture fit">
-                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
-                <div>
-                  <div class="rc-micro__title">Check furniture fit</div>
-                  <div class="rc-micro__body">Turn this space into real life: test furniture and appliances.</div>
-                  <div class="rc-micro__cta"><span>Open Furniture Fit</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+              <a class="sp-next-card" href="{{ url_for('planner.room', room_slug=room.slug) }}" aria-label="Check furniture fit">
+                <div class="sp-next-card__icon" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></div>
+                <div class="sp-next-card__body">
+                  <div class="sp-next-card__title">Check furniture fit</div>
+                  <div class="sp-next-card__desc">Turn this space into real life: test furniture and appliances.</div>
+                  <div class="sp-next-card__cta"><span>Open Furniture Fit</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
                 </div>
               </a>
-              <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.room', room_slug=room.slug) }}" aria-label="Open the full planner for this room">
-                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
-                <div>
-                  <div class="rc-micro__title">Open this room planner</div>
-                  <div class="rc-micro__body">See all checks for {{ room.label }} in one place.</div>
-                  <div class="rc-micro__cta"><span>View room page</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+              <a class="sp-next-card" href="{{ url_for('space_planner.room', room_slug=room.slug) }}" aria-label="Open the full planner for this room">
+                <div class="sp-next-card__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
+                <div class="sp-next-card__body">
+                  <div class="sp-next-card__title">Open this room planner</div>
+                  <div class="sp-next-card__desc">See all checks for {{ room.label }} in one place.</div>
+                  <div class="sp-next-card__cta"><span>View room page</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
                 </div>
               </a>
             {% else %}
-              <a class="rc-micro__card rc-micro__card--neutral" href="{{ url_for('space_planner.index') }}" aria-label="Go back to Space Planner">
-                <div class="rc-micro__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
-                <div>
-                  <div class="rc-micro__title">Browse Space Planner</div>
-                  <div class="rc-micro__body">Pick a room and plan comfort in minutes.</div>
-                  <div class="rc-micro__cta"><span>Open hub</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
+              <a class="sp-next-card" href="{{ url_for('space_planner.index') }}" aria-label="Go back to Space Planner">
+                <div class="sp-next-card__icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></div>
+                <div class="sp-next-card__body">
+                  <div class="sp-next-card__title">Browse Space Planner</div>
+                  <div class="sp-next-card__desc">Pick a room and plan comfort in minutes.</div>
+                  <div class="sp-next-card__cta"><span>Open hub</span> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></div>
                 </div>
               </a>
             {% endif %}
@@ -329,9 +340,9 @@
         </div>
 
       {% else %}
-        <div class="glass" style="padding: 1.25rem; border-radius: 1rem;">
-          <h2 class="rc-h2">What you’ll get</h2>
-          <ul class="rc-result__bullets" style="margin-bottom: 0;">
+        <div class="sp-tool-preview">
+          <h2 class="sp-tool-preview__title">What you'll get</h2>
+          <ul class="sp-tool-preview__list">
             <li>One clear verdict with a strong green/orange/red signal.</li>
             <li>Plain-language guidance focused on daily life.</li>
             <li>A natural next step (furniture fit, circulation, or comfort).</li>
@@ -339,10 +350,8 @@
         </div>
       {% endif %}
 
-      <div class="glass rc-note" style="margin-top: 1rem;">
-        <p style="margin: 0; opacity: .92;">
-          <strong>Quick note:</strong> Space planning is about comfort and usability — not regulations.
-        </p>
+      <div class="sp-tool-note">
+        <p><strong>Quick note:</strong> Space planning is about comfort and usability — not regulations.</p>
       </div>
     </div>
   </div>
