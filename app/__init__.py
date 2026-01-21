@@ -513,7 +513,6 @@ def register_blueprints(app):
     from app.blueprints.space_planner import space_planner_bp
     from app.blueprints.planner import planner_bp
     from app.blueprints.room_checker import room_checker_bp
-    from app.blueprints.reality_check import reality_check_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -523,7 +522,6 @@ def register_blueprints(app):
     app.register_blueprint(space_planner_bp, url_prefix='/space-planner')
     app.register_blueprint(planner_bp, url_prefix='/planner')
     app.register_blueprint(room_checker_bp, url_prefix='/room-checker')
-    app.register_blueprint(reality_check_bp, url_prefix='/reality-check')
 
 
 def register_error_handlers(app):
