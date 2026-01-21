@@ -74,3 +74,95 @@
 .pi-links { margin-top: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
 .pi-links a { color: var(--color-primary); text-decoration: none; font-weight: 800; }
 .pi-links a:hover { text-decoration: underline; }
+
+.pi-summary {
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 980px) {
+  .pi-summary { grid-template-columns: 1.1fr 0.9fr; align-items: start; }
+}
+
+.pi-summary__meta {
+  display: grid;
+  gap: 12px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.pi-summary__row {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  align-items: center;
+  color: var(--color-muted);
+}
+
+.pi-summary__row i { color: var(--color-primary); }
+
+.pi-progress {
+  display: grid;
+  gap: 12px;
+}
+
+.pi-progress__row {
+  display: grid;
+  gap: 8px;
+}
+
+.pi-progress__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.pi-progress__label strong { color: var(--color-text); }
+
+.pi-progress__bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.pi-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 400ms ease;
+}
+
+.pi-progress__fill--green { background: rgba(12,143,99,.85); }
+.pi-progress__fill--orange { background: rgba(247,144,9,.85); }
+.pi-progress__fill--red { background: rgba(217,45,32,.85); }
+
+.pi-faq {
+  display: grid;
+  gap: 14px;
+}
+
+.pi-faq__item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  background: var(--color-surface);
+}
+
+.pi-faq__item h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.pi-faq__item p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 15px;
+}

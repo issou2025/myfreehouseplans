@@ -144,6 +144,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	const toolsSpinner = document.querySelector('[data-tools-spinner]');
+	if (toolsSpinner instanceof HTMLSelectElement) {
+		toolsSpinner.addEventListener('change', function () {
+			const target = toolsSpinner.value;
+			if (!target) return;
+			if (target === window.location.href) return;
+			window.location.assign(target);
+		});
+	}
+
 	document.querySelectorAll('[data-unit-toggle]').forEach((group) => {
 		group.addEventListener('click', (event) => {
 			const btn = event.target instanceof HTMLElement ? event.target.closest('[data-unit]') : null;

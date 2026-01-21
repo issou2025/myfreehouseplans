@@ -19,17 +19,105 @@
 <section class="pi-section">
   <div class="pi-shell">
     <div class="pi-panel">
-      <h2 class="pi-panel__title">Stopping point</h2>
-      <p class="pi-lead" style="font-size: 18px; margin-top: 10px;"><strong>{{ result.stopping_phase }}</strong></p>
+      <div class="pi-summary">
+        <div>
+          <h2 class="pi-panel__title">Stopping point</h2>
+          <p class="pi-lead" style="font-size: 20px; margin-top: 10px;"><strong>{{ result.stopping_phase }}</strong></p>
+          <p class="pi-help" style="margin-top: 8px;">{{ result.explanation }}</p>
+        </div>
+        <div class="pi-summary__meta">
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-building" aria-hidden="true"></i>
+            <div>
+              <strong>{{ result.inputs.building_type }}</strong>
+              <div class="pi-help">Project type</div>
+            </div>
+          </div>
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+            <div>
+              <strong>{{ result.inputs.area_value|round(0) }} {{ result.inputs.area_unit }}</strong>
+              <div class="pi-help">Surface</div>
+            </div>
+          </div>
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            <div>
+              <strong>{{ result.inputs.floors }}</strong>
+              <div class="pi-help">Floors</div>
+            </div>
+          </div>
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+            <div>
+              <strong>{{ result.inputs.material }}</strong>
+              <div class="pi-help">Material</div>
+            </div>
+          </div>
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-wallet" aria-hidden="true"></i>
+            <div>
+              {% set has_total = result.inputs.total_budget is not none %}
+              {% set has_monthly = result.inputs.monthly_contribution is not none %}
+              {% if has_total and has_monthly %}
+                <strong>Total + Monthly</strong>
+              {% elif has_total %}
+                <strong>Total only</strong>
+              {% elif has_monthly %}
+                <strong>Monthly only</strong>
+              {% else %}
+                <strong>No budget inputs</strong>
+              {% endif %}
+              <div class="pi-help">Budget mode</div>
+            </div>
+          </div>
+          <div class="pi-summary__row">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+            <div>
+              <strong>{{ result.inputs.country_name }}</strong>
+              <div class="pi-help">Context</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="pi-badge-row">
-        <span class="pi-badge"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Country: {{ result.inputs.country_name }}</span>
         <span class="pi-badge"><i class="fa-solid fa-clock" aria-hidden="true"></i> Generated: {{ result.created_utc }}</span>
       </div>
-      <p class="pi-help" style="margin-top: 12px;">{{ result.explanation }}</p>
     </div>
 
     <div class="pi-panel" style="margin-top: 14px;">
-      <h2 class="pi-panel__title">Phase progression</h2>
+      <h2 class="pi-panel__title">Visual progress</h2>
+      <p class="pi-help" style="margin-top: 8px;">Horizontal phase bars summarize reachability at a glance.</p>
+      <div class="pi-progress" style="margin-top: 12px;">
+        {% for st in result.statuses %}
+          {% if st.status == 'green' %}
+            {% set fill = 1.0 %}
+            {% set tone = 'green' %}
+            {% set label = 'Reached' %}
+          {% elif st.status == 'orange' %}
+            {% set fill = 0.6 %}
+            {% set tone = 'orange' %}
+            {% set label = 'Fragile / Partial' %}
+          {% else %}
+            {% set fill = 0.2 %}
+            {% set tone = 'red' %}
+            {% set label = 'Not reached' %}
+          {% endif %}
+          <div class="pi-progress__row">
+            <div class="pi-progress__label">
+              <strong>{{ st.phase }}</strong>
+              <span>{{ label }}</span>
+            </div>
+            <div class="pi-progress__bar" role="presentation">
+              <span class="pi-progress__fill pi-progress__fill--{{ tone }}" style="width: {{ (fill * 100) | round(0) }}%;"></span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">Detailed phase analysis</h2>
       <div class="pi-timeline" style="margin-top: 12px;">
         {% for st in result.statuses %}
           <div class="pi-phase">
@@ -70,6 +158,20 @@
     </div>
 
     <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">How the intelligence reasoned</h2>
+      <p class="pi-help" style="margin-top: 8px;">This tool combines surface scale, floors, material, budget rhythm, and human margin to identify where projects usually stall.</p>
+      <ul class="pi-list" style="margin-top: 12px;">
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Surface scale sets the baseline complexity for continuity.</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Floors increase risk in later phases even if surface stays constant.</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Material shifts where effort concentrates (early vs late).</span></li>
+        <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Budget rhythm and monthly continuity decide whether work can keep moving.</span></li>
+        {% if result.margin_flag %}
+          <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Maximum-effort inputs indicate low margin for shocks and delays.</span></li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
       <h2 class="pi-panel__title">Practical advice</h2>
       <ul class="pi-list" style="margin-top: 12px;">
         {% for item in result.advice %}
@@ -79,13 +181,43 @@
     </div>
 
     <div class="pi-panel" style="margin-top: 14px;">
-      <h2 class="pi-panel__title">Adjustment scenarios (directional)</h2>
+      <h2 class="pi-panel__title">Improvement suggestions</h2>
       <ul class="pi-list" style="margin-top: 12px;">
         {% for s in result.scenarios %}
           <li><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> <span><strong>{{ s.title }}:</strong> {{ s.effect }}</span></li>
         {% endfor %}
       </ul>
-      <p class="pi-help" style="margin-top: 10px;">These are not promises — they show how scope and rhythm usually shift outcomes.</p>
+      <p class="pi-help" style="margin-top: 10px;">These are advisory — small scope or rhythm changes can improve outcomes.</p>
+    </div>
+
+    <div class="pi-panel" style="margin-top: 14px;">
+      <h2 class="pi-panel__title">FAQ</h2>
+      <div class="pi-faq" style="margin-top: 12px;">
+        <div class="pi-faq__item">
+          <h3>Is this tool a cost estimator or a quotation?</h3>
+          <p>No. It does not provide prices or bills of quantities. It shows how far a project usually goes under real conditions.</p>
+        </div>
+        <div class="pi-faq__item">
+          <h3>Why does the tool say my project stops early?</h3>
+          <p>Because worldwide data shows that similar projects often run out of resources at that stage.</p>
+        </div>
+        <div class="pi-faq__item">
+          <h3>Does this work in my country?</h3>
+          <p>Yes. The tool uses international construction realities, not local prices.</p>
+        </div>
+        <div class="pi-faq__item">
+          <h3>Why are floors and materials important?</h3>
+          <p>They multiply complexity, time, and risk, even if the surface stays the same.</p>
+        </div>
+        <div class="pi-faq__item">
+          <h3>Why don’t you show exact costs?</h3>
+          <p>Because early decisions require clarity, not false precision.</p>
+        </div>
+        <div class="pi-faq__item">
+          <h3>Can this replace an architect or engineer?</h3>
+          <p>No. It helps you decide before engaging professionals.</p>
+        </div>
+      </div>
     </div>
 
     <div class="pi-actions" style="margin-top: 14px;">

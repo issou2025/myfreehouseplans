@@ -29,7 +29,7 @@ def _reportlab_with_charts(*, result) -> bytes:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
-    from reportlab.lib.colors import HexColor
+    from reportlab.lib.colors import HexColor, Color
     from reportlab.lib.utils import ImageReader
 
     import matplotlib
@@ -45,6 +45,22 @@ def _reportlab_with_charts(*, result) -> bytes:
     top = 18 * mm
     bottom = 18 * mm
     y = h - top
+
+    def draw_watermark():
+        c.saveState()
+        try:
+            c.setFillAlpha(0.08)
+        except Exception:
+            pass
+        c.setFillColor(Color(0.15, 0.18, 0.25, alpha=0.08))
+        c.setFont('Times-Roman', 26)
+        c.translate(w / 2, h / 2)
+        c.rotate(35)
+        text = 'www.myfreehouseplans.com'
+        for x in range(-520, 521, 260):
+            for y_offset in range(-420, 421, 160):
+                c.drawString(x, y_offset, text)
+        c.restoreState()
 
     def heading(text: str):
         nonlocal y
@@ -83,8 +99,13 @@ def _reportlab_with_charts(*, result) -> bytes:
     def ensure_space(mm_needed: float):
         nonlocal y
         if y - (mm_needed * mm) < bottom:
-            c.showPage()
-            y = h - top
+            new_page()
+
+    def new_page():
+        nonlocal y
+        c.showPage()
+        y = h - top
+        draw_watermark()
 
     def draw_progress_bar(label: str, ratio: float, *, color: str):
         nonlocal y
@@ -110,15 +131,17 @@ def _reportlab_with_charts(*, result) -> bytes:
         plt.close(fig)
         return out.getvalue()
 
-    c.setTitle('Construction Reality Report')
+    c.setTitle('Construction Progress Intelligence Report')
+    draw_watermark()
 
     # Title page
-    heading('Construction Reality Report')
-    paragraph('Realistic projection based on global standards (no quotation, no unit prices).', size=11)
-    paragraph('This report helps prevent unfinished projects by showing where similar projects tend to stall under economic reality.', size=10)
+    heading('Construction Progress Intelligence Report')
+    paragraph('A realistic global projection of your project.', size=12)
+    paragraph('This report is an indicative simulation based on international construction realities. It is not a quotation or a cost estimate.', size=10)
+    paragraph('www.myfreehouseplans.com', color='#1f4ce4', size=10)
 
     ensure_space(18)
-    subheading('Project summary')
+    subheading('User inputs summary')
     inp = result.inputs
     currency = getattr(inp, 'currency', 'EUR')
     paragraph(f"Building type: {inp.building_type}", color='#111827', size=10)
@@ -130,12 +153,17 @@ def _reportlab_with_charts(*, result) -> bytes:
         paragraph(f"Total available now (your input): {float(inp.total_budget):.0f} {currency}", color='#111827', size=10)
     if inp.monthly_contribution is not None:
         paragraph(f"Monthly contribution (your input): {float(inp.monthly_contribution):.0f} {currency}", color='#111827', size=10)
-    paragraph(f"Country (auto-detected): {inp.country_name}", color='#334155', size=9)
+    paragraph(f"Country (context only): {inp.country_name}", color='#334155', size=9)
 
     ensure_space(14)
-    subheading('Core decision')
+    subheading('Global economic reality')
+    paragraph('Construction follows universal economic constraints. The tool uses internal international reference standards only as guardrails, never as visible prices.', size=10)
+    paragraph('Results are expressed in human language to prevent unrealistic expectations and avoid false precision.', size=10)
+
+    ensure_space(18)
+    subheading('Stopping point analysis')
     paragraph(f"Stopping point tends to appear around: {result.stopping_phase}", color='#111827', size=11)
-    paragraph('We use internal international reference standards only as a guardrail. We never display unit prices or phase prices.', size=10)
+    paragraph('Why: early phases consume scarce resources first, and late phases demand continuity that many projects cannot sustain.', size=10)
 
     ensure_space(22)
     subheading('Phase progression')
@@ -148,18 +176,16 @@ def _reportlab_with_charts(*, result) -> bytes:
         draw_progress_bar(f"{st.phase} — {st.status.upper()}", 1.0 if st.status == 'green' else (0.55 if st.status == 'orange' else 0.15), color=colors.get(st.status, '#64748b'))
 
     ensure_space(18)
-    subheading('Economic reality check')
-    paragraph('Construction follows global economic constraints. If coverage is too low, projects typically stop early — even with strong motivation.', size=10)
-    paragraph('The tool speaks in probabilities and prevention: it shows where risk concentrates so you can simplify early.', size=10)
+    subheading('Progress intelligence explanation')
+    paragraph('Surface scale sets baseline complexity. Floors increase late-stage exposure. Materials shift where effort concentrates. Rhythm and continuity decide whether progress remains stable.', size=10)
 
     # Charts page
-    c.showPage()
-    y = h - top
+    new_page()
     heading('Charts')
 
     # Pie chart: reachable vs unreachable
     ensure_space(90)
-    subheading('Reachable vs unreachable portion (indicative)')
+    subheading('Reachable vs unreachable portion')
     reachable = max(0.0, min(1.0, float(getattr(result, 'reachable_ratio', 0.0))))
     unreachable = max(0.0, 1.0 - reachable)
     fig1 = plt.figure(figsize=(4.8, 3.3))
@@ -192,16 +218,25 @@ def _reportlab_with_charts(*, result) -> bytes:
     # Explanation + scenarios
     ensure_space(40)
     subheading('Why projects stop here')
-    paragraph('When coverage is low, early phases consume the available capacity before the project becomes livable. Late phases are fragile and often require continuity.', size=10)
+    paragraph('When coverage is low, early phases consume available capacity before the project becomes livable. Late phases require continuity that is often disrupted.', size=10)
 
     ensure_space(30)
-    subheading('Improvement scenarios (directional)')
+    subheading('Improvement scenarios')
     for s in (result.scenarios or [])[:6]:
         paragraph(f"• {s.get('title')}: {s.get('effect')}", color='#111827', size=10)
 
+    ensure_space(28)
+    subheading('FAQ')
+    paragraph('Is this tool a cost estimator or a quotation? No. It does not provide prices or bills of quantities.', size=9)
+    paragraph('Why does the tool say my project stops early? Similar projects worldwide often run out of resources at that stage.', size=9)
+    paragraph('Does this work in my country? Yes. The tool uses international realities, not local prices.', size=9)
+    paragraph('Why are floors and materials important? They multiply complexity, time, and risk.', size=9)
+    paragraph('Why don’t you show exact costs? Early decisions require clarity, not false precision.', size=9)
+    paragraph('Can this replace an architect or engineer? No. It helps you decide before engaging professionals.', size=9)
+
     ensure_space(26)
     subheading('Disclaimer')
-    paragraph('This report is an indicative simulation. It is not a quotation, not a cost estimate, and not a substitute for professional studies.', size=9)
+    paragraph('This report is an indicative simulation. It is not a quotation, a cost estimate, nor a substitute for professional studies.', size=9)
 
     c.save()
     return buf.getvalue()
@@ -211,7 +246,7 @@ def _reportlab_minimal(*, result) -> bytes:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
-    from reportlab.lib.colors import HexColor
+    from reportlab.lib.colors import HexColor, Color
 
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
@@ -219,10 +254,27 @@ def _reportlab_minimal(*, result) -> bytes:
     x = 18 * mm
     y = h - 20 * mm
 
-    c.setTitle('Construction Reality Report')
+    def draw_watermark():
+        c.saveState()
+        try:
+            c.setFillAlpha(0.08)
+        except Exception:
+            pass
+        c.setFillColor(Color(0.15, 0.18, 0.25, alpha=0.08))
+        c.setFont('Times-Roman', 26)
+        c.translate(w / 2, h / 2)
+        c.rotate(35)
+        text = 'www.myfreehouseplans.com'
+        for x_offset in range(-520, 521, 260):
+            for y_offset in range(-420, 421, 160):
+                c.drawString(x_offset, y_offset, text)
+        c.restoreState()
+
+    c.setTitle('Construction Progress Intelligence Report')
+    draw_watermark()
     c.setFillColor(HexColor('#0b1220'))
     c.setFont('Helvetica-Bold', 18)
-    c.drawString(x, y, 'Construction Reality Report')
+    c.drawString(x, y, 'Construction Progress Intelligence Report')
 
     y -= 10 * mm
     c.setFillColor(HexColor('#334155'))
@@ -245,5 +297,6 @@ def _reportlab_minimal(*, result) -> bytes:
         y -= 6 * mm
 
     c.showPage()
+    draw_watermark()
     c.save()
     return buf.getvalue()
