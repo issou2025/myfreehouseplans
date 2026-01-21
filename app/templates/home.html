@@ -8,17 +8,20 @@
             <span class="hero__tag"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Luxury Architectural Portfolio</span>
             <h1 id="hero-heading">Premium house plans engineered for real-world builds.</h1>
             <p class="hero__lead">{{ site_description }} Trusted documentation, precise dimensions, and curated styles so you can move from inspiration to construction-ready faster.</p>
-            <div class="hero__cta">
-                <a href="{{ url_for('main.packs') }}" class="btn btn-primary btn--glow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore catalog</a>
-                <a href="{{ url_for('main.contact') }}" class="btn btn-outline btn-ghost"><i class="fa-solid fa-comments" aria-hidden="true"></i> Talk to an architect</a>
-            </div>
             <div class="hero__search" aria-label="Search the site">
-                <label class="sr-only" for="globalSearchInput">Search</label>
-                <div class="search-shell glass">
+                <label class="sr-only" for="globalSearchInput">Search the entire site</label>
+                <div class="search-shell glass" role="search">
                     <div class="search-shell__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div>
-                    <input id="globalSearchInput" class="search-shell__input" type="search" placeholder="Search rooms, comfort checks, articles, guides..." autocomplete="off">
-                    <button class="btn btn-primary" type="button" id="globalSearchBtn">Search</button>
+                    <input
+                        id="globalSearchInput"
+                        class="search-shell__input"
+                        type="search"
+                        placeholder="Search rooms, planners, or guides…"
+                        autocomplete="off"
+                        aria-controls="globalSearchResults"
+                        aria-expanded="false">
                 </div>
+                <p class="hero__search-hint">Find any planner, room check, guide, or plan in seconds.</p>
                 <div id="globalSearchResults" class="search-results glass" aria-live="polite" hidden>
                     <div class="search-results__group" data-group="tools">
                         <h3>Tools</h3>
@@ -33,9 +36,13 @@
                         <div class="search-results__list"></div>
                     </div>
                     <div class="search-results__empty" hidden>
-                        No matches yet. Try a room name or a comfort topic.
+                        Start typing to find planners, guides, and plans.
                     </div>
                 </div>
+            </div>
+            <div class="hero__cta">
+                <a href="{{ url_for('main.packs') }}" class="btn btn-primary btn--glow"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore catalog</a>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-outline btn-ghost"><i class="fa-solid fa-comments" aria-hidden="true"></i> Talk to an architect</a>
             </div>
             <div class="hero__metrics" aria-label="Studio metrics">
                 {% set total_showcase = (featured_plans|length if featured_plans else 0) + (recent_plans|length if recent_plans else 0) %}
@@ -400,11 +407,18 @@
 <script>
     (function(){
         const input = document.getElementById('globalSearchInput');
-        const btn = document.getElementById('globalSearchBtn');
         const panel = document.getElementById('globalSearchResults');
         if(!input || !panel) return;
 
-        const groups = {
+        const root = input.closest('.hero__search') || panel.parentElement;
+
+        const groupEls = {
+            tools: panel.querySelector('[data-group="tools"]'),
+            articles: panel.querySelector('[data-group="articles"]'),
+            pages: panel.querySelector('[data-group="pages"]'),
+        };
+
+        const lists = {
             tools: panel.querySelector('[data-group="tools"] .search-results__list'),
             articles: panel.querySelector('[data-group="articles"] .search-results__list'),
             pages: panel.querySelector('[data-group="pages"] .search-results__list'),
@@ -412,8 +426,34 @@
         const emptyState = panel.querySelector('.search-results__empty');
 
         let timer;
+        let controller;
+
+        function setExpanded(isExpanded){
+            try{ input.setAttribute('aria-expanded', isExpanded ? 'true' : 'false'); }catch(e){}
+        }
+
+        function showPanel(){
+            panel.hidden = false;
+            setExpanded(true);
+        }
+
+        function hidePanel(){
+            panel.hidden = true;
+            setExpanded(false);
+        }
+
         function clearGroups(){
-            Object.values(groups).forEach(list => list && (list.innerHTML = ''));
+            Object.values(lists).forEach(list => list && (list.innerHTML = ''));
+        }
+
+        function setEmptyMessage(message){
+            if(!emptyState) return;
+            emptyState.textContent = message;
+            emptyState.hidden = false;
+        }
+
+        function hideEmptyMessage(){
+            if(emptyState) emptyState.hidden = true;
         }
 
         function renderGroup(items, target){
@@ -429,34 +469,82 @@
         async function runSearch(){
             const q = (input.value || '').trim();
             if(!q){
-                panel.hidden = true;
+                hidePanel();
                 clearGroups();
+                Object.values(groupEls).forEach(el => el && (el.hidden = false));
+                if(emptyState) emptyState.hidden = true;
                 return;
             }
+
+            showPanel();
+            setEmptyMessage('Searching…');
+
+            clearGroups();
+            Object.values(groupEls).forEach(el => el && (el.hidden = true));
+
+            if(controller){
+                try{ controller.abort(); }catch(e){}
+            }
+            controller = new AbortController();
+
             try{
-                const resp = await fetch(`/search?q=${encodeURIComponent(q)}`);
+                const resp = await fetch(`/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
                 const data = await resp.json();
                 clearGroups();
-                const toolsCount = renderGroup(data.results.tools, groups.tools);
-                const articlesCount = renderGroup(data.results.articles, groups.articles);
-                const pagesCount = renderGroup(data.results.pages, groups.pages);
+                const toolsCount = renderGroup(data.results.tools, lists.tools);
+                const articlesCount = renderGroup(data.results.articles, lists.articles);
+                const pagesCount = renderGroup(data.results.pages, lists.pages);
                 const total = toolsCount + articlesCount + pagesCount;
-                if(emptyState) emptyState.hidden = total > 0;
-                panel.hidden = false;
+
+                if(groupEls.tools) groupEls.tools.hidden = toolsCount === 0;
+                if(groupEls.articles) groupEls.articles.hidden = articlesCount === 0;
+                if(groupEls.pages) groupEls.pages.hidden = pagesCount === 0;
+
+                if(total > 0){
+                    hideEmptyMessage();
+                }else{
+                    setEmptyMessage('No matches yet. Try a room name, a planner, or a comfort topic.');
+                }
+
+                showPanel();
             }catch(e){
-                panel.hidden = false;
-                if(emptyState) emptyState.hidden = false;
+                if(e && e.name === 'AbortError') return;
+                Object.values(groupEls).forEach(el => el && (el.hidden = true));
+                setEmptyMessage('We could not search right now. Please try again.');
+                showPanel();
             }
         }
 
         function debounceSearch(){
             clearTimeout(timer);
-            timer = setTimeout(runSearch, 250);
+            timer = setTimeout(runSearch, 220);
         }
 
         input.addEventListener('input', debounceSearch);
-        input.addEventListener('focus', debounceSearch);
-        if(btn){ btn.addEventListener('click', runSearch); }
+        input.addEventListener('focus', function(){
+            if((input.value || '').trim()) debounceSearch();
+        });
+
+        input.addEventListener('keydown', function(e){
+            if(e.key === 'Escape'){
+                hidePanel();
+                input.blur();
+            }
+        });
+
+        input.addEventListener('blur', function(){
+            window.setTimeout(function(){
+                if(!root) return;
+                if(root.contains(document.activeElement)) return;
+                hidePanel();
+            }, 120);
+        });
+
+        document.addEventListener('click', function(e){
+            if(!root) return;
+            if(root.contains(e.target)) return;
+            hidePanel();
+        });
     })();
 </script>
 <script>
