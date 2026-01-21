@@ -7,39 +7,69 @@
 {% endblock %}
 
 {% block content %}
-<section class="shell" style="padding: 2.25rem 0 1.25rem 0;">
-  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
-    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+<section class="shell sp-hero">
+  <div class="sp-hero__inner">
+    <div class="sp-hero__badge">
       <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-      Space Planner
-    </p>
-    <h1 style="margin: 0 0 .65rem 0; font-family: 'Playfair Display', serif;">Furniture Fit</h1>
-    <p style="margin: 0; opacity: .92; max-width: 78ch;">
-      Pick a room, then test furniture and appliances with real-life movement clearances.
-      This helps you plan a layout that feels good to live in — not just “fits on paper”.
-    </p>
+      Furniture Fit
+    </div>
+
+    <h1 class="sp-hero__title">Does Your Furniture Really Fit?</h1>
+    <p class="sp-hero__subtitle">Check comfort, movement, and real-life usability in seconds.</p>
+
+    <div class="sp-hero__actions">
+      <a class="btn btn-primary" href="#choose-room">
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+        Check Furniture Fit
+      </a>
+    </div>
+
+    {% if learn_article %}
+      <p class="sp-hero__learn">
+        <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
+      </p>
+    {% endif %}
   </div>
 </section>
 
-<section class="shell" style="padding: 0 0 3rem 0;">
-  {% if learn_article %}
-    <div class="glass sp-note" style="margin-bottom: 1rem;">
-      <p style="margin: 0; opacity: .92;">
-        <strong>{{ learn_article.heading }}:</strong>
-        <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
-      </p>
-    </div>
-  {% endif %}
+<section class="shell sp-section" aria-label="Quick starts">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">Quick starts</h2>
+    <p class="sp-section__subtitle">Choose what you want to test — then we guide you.</p>
+  </div>
 
-  <div class="sp-grid" aria-label="Choose a room type">
-    {% for r in rooms %}
+  <div class="sp-action-grid">
+    {% for a in quick_actions %}
+      <a class="sp-action" href="{{ a.href }}" aria-label="{{ a.title }}">
+        <div class="sp-action__icon" aria-hidden="true"><i class="{{ a.icon }}"></i></div>
+        <div class="sp-action__body">
+          <div class="sp-action__title">{{ a.title }}</div>
+          <div class="sp-action__desc">{{ a.body }}</div>
+          <div class="sp-action__cta">
+            <span>{{ a.cta }}</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="shell sp-section" id="choose-room" aria-label="Choose a room">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">Choose a Room</h2>
+    <p class="sp-section__subtitle">Start with the room you’re working on today.</p>
+  </div>
+
+  <div class="sp-grid" aria-label="Popular rooms">
+    {% for r in popular_rooms %}
       <a class="sp-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open furniture fit for {{ r.label }}">
         <div class="sp-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
         <div class="sp-card__body">
           <div class="sp-card__title">{{ r.label }}</div>
-          <div class="sp-card__desc">Start with furniture fit and see what feels comfortable.</div>
+          <div class="sp-card__desc">Check if it feels comfortable to use every day.</div>
           <div class="sp-card__cta">
-            <span>Open furniture fit</span>
+            <span>Open</span>
             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
           </div>
         </div>
@@ -47,11 +77,77 @@
     {% endfor %}
   </div>
 
-  <div class="glass sp-note" style="margin-top: 1.25rem;">
-    <p style="margin: 0; opacity: .92;">
-      <strong>Tip:</strong> If you’re still deciding the room size, start with
-      <a href="{{ url_for('space_planner.room_size') }}">Room Size</a> first — then come back here.
-    </p>
+  {% if more_rooms %}
+    <details class="sp-more">
+      <summary class="sp-more__summary">More rooms</summary>
+      <div class="sp-grid" aria-label="More rooms">
+        {% for r in more_rooms %}
+          <a class="sp-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open furniture fit for {{ r.label }}">
+            <div class="sp-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+            <div class="sp-card__body">
+              <div class="sp-card__title">{{ r.label }}</div>
+              <div class="sp-card__desc">Check if it feels comfortable to use every day.</div>
+              <div class="sp-card__cta">
+                <span>Open</span>
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </details>
+  {% endif %}
+</section>
+
+<section class="shell sp-section" aria-label="How it works">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">How it works</h2>
+  </div>
+
+  <div class="sp-steps" role="list">
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">1</div>
+      <div class="sp-step__title">Select your room</div>
+      <div class="sp-step__body">Pick a room so the guidance matches real life.</div>
+    </div>
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">2</div>
+      <div class="sp-step__title">Enter room + item size</div>
+      <div class="sp-step__body">Use the real measurements (or start from typical sizes).</div>
+    </div>
+    <div class="sp-step" role="listitem">
+      <div class="sp-step__num">3</div>
+      <div class="sp-step__title">Get a clear, human result</div>
+      <div class="sp-step__body">Comfortable, tight, or not recommended — with simple next steps.</div>
+    </div>
   </div>
 </section>
+
+<section class="shell sp-section" aria-label="Most people also check">
+  <div class="sp-section__head">
+    <h2 class="sp-section__title">Most people also check</h2>
+  </div>
+
+  <div class="sp-suggest-grid">
+    {% for s in suggestions %}
+      <a class="sp-suggest" href="{{ s.href }}" aria-label="{{ s.title }}">
+        <div class="sp-suggest__icon" aria-hidden="true"><i class="{{ s.icon }}"></i></div>
+        <div class="sp-suggest__body">
+          <div class="sp-suggest__title">{{ s.title }}</div>
+          <div class="sp-suggest__desc">{{ s.body }}</div>
+          <div class="sp-suggest__cta">{{ s.cta }}</div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="sp-sticky-cta" role="region" aria-label="Check furniture fit">
+  <div class="shell sp-sticky-cta__inner">
+    <a class="btn btn-primary sp-sticky-cta__btn" href="#choose-room">
+      <i class="fa-solid fa-check" aria-hidden="true"></i>
+      Check Furniture Fit
+    </a>
+  </div>
+</div>
 {% endblock %}

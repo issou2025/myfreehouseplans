@@ -7,28 +7,62 @@
 {% endblock %}
 
 {% block content %}
-<section class="shell" style="padding: 2.5rem 0 1.5rem 0;">
-  <div class="glass" style="padding: 1.75rem; border-radius: 1rem;">
-    <p class="eyebrow" style="margin: 0 0 .5rem 0;">
+<section class="shell pl-hero">
+  <div class="pl-hero__inner">
+    <div class="pl-hero__badge">
       <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-      Digital Space Assistant
-    </p>
-    <h1 style="margin: 0 0 .75rem 0; font-family: 'Playfair Display', serif;">Room Planner</h1>
-    <p style="margin: 0; opacity: .9; max-width: 72ch;">
-      Pick a room, enter the room size and your item size, then click <strong>Check fit</strong>.
-      We’ll give you a clear answer in plain language.
-    </p>
+      Furniture Planner
+    </div>
+
+    <h1 class="pl-hero__title">Plan Your Furniture, Before You Buy or Build</h1>
+    <p class="pl-hero__subtitle">See how furniture really fits and feels in your space.</p>
+
+    <div class="pl-hero__actions">
+      <a class="btn btn-primary" href="#choose-room">
+        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+        Start Planning
+      </a>
+    </div>
+
     {% if learn_article %}
-      <p style="margin: .9rem 0 0 0; opacity: .92;">
+      <p class="pl-hero__learn">
         <a href="{{ learn_article.href }}">{{ learn_article.anchor }}</a>
       </p>
     {% endif %}
   </div>
 </section>
 
-<section class="shell" style="padding: 0 0 3rem 0;">
-  <div class="pl-grid" aria-label="Choose a room type">
-    {% for r in rooms %}
+<section class="shell pl-section" aria-label="Quick starts">
+  <div class="pl-section__head">
+    <h2 class="pl-section__title">Quick starts</h2>
+    <p class="pl-section__subtitle">Pick a common situation and start in one tap.</p>
+  </div>
+
+  <div class="pl-action-grid">
+    {% for a in quick_actions %}
+      <a class="pl-action" href="{{ a.href }}" aria-label="{{ a.title }}">
+        <div class="pl-action__icon" aria-hidden="true"><i class="{{ a.icon }}"></i></div>
+        <div class="pl-action__body">
+          <div class="pl-action__title">{{ a.title }}</div>
+          <div class="pl-action__desc">{{ a.body }}</div>
+          <div class="pl-action__cta">
+            <span>{{ a.cta }}</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="shell pl-section" id="choose-room" aria-label="Choose a room">
+  <div class="pl-section__head">
+    <h2 class="pl-section__title">Choose a Room</h2>
+    <p class="pl-section__subtitle">People think in rooms — start with yours.</p>
+  </div>
+
+  <div class="pl-grid" aria-label="Popular rooms">
+    {% for r in popular_rooms %}
       <a class="pl-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open {{ r.label }} planner">
         <div class="pl-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
         <div class="pl-card__body">
@@ -43,10 +77,78 @@
     {% endfor %}
   </div>
 
-  <div class="glass pl-note" style="margin-top: 1.25rem;">
-    <p style="margin: 0; opacity: .92;">
-      <strong>Simple rule:</strong> if it doesn’t feel easy to walk around in real life, the planner will flag it as “tight”.
-    </p>
+  {% if more_rooms %}
+    <details class="pl-more">
+      <summary class="pl-more__summary">More rooms</summary>
+      <div class="pl-grid" aria-label="More rooms">
+        {% for r in more_rooms %}
+          <a class="pl-card" href="{{ url_for('planner.room', room_slug=r.slug) }}" aria-label="Open {{ r.label }} planner">
+            <div class="pl-card__icon" aria-hidden="true"><i class="{{ r.icon }}"></i></div>
+            <div class="pl-card__body">
+              <div class="pl-card__title">{{ r.label }}</div>
+              <div class="pl-card__desc">{{ r.description }}</div>
+              <div class="pl-card__cta">
+                <span>Open</span>
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </details>
+  {% endif %}
+</section>
+
+<section class="shell pl-section" aria-label="How it works">
+  <div class="pl-section__head">
+    <h2 class="pl-section__title">How it works</h2>
+  </div>
+
+  <div class="pl-steps" role="list">
+    <div class="pl-step" role="listitem">
+      <div class="pl-step__num">1</div>
+      <div class="pl-step__title">Select your room</div>
+      <div class="pl-step__body">Bedroom, kitchen, living room… choose what matches your space.</div>
+    </div>
+    <div class="pl-step" role="listitem">
+      <div class="pl-step__num">2</div>
+      <div class="pl-step__title">Enter your dimensions</div>
+      <div class="pl-step__body">Use metric or imperial — whatever you’re comfortable with.</div>
+    </div>
+    <div class="pl-step" role="listitem">
+      <div class="pl-step__num">3</div>
+      <div class="pl-step__title">See if daily life feels easy</div>
+      <div class="pl-step__body">Get one clear answer: comfortable, tight, or not recommended.</div>
+    </div>
   </div>
 </section>
+
+<section class="shell pl-section" aria-label="Most people also check">
+  <div class="pl-section__head">
+    <h2 class="pl-section__title">Most people also check</h2>
+    <p class="pl-section__subtitle">Quick extras that improve confidence — without overwhelm.</p>
+  </div>
+
+  <div class="pl-suggest-grid">
+    {% for s in suggestions %}
+      <a class="pl-suggest" href="{{ s.href }}" aria-label="{{ s.title }}">
+        <div class="pl-suggest__icon" aria-hidden="true"><i class="{{ s.icon }}"></i></div>
+        <div class="pl-suggest__body">
+          <div class="pl-suggest__title">{{ s.title }}</div>
+          <div class="pl-suggest__desc">{{ s.body }}</div>
+          <div class="pl-suggest__cta">{{ s.cta }}</div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="pl-sticky-cta" role="region" aria-label="Start planning">
+  <div class="shell pl-sticky-cta__inner">
+    <a class="btn btn-primary pl-sticky-cta__btn" href="#choose-room">
+      <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+      Start Planning
+    </a>
+  </div>
+</div>
 {% endblock %}

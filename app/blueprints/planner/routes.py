@@ -40,6 +40,59 @@ def _room_list():
     return sorted(ROOMS.values(), key=lambda r: r.label)
 
 
+def _split_rooms_for_homepage() -> tuple[list[RoomSpec], list[RoomSpec]]:
+    """Keep the homepage clean: show a small set of popular rooms first."""
+
+    popular_order = ['bedroom', 'living-room', 'kitchen', 'bathroom', 'office', 'garage']
+    by_slug = ROOMS
+    popular = [by_slug[s] for s in popular_order if s in by_slug]
+    popular_slugs = {r.slug for r in popular}
+    more = [r for r in _room_list() if r.slug not in popular_slugs]
+    return popular, more
+
+
+def _planner_home_quick_actions() -> list[dict]:
+    """Homepage entry cards: action-based (not feature-based)."""
+
+    def _room_href(room_slug: str, *, item_key: str) -> str:
+        if room_slug not in ROOMS:
+            return url_for('planner.index')
+        if item_key and item_key in ITEMS:
+            return url_for('planner.room', room_slug=room_slug, item_key=item_key)
+        return url_for('planner.room', room_slug=room_slug)
+
+    cards: list[dict] = []
+    cards.append({
+        'icon': 'fa-solid fa-bed',
+        'title': 'Plan furniture in a bedroom',
+        'body': 'Quickly see if a bed + storage still leaves comfortable space to move.',
+        'cta': 'Start with a queen bed',
+        'href': _room_href('bedroom', item_key='bed_queen'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-couch',
+        'title': 'Check sofa fit in a living room',
+        'body': 'Make sure the room still feels open when walking around daily.',
+        'cta': 'Check sofa fit',
+        'href': _room_href('living-room', item_key='sofa'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-utensils',
+        'title': 'Test a kitchen layout',
+        'body': 'See if appliances and an island still feel easy to use.',
+        'cta': 'Try a kitchen island',
+        'href': _room_href('kitchen', item_key='kitchen_island'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-bath',
+        'title': 'Verify bathroom usability',
+        'body': 'Check if daily movement feels comfortable, not cramped.',
+        'cta': 'Test a shower',
+        'href': _room_href('bathroom', item_key='shower'),
+    })
+    return cards
+
+
 def _items_for_room(room: RoomSpec) -> Dict[str, ItemSpec]:
     return {k: ITEMS[k] for k in room.item_keys if k in ITEMS}
 
@@ -197,13 +250,41 @@ def _build_micro_tools(
 @planner_bp.get('/')
 def index():
     learn_article = article_for_space_planner(intent='furniture-fit', room_slug=None)
+
+    popular_rooms, more_rooms = _split_rooms_for_homepage()
+    suggestions = [
+        {
+            'icon': 'fa-solid fa-ruler',
+            'title': 'Check if your room size feels comfortable',
+            'body': 'Not sure about room size yet? Get a quick comfort signal first.',
+            'cta': 'Open Room Size',
+            'href': url_for('space_planner.room_size'),
+        },
+        {
+            'icon': 'fa-solid fa-person-walking',
+            'title': 'Verify movement comfort',
+            'body': 'A quick circulation check for everyday walking space.',
+            'cta': 'Open Circulation',
+            'href': url_for('space_planner.circulation'),
+        },
+    ]
+
     meta = generate_meta_tags(
-        title='Room Planner',
-        description='A human-friendly room planner that helps you check if furniture and appliances will feel comfortable in a space.',
+        title='Furniture Planner',
+        description='Plan your furniture in a human-friendly way: check fit and daily-life comfort before you buy or build.',
         url=url_for('planner.index', _external=True),
     )
 
-    return render_template('planner/index.html', rooms=_room_list(), learn_article=learn_article, meta=meta)
+    return render_template(
+        'planner/index.html',
+        rooms=_room_list(),
+        popular_rooms=popular_rooms,
+        more_rooms=more_rooms,
+        quick_actions=_planner_home_quick_actions(),
+        suggestions=suggestions,
+        learn_article=learn_article,
+        meta=meta,
+    )
 
 
 @planner_bp.route('/<room_slug>', methods=['GET', 'POST'])

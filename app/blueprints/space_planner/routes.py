@@ -41,6 +41,53 @@ def _room_list():
     return out
 
 
+def _split_rooms_for_homepage() -> tuple[list[RoomType], list[RoomType]]:
+    """Keep landing pages clean: show a small set of popular rooms first."""
+
+    popular_order = ['bedroom', 'living-room', 'kitchen', 'bathroom', 'office', 'garage']
+    by_slug = SIZE_ROOMS
+    popular = [by_slug[s] for s in popular_order if s in by_slug]
+    popular_slugs = {r.slug for r in popular}
+    more = [r for r in _room_list() if r.slug not in popular_slugs]
+    return popular, more
+
+
+def _furniture_fit_quick_actions() -> list[dict]:
+    def _href(room_slug: str, *, item_key: str) -> str:
+        return url_for('planner.room', room_slug=room_slug, item_key=item_key)
+
+    cards: list[dict] = []
+    cards.append({
+        'icon': 'fa-solid fa-couch',
+        'title': 'Check a sofa and walking space',
+        'body': 'Make sure the room still feels easy to move through day-to-day.',
+        'cta': 'Test a sectional sofa',
+        'href': _href('living-room', item_key='sectional_sofa'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-chair',
+        'title': 'See if a dining table feels usable',
+        'body': 'Chairs need room to pull out comfortably — not just “barely fit”.',
+        'cta': 'Test a 6-seat table',
+        'href': _href('dining-room', item_key='dining_table_6'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-warehouse',
+        'title': 'Check if a car fits in your garage',
+        'body': 'Door opening and circulation matter more than you think.',
+        'cta': 'Test a car fit',
+        'href': _href('garage', item_key='car'),
+    })
+    cards.append({
+        'icon': 'fa-solid fa-route',
+        'title': 'Verify hallway / corridor passage',
+        'body': 'Keep the space comfortable to walk through every day.',
+        'cta': 'Test a console table',
+        'href': _href('corridor', item_key='console_table'),
+    })
+    return cards
+
+
 def _parse_units_and_method():
     # Support both `units` (current) and `unit` (legacy/share links)
     unit_key = (request.values.get('units') or request.values.get('unit') or 'metric').strip().lower()
@@ -251,12 +298,39 @@ def comfort_check():
 @space_planner_bp.get('/furniture-fit')
 def furniture_fit():
     learn_article = article_for_space_planner(intent='furniture-fit', room_slug=None)
+    popular_rooms, more_rooms = _split_rooms_for_homepage()
+    suggestions = [
+        {
+            'icon': 'fa-solid fa-ruler',
+            'title': 'Check room size comfort first',
+            'body': 'If you’re still choosing dimensions, start with a quick comfort check.',
+            'cta': 'Open Room Size',
+            'href': url_for('space_planner.room_size'),
+        },
+        {
+            'icon': 'fa-solid fa-heart',
+            'title': 'Get an overall comfort signal',
+            'body': 'A simple summary of daily-life usability for the room.',
+            'cta': 'Open Comfort Check',
+            'href': url_for('space_planner.comfort_check'),
+        },
+    ]
+
     meta = generate_meta_tags(
         title='Space Planner — Furniture Fit',
         description='Choose a room to check if furniture and appliances fit comfortably with realistic daily-life clearances.',
         url=url_for('space_planner.furniture_fit', _external=True),
     )
-    return render_template('space_planner/furniture_fit.html', rooms=_room_list(), learn_article=learn_article, meta=meta)
+    return render_template(
+        'space_planner/furniture_fit.html',
+        rooms=_room_list(),
+        popular_rooms=popular_rooms,
+        more_rooms=more_rooms,
+        quick_actions=_furniture_fit_quick_actions(),
+        suggestions=suggestions,
+        learn_article=learn_article,
+        meta=meta,
+    )
 
 
 @space_planner_bp.get('/<room_slug>')
