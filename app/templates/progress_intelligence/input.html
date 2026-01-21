@@ -39,9 +39,9 @@
           <label class="pi-label" for="number_of_floors">Number of floors</label>
           <select class="pi-select" id="number_of_floors" name="number_of_floors" required>
             <option value="Ground floor only">Ground floor only</option>
-            <option value="Ground + 1 floor">Ground + 1 floor</option>
-            <option value="Ground + 2 floors">Ground + 2 floors</option>
-            <option value="Ground + 3 floors or more">Ground + 3 floors or more</option>
+            <option value="Ground + 1">Ground + 1</option>
+            <option value="Ground + 2">Ground + 2</option>
+            <option value="Ground + 3 or more">Ground + 3 or more</option>
           </select>
           <p class="pi-help">More floors usually increases late-stage risk.</p>
         </div>
@@ -71,7 +71,16 @@
         <div class="pi-field">
           <label class="pi-label" for="total_budget">Total available amount (optional)</label>
           <input class="pi-input" id="total_budget" name="total_budget" type="number" step="0.01" inputmode="decimal" placeholder="Example: 20000">
-          <p class="pi-help">Enter any currency or unit you use. We never display prices per phase.</p>
+          <p class="pi-help">Enter the amount in the selected currency. We never display unit prices or phase prices.</p>
+        </div>
+
+        <div class="pi-field">
+          <label class="pi-label" for="currency">Currency</label>
+          <select class="pi-select" id="currency" name="currency">
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+          <p class="pi-help">We only use currency to normalize internally. We never show any exchange rate.</p>
         </div>
 
         <div class="pi-field">
@@ -99,7 +108,7 @@
         </div>
 
         <div class="pi-note" role="note">
-          <strong>Country:</strong> we may auto-detect a country only to adjust realism factors. We do not use local prices.
+          <strong>Country:</strong> we may auto-detect a country for context in the report. We do not use local prices.
         </div>
       </form>
 

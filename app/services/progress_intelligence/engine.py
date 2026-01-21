@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -9,15 +7,55 @@ from typing import Any
 from .units import normalize_area_to_m2
 
 
+# Fixed conservative internal rate (NEVER shown to user)
+EUR_TO_USD = 1.1
+
+
 PHASES = [
     'Preparation',
     'Foundation',
     'Structure',
-    'Envelope (walls + roof)',
-    'Closure (doors + windows)',
-    'Services (basic habitability)',
+    'Envelope',
+    'Closure',
+    'Basic habitability',
     'Finishing',
 ]
+
+
+INTERNAL_BASE_COST_EUR_PER_M2 = {
+    'Single-family house': 400,
+    'Multi-family building': 500,
+    'School': 450,
+    'Health center': 550,
+    'Commercial building': 600,
+    'Light industrial / workshop': 500,
+}
+
+
+FLOOR_FACTORS = {
+    'Ground floor only': 1.00,
+    'Ground + 1': 1.15,
+    'Ground + 2': 1.30,
+    'Ground + 3 or more': 1.50,
+}
+
+
+MATERIAL_FACTORS = {
+    'Wood': 0.95,
+    'Concrete': 1.00,
+    'Steel': 1.10,
+}
+
+
+PHASE_DISTRIBUTION = {
+    'Preparation': 0.05,
+    'Foundation': 0.15,
+    'Structure': 0.25,
+    'Envelope': 0.20,
+    'Closure': 0.10,
+    'Basic habitability': 0.15,
+    'Finishing': 0.10,
+}
 
 
 @dataclass(frozen=True)
@@ -27,6 +65,7 @@ class Inputs:
     material: str
     area_value: float
     area_unit: str
+    currency: str
     total_budget: float | None
     monthly_contribution: float | None
     max_monthly_effort: bool
@@ -46,175 +85,134 @@ class Result:
     created_utc: str
     inputs: Inputs
     stopping_phase: str
-    rhythm: str  # stable|fragile|stoppage
+    rhythm: str  # stable|fragile|blocked
     margin_flag: bool
     statuses: list[PhaseStatus]
     explanation: str
     advice: list[str]
     scenarios: list[dict[str, Any]]
+    # PDF-only charts
+    progress_months: list[int]
+    progress_ratios: list[float]
+    reachable_ratio: float
 
 
-def _clamp01(x: float) -> float:
-    return max(0.0, min(1.0, float(x)))
+def _clamp(x: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, float(x)))
 
 
-def _safe_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == '':
-        return None
-    try:
-        v = float(s)
-    except Exception:
-        return None
-    if v < 0:
+def _normalize_currency(value: float | None, currency: str) -> float:
+    if not value:
         return 0.0
-    return float(v)
+    v = max(0.0, float(value))
+    c = (currency or 'EUR').strip().upper()
+    if c == 'USD':
+        return v / EUR_TO_USD
+    return v
 
 
-def _load_country_factor(country_name: str) -> dict[str, float]:
-    name = (country_name or '').strip() or 'Global'
-    path = os.path.join(os.path.dirname(__file__), 'country_factors.json')
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except Exception:
-        data = {}
-
-    entry = data.get(name) or data.get('Global') or {'pressure': 0.5, 'volatility': 0.5, 'logistics': 0.5}
-
-    def n(v: Any) -> float:
-        try:
-            return _clamp01(float(v))
-        except Exception:
-            return 0.5
-
-    return {
-        'pressure': n(entry.get('pressure')),
-        'volatility': n(entry.get('volatility')),
-        'logistics': n(entry.get('logistics')),
-    }
+def _factor_for_building_type(building_type: str) -> float:
+    # The €/m² value itself is never shown; we only use it to prevent impossible outputs.
+    bt = (building_type or '').strip()
+    return float(INTERNAL_BASE_COST_EUR_PER_M2.get(bt, 500))
 
 
-def _building_type_multiplier(building_type: str) -> float:
-    key = (building_type or '').strip()
-    return {
-        'Single-family house': 1.00,
-        'Multi-family building': 1.22,
-        'School': 1.12,
-        'Health center': 1.20,
-        'Commercial building': 1.15,
-        'Light industrial / workshop': 1.10,
-    }.get(key, 1.10)
-
-
-def _floors_multiplier(floors: str) -> float:
+def _floor_factor(floors: str) -> float:
     key = (floors or '').strip()
-    return {
-        'Ground floor only': 1.00,
-        'Ground + 1 floor': 1.18,
-        'Ground + 2 floors': 1.38,
-        'Ground + 3 floors or more': 1.60,
-    }.get(key, 1.25)
+    return float(FLOOR_FACTORS.get(key, 1.30))
 
 
-def _material_profile(material: str) -> dict[str, Any]:
+def _material_factor(material: str) -> float:
     key = (material or '').strip()
-    if key == 'Steel':
-        return {
-            'mult': 1.06,
-            'weights_adjust': {'Preparation': +0.03, 'Structure': +0.02, 'Services (basic habitability)': -0.02, 'Finishing': -0.03},
-            'continuity_sensitivity': 1.05,
-            'note': 'Steel projects are sensitive early: precision and coordination matter from the start.',
-        }
-    if key == 'Wood':
-        return {
-            'mult': 0.98,
-            'weights_adjust': {'Finishing': +0.02, 'Envelope (walls + roof)': -0.01, 'Preparation': -0.01},
-            'continuity_sensitivity': 1.15,
-            'note': 'Wood can progress fast early, but interruptions can create fragility later.',
-        }
-    # Concrete default
-    return {
-        'mult': 1.00,
-        'weights_adjust': {'Finishing': +0.03, 'Services (basic habitability)': +0.02, 'Preparation': -0.02, 'Structure': -0.03},
-        'continuity_sensitivity': 1.00,
-        'note': 'Concrete projects often feel easy early but become demanding near the end.',
-    }
+    return float(MATERIAL_FACTORS.get(key, 1.00))
 
 
-def _base_phase_weights() -> dict[str, float]:
-    # Intentionally non-linear: later phases consume disproportionate resources.
-    return {
-        'Preparation': 0.08,
-        'Foundation': 0.12,
-        'Structure': 0.22,
-        'Envelope (walls + roof)': 0.16,
-        'Closure (doors + windows)': 0.10,
-        'Services (basic habitability)': 0.12,
-        'Finishing': 0.20,
-    }
+def _minimum_realistic_budget_eur(inputs: Inputs, *, area_m2: float) -> float:
+    base = _factor_for_building_type(inputs.building_type)
+    return float(area_m2) * base * _floor_factor(inputs.floors) * _material_factor(inputs.material)
 
 
-def _normalize_weights(weights: dict[str, float]) -> dict[str, float]:
-    total = sum(max(0.0, float(v)) for v in weights.values())
-    if total <= 0:
-        return _base_phase_weights()
-    return {k: max(0.0, float(v)) / total for k, v in weights.items()}
+def _phase_statuses(ratio: float) -> tuple[list[PhaseStatus], str]:
+    r = max(0.0, float(ratio))
+    statuses: list[PhaseStatus] = []
+
+    cumulative = 0.0
+    last_phase = PHASES[0]
+
+    for phase in PHASES:
+        share = float(PHASE_DISTRIBUTION.get(phase, 0.0))
+        prev = cumulative
+        cumulative += share
+
+        if r >= cumulative:
+            statuses.append(PhaseStatus(phase=phase, status='green', note='Usually reachable under global constraints.'))
+            last_phase = phase
+        elif r > prev:
+            statuses.append(PhaseStatus(phase=phase, status='orange', note='Partially reachable; fragile under interruptions.'))
+            last_phase = phase
+        else:
+            statuses.append(PhaseStatus(phase=phase, status='red', note='Usually not reachable with this coverage.'))
+
+    # Spec stopping rules (phrase-level)
+    if r < 0.10:
+        stopping = 'Preparation'
+    elif r < 0.20:
+        stopping = 'Foundation (partial)'
+    elif r < 0.35:
+        stopping = 'Structure (partial)'
+    elif r < 0.55:
+        stopping = 'Envelope (partial)'
+    elif r < 0.70:
+        stopping = 'Closure (partial)'
+    elif r < 0.85:
+        stopping = 'Basic habitability'
+    else:
+        stopping = 'Finishing possible'
+
+    return statuses, stopping
 
 
-def _apply_adjustments(weights: dict[str, float], adjustments: dict[str, float]) -> dict[str, float]:
-    out = dict(weights)
-    for k, delta in (adjustments or {}).items():
-        if k in out:
-            out[k] = float(out[k]) + float(delta)
-    return _normalize_weights(out)
+def _simulate_monthly_progress(
+    *,
+    minimum_budget_eur: float,
+    total_eur: float,
+    monthly_eur: float,
+    months: int = 24,
+) -> tuple[list[int], list[float]]:
+    if minimum_budget_eur <= 0:
+        return [0], [1.0]
+
+    m = max(0, int(months))
+    monthly = max(0.0, float(monthly_eur))
+    base = max(0.0, float(total_eur))
+
+    xs: list[int] = []
+    ys: list[float] = []
+    for i in range(0, m + 1):
+        covered = base + (monthly * i)
+        xs.append(i)
+        ys.append(_clamp(covered / minimum_budget_eur, 0.0, 1.25))
+    return xs, ys
 
 
-def _required_resource_index(area_m2: float, building_type: str, floors: str, material: str, country_name: str) -> float:
-    # Dimensionless index used only to map user's own amounts to a stopping point.
-    # We keep it simple and globally applicable.
-    t_mult = _building_type_multiplier(building_type)
-    f_mult = _floors_multiplier(floors)
-    m_prof = _material_profile(material)
+def _rhythm_indicator(*, minimum_budget_eur: float, monthly_eur: float) -> str:
+    if monthly_eur <= 0:
+        return 'blocked'
+    if minimum_budget_eur <= 0:
+        return 'stable'
 
-    factors = _load_country_factor(country_name)
-    pressure = (0.45 * factors['pressure']) + (0.35 * factors['volatility']) + (0.20 * factors['logistics'])
-
-    # Surface grows sub-linearly to avoid over-penalizing large community projects.
-    surface_term = (max(10.0, area_m2) / 100.0) ** 0.88
-
-    # Baseline index: calibrated so typical inputs produce readable phase splits.
-    base = 110.0
-    return base * surface_term * t_mult * f_mult * float(m_prof['mult']) * (0.90 + 0.35 * pressure)
-
-
-def _compute_rhythm(required_index: float, monthly: float | None, *, target_months: int, material: str) -> tuple[str, float]:
-    if not monthly or monthly <= 0:
-        return ('stoppage', 0.0)
-
-    # Convert required index into a monthly "continuity" target (dimensionless).
-    needed_per_month = required_index / float(target_months)
-    if needed_per_month <= 0:
-        return ('stable', 1.0)
-
-    ratio = monthly / needed_per_month
-    ratio = float(ratio)
-
-    sensitivity = float(_material_profile(material).get('continuity_sensitivity', 1.0))
-    ratio = ratio / sensitivity
+    # Conservative: assume you need meaningful continuity across 24 months.
+    needed_per_month = minimum_budget_eur / 24.0
+    ratio = monthly_eur / needed_per_month if needed_per_month > 0 else 1.0
 
     if ratio >= 1.0:
-        return ('stable', ratio)
+        return 'stable'
     if ratio >= 0.60:
-        return ('fragile', ratio)
-    return ('stoppage', ratio)
+        return 'fragile'
+    return 'blocked'
 
 
-def simulate(inputs: Inputs) -> Result:
-    lang = (inputs.lang or 'en').strip().lower()
-
+def simulate(inputs: Inputs, *, include_scenarios: bool = True) -> Result:
     # Normalize + validate area
     area_m2 = normalize_area_to_m2(inputs.area_value, inputs.area_unit)
     if area_m2 < 10:
@@ -222,80 +220,67 @@ def simulate(inputs: Inputs) -> Result:
     if area_m2 > 200000:
         raise ValueError('Surface area is too large for this tool. Please reduce it or split the project.')
 
-    total_budget = inputs.total_budget or 0.0
-    monthly = inputs.monthly_contribution or 0.0
+    currency = (inputs.currency or 'EUR').strip().upper()
+    if currency not in {'EUR', 'USD'}:
+        currency = 'EUR'
 
-    required = _required_resource_index(area_m2, inputs.building_type, inputs.floors, inputs.material, inputs.country_name)
+    total_eur = _normalize_currency(inputs.total_budget, currency)
+    monthly_eur = _normalize_currency(inputs.monthly_contribution, currency)
 
-    # Budget-based reach ratio (0..1+)
-    # We keep it bounded for stability.
-    reach_ratio = 0.0
-    if required > 0:
-        reach_ratio = max(0.0, float(total_budget) / float(required))
+    minimum_budget_eur = _minimum_realistic_budget_eur(inputs, area_m2=area_m2)
 
-    # Add a limited time-horizon contribution to represent continuity.
-    # This avoids pretending we know infinite future.
+    if minimum_budget_eur <= 0:
+        raise ValueError('We could not compute a realistic minimum for this project. Please change inputs and try again.')
+
+    # Economic coverage ratio: what portion of the minimum realistic budget is covered.
+    ratio_now = _clamp(total_eur / minimum_budget_eur, 0.0, 1.25)
+
+    # Use a conservative horizon to avoid “infinite future” assumptions.
     horizon_months = 24
-    if monthly > 0 and required > 0:
-        reach_ratio = max(0.0, float(total_budget + (monthly * horizon_months)) / float(required))
+    ratio_horizon = ratio_now
+    if monthly_eur > 0:
+        ratio_horizon = _clamp((total_eur + monthly_eur * horizon_months) / minimum_budget_eur, 0.0, 1.25)
 
-    reach_ratio = min(1.25, reach_ratio)
+    statuses, stopping_phase = _phase_statuses(ratio_horizon)
+    rhythm = _rhythm_indicator(minimum_budget_eur=minimum_budget_eur, monthly_eur=monthly_eur)
+    margin_flag = bool(inputs.max_monthly_effort and monthly_eur > 0 and rhythm in {'fragile', 'blocked'})
 
-    weights = _base_phase_weights()
-    weights = _apply_adjustments(weights, _material_profile(inputs.material).get('weights_adjust', {}))
+    progress_months, progress_ratios = _simulate_monthly_progress(
+        minimum_budget_eur=minimum_budget_eur,
+        total_eur=total_eur,
+        monthly_eur=monthly_eur,
+        months=horizon_months,
+    )
 
-    cumulative = 0.0
-    statuses: list[PhaseStatus] = []
-    stopping_phase = PHASES[0]
-
-    for phase in PHASES:
-        w = float(weights.get(phase, 0.0))
-        prev = cumulative
-        cumulative += w
-
-        if reach_ratio >= cumulative:
-            statuses.append(PhaseStatus(phase=phase, status='green', note='Reached with realistic continuity.'))
-            stopping_phase = phase
-        elif reach_ratio > prev:
-            statuses.append(PhaseStatus(phase=phase, status='orange', note='Partially reachable, but fragile.'))
-            stopping_phase = phase
-        else:
-            statuses.append(PhaseStatus(phase=phase, status='red', note='Not realistically reachable with current pattern.'))
-
-    rhythm, rhythm_ratio = _compute_rhythm(required, monthly if monthly > 0 else None, target_months=horizon_months, material=inputs.material)
-
-    margin_flag = bool(inputs.max_monthly_effort and monthly > 0 and rhythm in {'fragile', 'stoppage'})
-
-    material_note = _material_profile(inputs.material).get('note', '')
+    reachable_ratio = _clamp(ratio_horizon, 0.0, 1.0)
 
     explanation = (
         f"Stopping point tends to appear around: {stopping_phase}. "
-        "This is a simulation of progression stress, not a quote. "
-        + (material_note or '')
+        "This is a global realism check, not a quotation. "
+        "We use internal reference standards to block impossible results, but we never display unit prices."
     )
 
     advice: list[str] = []
-    if stopping_phase in {'Finishing', 'Services (basic habitability)'}:
-        advice.append('Protect the final stretch. Late changes are the #1 reason stable projects become fragile.')
+    if stopping_phase in {'Finishing possible', 'Basic habitability'}:
+        advice.append('Protect the last stretch. Late changes often turn stable projects into fragile ones.')
     else:
         advice.append('The safest improvement is to reduce surface or floors before starting.')
 
     if rhythm == 'stable':
-        advice.append('Your monthly rhythm looks stable. Keep it consistent — continuity matters more than speed.')
+        advice.append('Your monthly rhythm looks stable. Continuity matters more than speed.')
     elif rhythm == 'fragile':
-        advice.append('Your monthly rhythm looks fragile. Small interruptions can move the stopping point earlier.')
+        advice.append('Your monthly rhythm looks fragile. Interruptions can move the stopping point earlier.')
     else:
-        advice.append('Without a steady rhythm, projects often stall for long periods. Protect continuity if possible.')
+        advice.append('Without steady monthly continuity, projects often stall for long periods.')
 
     if margin_flag:
-        advice.append('You marked your monthly effort as “maximum”. That means low margin — risk increases under pressure.')
+        advice.append('You marked monthly effort as “maximum”. That means no margin — fragility increases under pressure.')
 
     advice.append('Split the project into finishable milestones. Completion-first is safer than starting many parts.')
 
-    scenarios = _scenario_suggestions(inputs, base_required=required)
+    scenarios = _scenario_suggestions(inputs) if include_scenarios else []
 
     created_utc = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
-
     return Result(
         created_utc=created_utc,
         inputs=inputs,
@@ -306,61 +291,46 @@ def simulate(inputs: Inputs) -> Result:
         explanation=explanation,
         advice=advice,
         scenarios=scenarios,
+        progress_months=progress_months,
+        progress_ratios=progress_ratios,
+        reachable_ratio=reachable_ratio,
     )
 
 
-def _scenario_suggestions(inputs: Inputs, *, base_required: float) -> list[dict[str, Any]]:
-    # Show improvement directions without exposing any "prices".
+def _scenario_suggestions(inputs: Inputs) -> list[dict[str, Any]]:
     scenarios: list[dict[str, Any]] = []
 
     def sim(area_factor: float = 1.0, floors_override: str | None = None, monthly_factor: float = 1.0) -> str:
-        area_m2 = normalize_area_to_m2(inputs.area_value, inputs.area_unit) * area_factor
+        area_m2 = normalize_area_to_m2(inputs.area_value, inputs.area_unit) * float(area_factor)
+
         floors = floors_override or inputs.floors
-        required = _required_resource_index(area_m2, inputs.building_type, floors, inputs.material, inputs.country_name)
+        tmp = Inputs(
+            building_type=inputs.building_type,
+            floors=floors,
+            material=inputs.material,
+            area_value=area_m2,
+            area_unit='m2',
+            currency=inputs.currency,
+            total_budget=inputs.total_budget,
+            monthly_contribution=(inputs.monthly_contribution or 0.0) * float(monthly_factor),
+            max_monthly_effort=inputs.max_monthly_effort,
+            country_name=inputs.country_name,
+            lang=inputs.lang,
+        )
 
-        total_budget = inputs.total_budget or 0.0
-        monthly = (inputs.monthly_contribution or 0.0) * monthly_factor
+        res = simulate(tmp, include_scenarios=False)
+        return res.stopping_phase
 
-        horizon_months = 24
-        reach_ratio = 0.0
-        if required > 0:
-            reach_ratio = (total_budget + monthly * horizon_months) / required
-        reach_ratio = min(1.25, max(0.0, float(reach_ratio)))
+    scenarios.append({'title': 'Reduce surface by 10%', 'effect': f"Stopping point tends to move toward: {sim(area_factor=0.90)}"})
+    scenarios.append({'title': 'Reduce surface by 20%', 'effect': f"Stopping point tends to move toward: {sim(area_factor=0.80)}"})
 
-        weights = _apply_adjustments(_base_phase_weights(), _material_profile(inputs.material).get('weights_adjust', {}))
-
-        cumulative = 0.0
-        last = PHASES[0]
-        for phase in PHASES:
-            cumulative += float(weights.get(phase, 0.0))
-            if reach_ratio >= cumulative:
-                last = phase
-            elif reach_ratio > (cumulative - float(weights.get(phase, 0.0))):
-                last = phase
-        return last
-
-    scenarios.append({
-        'title': 'Reduce surface by 10%',
-        'effect': f"Stopping point tends to move toward: {sim(area_factor=0.90)}",
-    })
-    scenarios.append({
-        'title': 'Reduce surface by 20%',
-        'effect': f"Stopping point tends to move toward: {sim(area_factor=0.80)}",
-    })
-
-    floors_order = ['Ground floor only', 'Ground + 1 floor', 'Ground + 2 floors', 'Ground + 3 floors or more']
+    floors_order = ['Ground floor only', 'Ground + 1', 'Ground + 2', 'Ground + 3 or more']
     if inputs.floors in floors_order:
         idx = floors_order.index(inputs.floors)
         if idx > 0:
-            scenarios.append({
-                'title': 'Simplify floors (one step down)',
-                'effect': f"Stopping point tends to move toward: {sim(floors_override=floors_order[idx - 1])}",
-            })
+            scenarios.append({'title': 'Simplify floors (one step down)', 'effect': f"Stopping point tends to move toward: {sim(floors_override=floors_order[idx - 1])}"})
 
     if (inputs.monthly_contribution or 0.0) > 0:
-        scenarios.append({
-            'title': 'Improve monthly rhythm by +20%',
-            'effect': f"Stopping point tends to move toward: {sim(monthly_factor=1.20)}",
-        })
+        scenarios.append({'title': 'Improve monthly rhythm by +20%', 'effect': f"Stopping point tends to move toward: {sim(monthly_factor=1.20)}"})
 
     return scenarios

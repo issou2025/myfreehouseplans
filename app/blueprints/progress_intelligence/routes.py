@@ -83,6 +83,10 @@ def start():
     floors = (request.form.get('number_of_floors') or '').strip()
     material = (request.form.get('structural_material') or '').strip()
 
+    currency = (request.form.get('currency') or 'EUR').strip().upper()
+    if currency not in {'EUR', 'USD'}:
+        currency = 'EUR'
+
     area_value = (request.form.get('surface_area') or '').strip()
     area_unit = (request.form.get('surface_unit') or 'm2').strip()
 
@@ -118,6 +122,7 @@ def start():
         'material': material,
         'area_value': area_value_f,
         'area_unit': area_unit,
+        'currency': currency,
         'total_budget': safe_float(total_budget),
         'monthly_contribution': safe_float(monthly),
         'max_monthly_effort': bool(max_monthly_effort),
@@ -148,6 +153,7 @@ def result():
         material=str(payload.get('material') or ''),
         area_value=float(payload.get('area_value') or 0.0),
         area_unit=str(payload.get('area_unit') or 'm2'),
+        currency=str(payload.get('currency') or 'EUR'),
         total_budget=payload.get('total_budget', None),
         monthly_contribution=payload.get('monthly_contribution', None),
         max_monthly_effort=bool(payload.get('max_monthly_effort', False)),
@@ -188,6 +194,7 @@ def report_pdf():
         material=str(payload.get('material') or ''),
         area_value=float(payload.get('area_value') or 0.0),
         area_unit=str(payload.get('area_unit') or 'm2'),
+        currency=str(payload.get('currency') or 'EUR'),
         total_budget=payload.get('total_budget', None),
         monthly_contribution=payload.get('monthly_contribution', None),
         max_monthly_effort=bool(payload.get('max_monthly_effort', False)),
