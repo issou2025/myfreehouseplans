@@ -1,8 +1,8 @@
-"""
-Blog Blueprint - Public and Admin Routes
-"""
+"""Blog Blueprint - Public and Admin Routes."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
+from io import BytesIO
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +20,7 @@ from app.utils.article_extras import (
     normalize_article_extras,
     save_article_extras,
 )
+from app.services.blog.article_pdf import ArticlePdfInput, build_article_pdf
 
 blog_bp = Blueprint('blog', __name__)
 
@@ -162,6 +163,39 @@ def detail(slug):
         meta=meta,
         extras=extras,
         related_experience=related_experience,
+    )
+
+
+@blog_bp.route('/blog/<slug>/pdf')
+def download_pdf(slug):
+    post = BlogPost.query.filter_by(slug=slug, status=BlogPost.STATUS_PUBLISHED).first_or_404()
+
+    extras = {}
+    try:
+        extras = normalize_article_extras(load_article_extras(slug=post.slug, post_id=post.id))
+    except Exception:
+        extras = {}
+
+    canonical_url = url_for('blog.detail', slug=post.slug, _external=True)
+    pdf_bytes = build_article_pdf(
+        ArticlePdfInput(
+            title=post.title,
+            slug=post.slug,
+            created_at=post.created_at,
+            canonical_url=canonical_url,
+            content_html=post.content or '',
+            cover_image=post.cover_image,
+            extras=extras or {},
+        )
+    )
+
+    safe_name = f"{post.slug}.pdf"
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=safe_name,
+        max_age=60,
     )
 
 
