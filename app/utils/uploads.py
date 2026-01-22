@@ -162,12 +162,34 @@ def save_uploaded_file(
     except Exception:
         pass
 
+    protected_folders = current_app.config.get('PROTECTED_FOLDERS') or set()
+    is_protected = folder in protected_folders
+
+    def _save_local() -> str:
+        if is_protected:
+            base_dir = current_app.config.get('PROTECTED_UPLOAD_FOLDER') or current_app.config['UPLOAD_FOLDER']
+            dest_dir = Path(base_dir) / folder
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_path = dest_dir / safe_name
+            file.save(str(dest_path))
+            return (Path(folder) / safe_name).as_posix()
+
+        base_dir = current_app.config['UPLOAD_FOLDER']
+        dest_dir = Path(base_dir) / folder
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / safe_name
+        file.save(str(dest_path))
+        return (Path('uploads') / folder / safe_name).as_posix()
+
     try:
         cloud_url = upload_to_cloud(file, folder)
-    except CloudStorageConfigurationError as exc:
-        raise RuntimeError(
-            'Cloudinary is not configured. Please set CLOUDINARY_URL so uploads persist across deploys.'
-        ) from exc
+    except CloudStorageConfigurationError:
+        current_app.logger.warning(
+            'Cloud uploads not configured; saving upload locally to %s folder=%s',
+            'protected' if is_protected else 'static',
+            folder,
+        )
+        return _save_local()
     except Exception as exc:  # pragma: no cover - defensive logging
         current_app.logger.exception('Cloud upload failed')
         raise RuntimeError('Uploading file to persistent storage failed.') from exc

@@ -1257,8 +1257,12 @@ def contact():
         if attachment_obj and getattr(attachment_obj, 'filename', ''):
             try:
                 saved_attachment = save_uploaded_file(attachment_obj, 'support')
-                attachment_absolute = resolve_protected_upload(saved_attachment)
-                attachment_mime, _ = mimetypes.guess_type(str(attachment_absolute))
+                if saved_attachment and is_absolute_url(saved_attachment):
+                    attachment_absolute = None
+                    attachment_mime, _ = mimetypes.guess_type(saved_attachment)
+                else:
+                    attachment_absolute = resolve_protected_upload(saved_attachment)
+                    attachment_mime, _ = mimetypes.guess_type(str(attachment_absolute))
             except ValueError as upload_err:
                 current_app.logger.warning('Upload failed while handling contact attachment: %s', upload_err)
                 flash("We couldn't upload that file. Please ensure it's a supported file type and under 16 MB, then try again.", 'danger')

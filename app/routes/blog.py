@@ -183,8 +183,27 @@ def create():
         slug_value = _generate_unique_slug(slug_source)
 
         cover_path = None
-        if form.cover_image.data:
-            cover_path = save_uploaded_file(form.cover_image.data, folder='blog')
+        cover_upload = form.cover_image.data
+        if cover_upload and getattr(cover_upload, 'filename', ''):
+            try:
+                cover_path = save_uploaded_file(cover_upload, folder='blog')
+            except ValueError as upload_err:
+                flash(str(upload_err), 'danger')
+                return render_template(
+                    'admin/create_post.html',
+                    form=form,
+                    extras=extras,
+                    experience_options=get_experience_options(),
+                )
+            except Exception as exc:
+                current_app.logger.exception('Failed to upload blog cover image (create): %s', exc)
+                flash('We could not upload that image. Please try a different file.', 'danger')
+                return render_template(
+                    'admin/create_post.html',
+                    form=form,
+                    extras=extras,
+                    experience_options=get_experience_options(),
+                )
 
         post = BlogPost(
             title=form.title.data.strip(),
@@ -271,8 +290,29 @@ def edit(post_id):
         slug_source = (form.slug.data or '').strip() or post.slug
         slug_value = _generate_unique_slug(slug_source, exclude_id=post.id)
         cover_path = post.cover_image
-        if form.cover_image.data:
-            cover_path = save_uploaded_file(form.cover_image.data, folder='blog')
+        cover_upload = form.cover_image.data
+        if cover_upload and getattr(cover_upload, 'filename', ''):
+            try:
+                cover_path = save_uploaded_file(cover_upload, folder='blog')
+            except ValueError as upload_err:
+                flash(str(upload_err), 'danger')
+                return render_template(
+                    'admin/create_post.html',
+                    form=form,
+                    post=post,
+                    extras=extras,
+                    experience_options=get_experience_options(),
+                )
+            except Exception as exc:
+                current_app.logger.exception('Failed to upload blog cover image (edit): %s', exc)
+                flash('We could not upload that image. Please try a different file.', 'danger')
+                return render_template(
+                    'admin/create_post.html',
+                    form=form,
+                    post=post,
+                    extras=extras,
+                    experience_options=get_experience_options(),
+                )
 
         post.title = form.title.data.strip()
         post.slug = slug_value
