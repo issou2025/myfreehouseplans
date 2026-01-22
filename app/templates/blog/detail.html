@@ -52,6 +52,7 @@
         {% set _recs = ns.recs[:3] %}
         {% set _has_recs = _recs and _recs|length > 0 %}
         {% set _faq = (_extras or {}).get('faq', []) %}
+        {% set _summary = post.meta_description or ((_extras or {}).get('seo', {}) or {}).get('meta_description') %}
 
         <article class="blog-article__main" itemscope itemtype="https://schema.org/Article">
             <header class="blog-article__header">
@@ -66,10 +67,6 @@
                     </button>
                 </div>
                 <div class="blog-share" role="group" aria-label="Share this article">
-                    <a class="blog-share__btn" href="{{ url_for('blog.download_pdf', slug=post.slug) }}" aria-label="Download this article as PDF">
-                        <i class="fa-regular fa-file-pdf" aria-hidden="true"></i>
-                        <span>PDF</span>
-                    </a>
                     <a class="blog-share__btn" href="#" data-share="twitter" target="_blank" rel="noopener noreferrer" aria-label="Share on X">
                         <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
                         <span>Share</span>
@@ -88,6 +85,18 @@
                     </button>
                 </div>
             </header>
+
+            {% if _summary %}
+                <div class="blog-article__summary" aria-label="Article summary">
+                    <div class="blog-article__summary-icon" aria-hidden="true">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div class="blog-article__summary-body">
+                        <p class="eyebrow">Quick summary</p>
+                        <p>{{ _summary }}</p>
+                    </div>
+                </div>
+            {% endif %}
 
             <div class="blog-author-bio">
                 <div class="blog-author-bio__avatar">
