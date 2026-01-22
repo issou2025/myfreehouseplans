@@ -3005,14 +3005,12 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 }
 
 .nav__select::after {
-	content: "\f078";
-	font-family: "Font Awesome 6 Free";
-	font-weight: 900;
+	content: "▼";
 	position: absolute;
 	right: 12px;
 	top: 50%;
 	transform: translateY(-50%);
-	color: var(--color-muted);
+	color: var(--color-primary);
 	pointer-events: none;
 }
 
@@ -3021,11 +3019,15 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 }
 
 .nav__select-label {
-	font-weight: 800;
-	letter-spacing: 0.08em;
+	font-weight: 900;
+	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	font-size: 0.72rem;
-	color: var(--color-soft);
+	font-size: 0.70rem;
+	color: #ffffff;
+	background: var(--gradient-primary);
+	border-radius: 999px;
+	padding: 6px 10px;
+	line-height: 1;
 }
 
 .nav__select-control {
@@ -3046,6 +3048,11 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 }
 
 .nav__group--tools .nav__stack { gap: 12px; }
+
+.nav__group--tools .nav__select {
+	border-color: rgba(31, 76, 228, 0.25);
+	background: rgba(31, 76, 228, 0.06);
+}
 
 .nav__tools-links {
 	display: grid;
