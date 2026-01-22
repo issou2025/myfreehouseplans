@@ -116,7 +116,8 @@
                         {# Desktop: compact spinner. Mobile: tap-friendly list (select dropdowns can be clipped in slide-in nav). #}
                         <div class="nav__select" data-tools-desktop>
                             <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
-                            <select id="toolsSpinner" class="nav__select-control" data-tools-spinner>
+                            <span class="nav__select-label" aria-hidden="true">Tools</span>
+                            <select id="toolsSpinner" class="nav__select-control" data-tools-spinner aria-label="Tools">
                                 <option value="{{ url_for('progress_intelligence.landing') }}" {% if tools_value == 'progress_intelligence' %}selected{% endif %}>Progress Intelligence</option>
                                 <option value="{{ url_for('main.favorites') }}" {% if tools_value == 'favorites' %}selected{% endif %}>Favorites</option>
                                 <option value="{{ url_for('main.compare') }}" {% if tools_value == 'compare' %}selected{% endif %}>Compare</option>
