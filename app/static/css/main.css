@@ -3026,6 +3026,15 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 
 .nav__group--tools .nav__stack { gap: 12px; }
 
+.nav__tools-links {
+	display: grid;
+	gap: 8px;
+}
+
+/* Mobile-first: show tap-friendly list, hide spinner */
+[data-tools-desktop] { display: none; }
+[data-tools-mobile] { display: grid; }
+
 .nav__cta {
 	margin-top: auto;
 	display: flex;
@@ -3126,6 +3135,8 @@ input[type="range"]:focus { outline: none; box-shadow: var(--shadow-ring); }
 	.nav__stack { flex-direction: row; gap: 6px; }
 	.nav__group--tools .nav__stack { flex-direction: column; }
 	.nav__select { min-width: 220px; }
+	[data-tools-desktop] { display: flex; }
+	[data-tools-mobile] { display: none; }
 	.nav a { padding: 10px 12px; min-height: auto; font-size: 0.93rem; transform: none; }
 	.nav a:hover,
 	.nav a.is-active { transform: none; }
