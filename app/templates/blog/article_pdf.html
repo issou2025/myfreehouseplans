@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }} | myfreehouseplans.com</title>
+  </head>
+
+  <body>
+    <div class="pdf-wrap">
+      <div class="watermark">www.myfreehouseplans.com</div>
+
+      <section class="cover layer">
+        <div class="brand">MYFREEHOUSEPLANS</div>
+        <h1>{{ title }}</h1>
+        <div class="meta">
+          <div>Website: www.myfreehouseplans.com</div>
+          <div>URL: {{ canonical_url }}</div>
+          <div>Published: {{ created_at.strftime('%Y-%m-%d') if created_at else '' }}</div>
+          <div>Generated: {{ generated_at.strftime('%Y-%m-%d %H:%M') }}</div>
+        </div>
+
+        {% if cover_image_uri %}
+          <div class="cover-image">
+            <img src="{{ cover_image_uri }}" alt="Cover image" />
+          </div>
+        {% endif %}
+      </section>
+
+      {% if toc and toc|length %}
+        <section class="toc layer">
+          <h2>Table of Contents</h2>
+          <ul>
+            {% for item in toc %}
+              <li>
+                <div class="toc-title">
+                  <a href="#{{ item.id }}">{{ item.title }}</a>
+                </div>
+                <div class="toc-level">{{ item.level|upper }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      <article class="article layer">
+        {{ content_html|safe }}
+      </article>
+
+      {% if faq and faq|length %}
+        <section class="layer keep-together">
+          <hr />
+          <h2>FAQ</h2>
+          {% for qa in faq %}
+            <div class="keep-together" style="margin-bottom: 10pt;">
+              <h3 style="margin: 0 0 4pt;">{{ qa.question }}</h3>
+              <p style="margin: 0;">{{ qa.answer }}</p>
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    </div>
+  </body>
+</html>

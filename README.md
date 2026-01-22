@@ -51,6 +51,16 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
+#### Optional: premium HTML-to-PDF
+
+The blog article “Download PDF” feature supports a premium HTML+CSS renderer when available.
+
+```bash
+pip install -r requirements_pdf.txt
+```
+
+If not installed (or not supported by your host OS), the app automatically falls back to the built-in ReportLab PDF generator.
+
 ### 3. Set Environment Variables
 
 Create a `.env` file in the root directory:

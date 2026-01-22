@@ -1,6 +1,8 @@
 """Blog Blueprint - Public and Admin Routes."""
 
 from io import BytesIO
+from datetime import datetime
+from pathlib import Path
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, send_file
 from flask_login import login_required, current_user
@@ -177,17 +179,57 @@ def download_pdf(slug):
         extras = {}
 
     canonical_url = url_for('blog.detail', slug=post.slug, _external=True)
-    pdf_bytes = build_article_pdf(
-        ArticlePdfInput(
-            title=post.title,
-            slug=post.slug,
-            created_at=post.created_at,
-            canonical_url=canonical_url,
-            content_html=post.content or '',
-            cover_image=post.cover_image,
-            extras=extras or {},
+
+    # Prefer HTML->PDF when available (WeasyPrint). Fall back to ReportLab.
+    pdf_bytes: bytes
+    try:
+        from app.services.blog.article_pdf_html import (
+            build_article_pdf_weasyprint,
+            build_toc_and_annotated_html,
+            static_file_uri,
         )
-    )
+
+        toc, annotated_html = build_toc_and_annotated_html(post.content or '')
+
+        cover_image_uri = None
+        if post.cover_image:
+            cover_str = str(post.cover_image).strip()
+            if cover_str.lower().startswith(('http://', 'https://', 'data:')):
+                cover_image_uri = cover_str
+            else:
+                cover_image_uri = static_file_uri(cover_str)
+
+        faq = (extras or {}).get('faq') or []
+        if not isinstance(faq, list):
+            faq = []
+
+        html = render_template(
+            'blog/article_pdf.html',
+            title=post.title,
+            canonical_url=canonical_url,
+            created_at=post.created_at,
+            generated_at=datetime.utcnow(),
+            toc=toc,
+            cover_image_uri=cover_image_uri,
+            content_html=annotated_html,
+            faq=faq,
+        )
+
+        css_path = Path(current_app.static_folder) / 'css' / 'pdf' / 'article.css'
+        pdf_bytes = build_article_pdf_weasyprint(html=html, stylesheets=[css_path])
+    except Exception as exc:
+        current_app.logger.warning('HTML-to-PDF failed; falling back to ReportLab: %s', exc)
+        pdf_bytes = build_article_pdf(
+            ArticlePdfInput(
+                title=post.title,
+                slug=post.slug,
+                created_at=post.created_at,
+                canonical_url=canonical_url,
+                content_html=post.content or '',
+                cover_image=post.cover_image,
+                extras=extras or {},
+            )
+        )
 
     safe_name = f"{post.slug}.pdf"
     return send_file(

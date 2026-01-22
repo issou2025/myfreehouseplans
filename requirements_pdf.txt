@@ -1,0 +1,5 @@
+# Optional HTML-to-PDF rendering (premium article PDFs)
+#
+# WeasyPrint may require native system dependencies (varies by OS / hosting).
+# Install only if your environment supports it.
+weasyprint==61.2
