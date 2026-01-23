@@ -308,7 +308,7 @@
                         </div>
                     </div>
 
-                    <details style="margin-top: 1rem;">
+                    <details>
                         <summary class="form-card__summary">Advanced SEO overrides (optional, non-DB)</summary>
                         {% set _seo = (extras or {}).get('seo', {}) if extras is defined else {} %}
                         <div class="form-grid form-grid--2" style="margin-top: .75rem;">
@@ -353,6 +353,40 @@
                             </select>
                             <p class="form-help">If set, the article will show a gentle call‑to‑action back to that check. If empty, no link is shown.</p>
                         </div>
+                    </details>
+
+                    <details>
+                        <summary class="form-card__summary">Tool linking (optional)</summary>
+                        {% set _tool_links = (extras or {}).get('tool_links', []) if extras is defined else [] %}
+                        <p class="form-help">Link this article to one or more planning tools. These links appear on the article and on the tool page.</p>
+                        {% for idx in range(1, 4) %}
+                            {% set _item = (_tool_links[idx-1] if _tool_links|length >= idx else {}) %}
+                            <div class="form-card form-card--nested">
+                                <div class="form-grid form-grid--2">
+                                    <div class="form-group">
+                                        <label class="form-label" for="extras__tool_key_{{ idx }}">Tool</label>
+                                        <select class="form-input" id="extras__tool_key_{{ idx }}" name="extras__tool_key_{{ idx }}">
+                                            <option value="" {% if not _item.get('tool_key') %}selected{% endif %}>No tool</option>
+                                            {% for opt in (tool_options or []) %}
+                                                <option value="{{ opt[0] }}" {% if _item.get('tool_key') == opt[0] %}selected{% endif %}>{{ opt[1] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="extras__tool_cta_{{ idx }}">CTA label (optional)</label>
+                                        <input class="form-input" id="extras__tool_cta_{{ idx }}" name="extras__tool_cta_{{ idx }}" value="{{ _item.get('cta_label','') }}" placeholder="Open tool">
+                                    </div>
+                                    <div class="form-group form-group--full">
+                                        <label class="form-label" for="extras__tool_title_{{ idx }}">Tool headline (optional)</label>
+                                        <input class="form-input" id="extras__tool_title_{{ idx }}" name="extras__tool_title_{{ idx }}" value="{{ _item.get('title','') }}" placeholder="Apply this to your plan">
+                                    </div>
+                                    <div class="form-group form-group--full">
+                                        <label class="form-label" for="extras__tool_body_{{ idx }}">Short explanation (optional)</label>
+                                        <textarea class="form-textarea" id="extras__tool_body_{{ idx }}" name="extras__tool_body_{{ idx }}" rows="2" placeholder="Explain why this tool helps for this article.">{{ _item.get('body','') }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </details>
                 </details>
 

@@ -267,6 +267,33 @@ def _normalize_media(value: Any) -> Dict[str, Any]:
     return out
 
 
+def _normalize_tool_links(value: Any) -> List[Dict[str, Any]]:
+    if not value:
+        return []
+    if not isinstance(value, list):
+        return []
+
+    items: List[Dict[str, Any]] = []
+    for raw in value[:10]:
+        if not isinstance(raw, dict):
+            continue
+        tool_key = _clean_str(raw.get("tool_key"), max_len=120)
+        title = _clean_str(raw.get("title"), max_len=160)
+        body = _clean_str(raw.get("body"), max_len=800)
+        cta = _clean_str(raw.get("cta_label"), max_len=60)
+        if not tool_key:
+            continue
+        payload = {"tool_key": tool_key}
+        if title:
+            payload["title"] = title
+        if body:
+            payload["body"] = body
+        if cta:
+            payload["cta_label"] = cta
+        items.append(payload)
+    return items
+
+
 def normalize_article_extras(extras: Any) -> Dict[str, Any]:
     """Return a defensive, backward-compatible extras dict.
 
@@ -369,6 +396,14 @@ def normalize_article_extras(extras: Any) -> Dict[str, Any]:
 
     if media:
         normalized["media"] = media
+
+    # tool links
+    try:
+        tool_links = _normalize_tool_links(extras.get("tool_links"))
+        if tool_links:
+            normalized["tool_links"] = tool_links
+    except Exception:
+        pass
 
     return normalized
 
@@ -524,6 +559,35 @@ def extract_article_extras_from_form(form: Any) -> Dict[str, Any]:
     except Exception:
         try:
             current_app.logger.exception("Failed to parse media extras")
+        except Exception:
+            pass
+
+    # Tool links (up to 3)
+    try:
+        tool_links: List[Dict[str, Any]] = []
+        for idx in range(1, 4):
+            tool_key = _clean_str(form.get(f"extras__tool_key_{idx}"), max_len=120)
+            title = _clean_str(form.get(f"extras__tool_title_{idx}"), max_len=160)
+            body = _clean_str(form.get(f"extras__tool_body_{idx}"), max_len=800)
+            cta = _clean_str(form.get(f"extras__tool_cta_{idx}"), max_len=60)
+            if not tool_key:
+                continue
+            payload = {"tool_key": tool_key}
+            if title:
+                payload["title"] = title
+            if body:
+                payload["body"] = body
+            if cta:
+                payload["cta_label"] = cta
+            tool_links.append(payload)
+
+        if full_mode:
+            extras["tool_links"] = tool_links
+        elif tool_links:
+            extras["tool_links"] = tool_links
+    except Exception:
+        try:
+            current_app.logger.exception("Failed to parse tool link extras")
         except Exception:
             pass
 

@@ -22,6 +22,7 @@ from app.utils.article_extras import (
     normalize_article_extras,
     save_article_extras,
 )
+from app.utils.tool_links import get_tool_options, resolve_tool_link
 from app.services.blog.article_pdf import ArticlePdfInput, build_article_pdf
 
 blog_bp = Blueprint('blog', __name__)
@@ -156,6 +157,23 @@ def detail(slug):
     except Exception:
         related_experience = None
 
+    tool_links = []
+    try:
+        for item in (extras or {}).get('tool_links', []) or []:
+            tool_key = (item or {}).get('tool_key')
+            tool = resolve_tool_link(tool_key)
+            if not tool:
+                continue
+            tool_links.append({
+                'key': tool.get('key'),
+                'label': item.get('title') or tool.get('label'),
+                'body': item.get('body') or tool.get('description'),
+                'cta': item.get('cta_label') or 'Open tool',
+                'href': f"{tool.get('href')}?article={post.slug}",
+            })
+    except Exception:
+        tool_links = []
+
     popular_plans = HousePlan.query.filter_by(is_published=True).order_by(HousePlan.views_count.desc()).limit(4).all()
 
     return render_template(
@@ -165,6 +183,7 @@ def detail(slug):
         meta=meta,
         extras=extras,
         related_experience=related_experience,
+        tool_links=tool_links,
     )
 
 
@@ -270,6 +289,7 @@ def create():
                     form=form,
                     extras=extras,
                     experience_options=get_experience_options(),
+                    tool_options=get_tool_options(),
                 )
             except Exception as exc:
                 current_app.logger.exception('Failed to upload blog cover image (create): %s', exc)
@@ -279,6 +299,7 @@ def create():
                     form=form,
                     extras=extras,
                     experience_options=get_experience_options(),
+                    tool_options=get_tool_options(),
                 )
 
         post = BlogPost(
@@ -316,6 +337,7 @@ def create():
         form=form,
         extras=extras,
         experience_options=get_experience_options(),
+        tool_options=get_tool_options(),
     )
 
 
@@ -378,6 +400,7 @@ def edit(post_id):
                     post=post,
                     extras=extras,
                     experience_options=get_experience_options(),
+                    tool_options=get_tool_options(),
                 )
             except Exception as exc:
                 current_app.logger.exception('Failed to upload blog cover image (edit): %s', exc)
@@ -388,6 +411,7 @@ def edit(post_id):
                     post=post,
                     extras=extras,
                     experience_options=get_experience_options(),
+                    tool_options=get_tool_options(),
                 )
 
         post.title = form.title.data.strip()
@@ -423,6 +447,7 @@ def edit(post_id):
         post=post,
         extras=extras,
         experience_options=get_experience_options(),
+        tool_options=get_tool_options(),
     )
 
 

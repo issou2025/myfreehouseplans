@@ -7,6 +7,8 @@ from flask import flash, render_template, request, url_for
 from app.domain.area_calculator import CalculatorInput, calculate_house_area
 from app.models import BlogPost, HousePlan
 from app.seo import generate_meta_tags
+from app.utils.article_extras import load_article_extras, normalize_article_extras
+from app.utils.tool_links import resolve_tool_link
 from . import area_calculator_bp
 
 
@@ -51,8 +53,12 @@ def index():
             for msg in errors:
                 flash(msg, 'warning')
 
+    tool_key = 'house-area-calculator'
+    article_slug = request.args.get('article') or request.args.get('from_article')
+
     recommended_plans = _recommended_plans(result)
-    recommended_articles = _recommended_articles()
+    recommended_articles = _recommended_articles(tool_key=tool_key)
+    article_context = _article_context(article_slug, tool_key=tool_key)
 
     meta = generate_meta_tags(
         title='House Area Calculator',
@@ -66,6 +72,7 @@ def index():
         result=result,
         recommended_plans=recommended_plans,
         recommended_articles=recommended_articles,
+        article_context=article_context,
         meta=meta,
     )
 
@@ -97,14 +104,82 @@ def _recommended_plans(result):
         return []
 
 
-def _recommended_articles():
+def _recommended_articles(*, tool_key: str):
     try:
-        return (
+        posts = (
             BlogPost.query
             .filter_by(status=BlogPost.STATUS_PUBLISHED)
             .order_by(BlogPost.created_at.desc())
-            .limit(4)
+            .limit(12)
             .all()
         )
     except Exception:
         return []
+
+    related = []
+    for post in posts:
+        try:
+            extras = normalize_article_extras(load_article_extras(slug=post.slug, post_id=post.id))
+        except Exception:
+            extras = {}
+        tool_links = (extras or {}).get('tool_links') or []
+        match = next((item for item in tool_links if item.get('tool_key') == tool_key), None)
+        if match:
+            related.append({
+                'post': post,
+                'title': match.get('title') or post.title,
+                'body': match.get('body') or post.meta_description or '',
+            })
+        if len(related) >= 4:
+            break
+
+    if related:
+        return related
+
+    try:
+        return [
+            {
+                'post': post,
+                'title': post.title,
+                'body': post.meta_description or '',
+            }
+            for post in (
+                BlogPost.query
+                .filter_by(status=BlogPost.STATUS_PUBLISHED)
+                .order_by(BlogPost.created_at.desc())
+                .limit(4)
+                .all()
+            )
+        ]
+    except Exception:
+        return []
+
+
+def _article_context(article_slug: Optional[str], *, tool_key: str):
+    if not article_slug:
+        return None
+    try:
+        post = BlogPost.query.filter_by(slug=article_slug, status=BlogPost.STATUS_PUBLISHED).first()
+    except Exception:
+        post = None
+    if not post:
+        return None
+
+    try:
+        extras = normalize_article_extras(load_article_extras(slug=post.slug, post_id=post.id))
+    except Exception:
+        extras = {}
+
+    tool_links = (extras or {}).get('tool_links') or []
+    match = next((item for item in tool_links if item.get('tool_key') == tool_key), None)
+    tool = resolve_tool_link(tool_key)
+    if not tool:
+        return None
+
+    return {
+        'post': post,
+        'title': match.get('title') if match else None,
+        'body': match.get('body') if match else None,
+        'cta': match.get('cta_label') if match else None,
+        'tool': tool,
+    }

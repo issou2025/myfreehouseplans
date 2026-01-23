@@ -44,6 +44,44 @@ class LandRow:
 
 
 @dataclass(frozen=True)
+class SummaryCard:
+    label: str
+    value: str
+    helper: str
+
+
+@dataclass(frozen=True)
+class Recommendation:
+    title: str
+    detail: str
+    tone: str
+
+
+@dataclass(frozen=True)
+class Insight:
+    title: str
+    body: str
+    tone: str
+
+
+@dataclass(frozen=True)
+class AlternativeOption:
+    label: str
+    description: str
+    gross_area: float
+    net_area: float
+    bedrooms: int
+    bathrooms: int
+    circulation_ratio: float
+
+
+@dataclass(frozen=True)
+class FaqItem:
+    question: str
+    answer: str
+
+
+@dataclass(frozen=True)
 class CalculationResult:
     bedrooms: list[TableRow]
     living_day: list[TableRow]
@@ -52,8 +90,15 @@ class CalculationResult:
     circulation: list[CirculationRow]
     totals: list[TotalRow]
     land: list[LandRow]
-    recommendations: list[str]
-    summary: dict[str, float | int | str]
+    recommendations: list[Recommendation]
+    summary_cards: list[SummaryCard]
+    insights: list[Insight]
+    warnings: list[Insight]
+    tradeoffs: list[Insight]
+    alternatives: list[AlternativeOption]
+    next_steps: list[str]
+    faq: list[FaqItem]
+    summary: dict[str, float | int | str | None]
 
 
 # ---- Rule constants (named for clarity, not magic numbers) ----
@@ -171,13 +216,7 @@ def calculate_house_area(data: CalculatorInput) -> CalculationResult:
     ]
 
     land_rows = _land_rows(data.land_size, gross_area, data.layout)
-    recommendations = _recommendations(
-        occupants=occupants,
-        bedrooms=bedrooms_count,
-        land_size=data.land_size,
-        layout=data.layout,
-        gross_area=gross_area,
-    )
+    land_metrics = _land_metrics(data.land_size, gross_area, data.layout)
 
     summary = {
         'bedrooms': bedrooms_count,
@@ -187,7 +226,20 @@ def calculate_house_area(data: CalculatorInput) -> CalculationResult:
         'gross_area': gross_area,
         'circulation_ratio': circulation_ratio,
         'gross_multiplier': gross_multiplier,
+        'occupants': occupants,
+        'layout': data.layout,
+        'land_size': data.land_size or 0,
+        'land_coverage': land_metrics.get('coverage'),
+        'footprint': land_metrics.get('footprint'),
+        'comfort_level': data.comfort_level,
     }
+
+    summary_cards = _summary_cards(summary)
+    recommendations = _recommendations(summary)
+    insights, warnings, tradeoffs = _interpretation(summary)
+    alternatives = _alternatives(summary)
+    next_steps = _next_steps(summary)
+    faq = _faq(summary)
 
     return CalculationResult(
         bedrooms=bedrooms_rows,
@@ -198,6 +250,13 @@ def calculate_house_area(data: CalculatorInput) -> CalculationResult:
         totals=totals_rows,
         land=land_rows,
         recommendations=recommendations,
+        summary_cards=summary_cards,
+        insights=insights,
+        warnings=warnings,
+        tradeoffs=tradeoffs,
+        alternatives=alternatives,
+        next_steps=next_steps,
+        faq=faq,
         summary=summary,
     )
 
@@ -251,6 +310,23 @@ def _growth_buffer(occupants: int, future_growth: str) -> float:
     return 0.0
 
 
+def _land_metrics(land_size: Optional[int], gross_area: float, layout: str) -> dict[str, float | None]:
+    if not land_size:
+        return {'coverage': None, 'footprint': None}
+
+    footprint_single = gross_area
+    footprint_two = gross_area / 2
+    if layout == 'two_storey':
+        footprint = footprint_two
+    elif layout == 'single_storey':
+        footprint = footprint_single
+    else:
+        footprint = min(footprint_single, footprint_two)
+
+    coverage = footprint / land_size
+    return {'coverage': coverage, 'footprint': footprint}
+
+
 def _land_rows(land_size: Optional[int], gross_area: float, layout: str) -> list[LandRow]:
     if not land_size:
         return [
@@ -285,29 +361,254 @@ def _land_rows(land_size: Optional[int], gross_area: float, layout: str) -> list
     ]
 
 
-def _recommendations(*, occupants: int, bedrooms: int, land_size: Optional[int], layout: str, gross_area: float) -> list[str]:
-    tips: list[str] = []
+def _summary_cards(summary: dict[str, float | int | str]) -> list[SummaryCard]:
+    bedrooms = int(summary.get('bedrooms', 0) or 0)
+    bathrooms = int(summary.get('bathrooms', 0) or 0)
+    net_area = float(summary.get('net_area', 0.0) or 0.0)
+    gross_area = float(summary.get('gross_area', 0.0) or 0.0)
+    circulation_ratio = float(summary.get('circulation_ratio', 0.0) or 0.0)
 
-    if occupants >= 5 and bedrooms < 3:
-        tips.append('Consider at least three bedrooms so daily life can stay quiet for larger households.')
+    cards = [
+        SummaryCard('Bedrooms', f"{bedrooms}", 'Sleeping rooms sized for your household.'),
+        SummaryCard('Bathrooms', f"{bathrooms}", 'Full bathrooms; WCs are listed separately.'),
+        SummaryCard('Net living area', f"{_r(net_area)} m²", 'Room-only area before circulation.'),
+        SummaryCard('Gross built area', f"{_r(gross_area)} m²", 'Includes circulation and construction allowance.'),
+        SummaryCard('Circulation share', f"{int(circulation_ratio * 100)}%", 'Hallways and movement space.'),
+    ]
 
-    if land_size:
-        footprint = gross_area if layout != 'two_storey' else gross_area / 2
-        coverage = footprint / land_size
-        if coverage >= 0.6:
-            tips.append('Your estimated footprint is dense for the land size. A two-storey layout can protect outdoor comfort.')
-        elif coverage >= 0.5:
-            tips.append('Your footprint is approaching the comfort limit. Keep outdoor breathing space for light and airflow.')
-        else:
-            tips.append('Your land size supports the footprint with room for outdoor living and daylight access.')
+    coverage = summary.get('land_coverage')
+    if isinstance(coverage, (int, float)):
+        cards.append(SummaryCard('Land coverage', f"{coverage * 100:.0f}%", 'Estimated footprint share of the site.'))
+
+    return cards
+
+
+def _recommendations(summary: dict[str, float | int | str]) -> list[Recommendation]:
+    tips: list[Recommendation] = []
+
+    occupants = int(summary.get('occupants', 0) or 0)
+    bedrooms = int(summary.get('bedrooms', 0) or 0)
+    bathrooms = int(summary.get('bathrooms', 0) or 0)
+    coverage = summary.get('land_coverage')
+    layout = str(summary.get('layout', 'no_preference'))
+
+    if occupants >= 5 and bathrooms < 2:
+        tips.append(
+            Recommendation(
+                'Add a second full bathroom',
+                'Larger households benefit from parallel morning routines and quieter shared use.',
+                'caution',
+            )
+        )
+
+    if bedrooms < max(2, ceil(occupants / 2)):
+        tips.append(
+            Recommendation(
+                'Consider one more bedroom',
+                'A buffer room preserves privacy as household routines overlap.',
+                'neutral',
+            )
+        )
+
+    if isinstance(coverage, (int, float)):
+        if coverage >= 0.45 and layout != 'two_storey':
+            tips.append(
+                Recommendation(
+                    'Explore a two-storey option',
+                    'Reducing the footprint keeps outdoor space breathable and improves daylight access.',
+                    'caution',
+                )
+            )
+        elif coverage < 0.35:
+            tips.append(
+                Recommendation(
+                    'You have flexibility on the site',
+                    'Low coverage allows courtyards, terraces, or future expansion without crowding.',
+                    'positive',
+                )
+            )
     else:
-        tips.append('Add land size to verify the footprint and outdoor comfort ratio.')
-
-    tips.append('Match plans with similar bedroom counts and total area to reduce redesign effort.')
-    tips.append('Try the Space Planner tools to validate key rooms before finalizing the plan.')
-    tips.append('Use a cost or material estimator after you confirm the program size.')
+        tips.append(
+            Recommendation(
+                'Confirm land size to validate the footprint',
+                'Site coverage is the key check that prevents a house from feeling too dense.',
+                'neutral',
+            )
+        )
 
     return tips
+
+
+def _interpretation(summary: dict[str, float | int | str]) -> tuple[list[Insight], list[Insight], list[Insight]]:
+    insights: list[Insight] = []
+    warnings: list[Insight] = []
+    tradeoffs: list[Insight] = []
+
+    occupants = int(summary.get('occupants', 0) or 0)
+    gross_area = float(summary.get('gross_area', 0.0) or 0.0)
+    net_area = float(summary.get('net_area', 0.0) or 0.0)
+    coverage = summary.get('land_coverage')
+    circulation_ratio = float(summary.get('circulation_ratio', 0.0) or 0.0)
+    comfort = str(summary.get('comfort_level', 'standard'))
+
+    if occupants:
+        area_per_person = gross_area / max(1, occupants)
+        if area_per_person < 22:
+            warnings.append(
+                Insight(
+                    'This is a compact program',
+                    'Your total area per person is on the compact side. Expect efficient spaces and less storage.',
+                    'caution',
+                )
+            )
+        elif area_per_person > 35:
+            insights.append(
+                Insight(
+                    'You have comfortable breathing room',
+                    'The area per person allows flexible furniture layouts and long-term adaptability.',
+                    'positive',
+                )
+            )
+
+    if isinstance(coverage, (int, float)):
+        if coverage >= 0.5:
+            warnings.append(
+                Insight(
+                    'Outdoor space will feel tight',
+                    'A high site coverage limits gardens, daylight, and airflow. Consider a multi-storey option.',
+                    'caution',
+                )
+            )
+        elif coverage <= 0.3:
+            insights.append(
+                Insight(
+                    'The site has generous breathing space',
+                    'You can preserve outdoor comfort or plan for future extensions without crowding.',
+                    'positive',
+                )
+            )
+    else:
+        insights.append(
+            Insight(
+                'Land size will refine this result',
+                'Adding land size turns the program into a real-world footprint check.',
+                'neutral',
+            )
+        )
+
+    if circulation_ratio >= 0.17:
+        tradeoffs.append(
+            Insight(
+                'Circulation is relatively high',
+                'Complex layouts feel spacious but use more area for hallways and transitions.',
+                'neutral',
+            )
+        )
+
+    if comfort == 'high':
+        insights.append(
+            Insight(
+                'High comfort means future flexibility',
+                'Rooms scale up to handle changing routines without renovations.',
+                'positive',
+            )
+        )
+
+    if net_area <= 0.0:
+        warnings.append(
+            Insight(
+                'We need more information',
+                'Complete the form to calculate a reliable program and guidance.',
+                'caution',
+            )
+        )
+
+    return insights, warnings, tradeoffs
+
+
+def _alternatives(summary: dict[str, float | int | str]) -> list[AlternativeOption]:
+    gross_area = float(summary.get('gross_area', 0.0) or 0.0)
+    net_area = float(summary.get('net_area', 0.0) or 0.0)
+    bedrooms = int(summary.get('bedrooms', 0) or 0)
+    bathrooms = int(summary.get('bathrooms', 0) or 0)
+    circulation_ratio = float(summary.get('circulation_ratio', 0.0) or 0.0)
+
+    if gross_area <= 0 or net_area <= 0:
+        return []
+
+    return [
+        AlternativeOption(
+            'Compact',
+            'Reduce room sizes slightly to protect budget and footprint.',
+            _r(gross_area * 0.92),
+            _r(net_area * 0.92),
+            bedrooms,
+            bathrooms,
+            circulation_ratio,
+        ),
+        AlternativeOption(
+            'Standard',
+            'Balanced program that fits the inputs you provided.',
+            _r(gross_area),
+            _r(net_area),
+            bedrooms,
+            bathrooms,
+            circulation_ratio,
+        ),
+        AlternativeOption(
+            'Spacious',
+            'Adds flexibility for storage, guests, and long-term comfort.',
+            _r(gross_area * 1.08),
+            _r(net_area * 1.08),
+            bedrooms,
+            bathrooms,
+            circulation_ratio,
+        ),
+    ]
+
+
+def _next_steps(summary: dict[str, float | int | str]) -> list[str]:
+    bedrooms = int(summary.get('bedrooms', 0) or 0)
+    gross_area = float(summary.get('gross_area', 0.0) or 0.0)
+    steps = [
+        f"Compare plans around {bedrooms} bedrooms and ~{_r(gross_area)} m² gross area.",
+        'Validate key rooms with the Space Planner tools before final design work.',
+        'Use your program as input for a cost or material estimate to align budget expectations.',
+    ]
+    return steps
+
+
+def _faq(summary: dict[str, float | int | str]) -> list[FaqItem]:
+    bedrooms = int(summary.get('bedrooms', 0) or 0)
+    bathrooms = int(summary.get('bathrooms', 0) or 0)
+    circulation_ratio = float(summary.get('circulation_ratio', 0.0) or 0.0)
+    gross_multiplier = float(summary.get('gross_multiplier', 0.0) or 0.0)
+    land_size = int(summary.get('land_size', 0) or 0)
+
+    faqs = [
+        FaqItem(
+            'Why does circulation take space?',
+            f"Circulation covers hallways and internal movement. In this program it is about {int(circulation_ratio * 100)}% of net area.",
+        ),
+        FaqItem(
+            'What is the difference between net and gross area?',
+            f"Net area totals rooms only. Gross area adds walls and construction allowance using a multiplier of {gross_multiplier:.2f}.",
+        ),
+        FaqItem(
+            'How many bedrooms does this program assume?',
+            f"The program targets {bedrooms} bedrooms and {bathrooms} full bathrooms based on household size.",
+        ),
+    ]
+
+    if land_size > 0:
+        faqs.append(
+            FaqItem(
+                'Is the footprint compatible with the land?',
+                'Yes, the land compatibility table checks your estimated footprint against the site size to protect outdoor comfort.',
+            )
+        )
+
+    return faqs
 
 
 def _clamp(value: float, min_value: float, max_value: float) -> float:

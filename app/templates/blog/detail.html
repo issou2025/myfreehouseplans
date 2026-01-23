@@ -126,6 +126,24 @@
                 </section>
             {% endif %}
 
+            {% if tool_links %}
+                <section class="blog-cta blog-tool-links" aria-label="Apply this with a planning tool">
+                    <div class="blog-cta__content">
+                        <p class="eyebrow"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Helpful tools</p>
+                        <h2 class="blog-tool-links__title">Turn this article into a plan</h2>
+                        <div class="blog-tool-links__grid">
+                            {% for tool in tool_links %}
+                                <div class="blog-tool-links__card">
+                                    <h3>{{ tool.label }}</h3>
+                                    <p class="blog-tool-links__desc">{{ tool.body }}</p>
+                                    <a class="btn btn-primary" href="{{ tool.href }}">{{ tool.cta }}</a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
             {% if post.cover_image %}
                 <figure class="blog-article__cover">
                     <img src="{{ upload_url(post.cover_image) }}" alt="{{ post.title }}" loading="lazy" decoding="async" itemprop="image">

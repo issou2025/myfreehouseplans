@@ -6,6 +6,29 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/area_calculator.css') }}">
 {% endblock %}
 
+{% block structured_data %}
+  {% if result and result.faq %}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {% for item in result.faq %}
+          {
+            "@type": "Question",
+            "name": {{ item.question|tojson }},
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": {{ item.answer|tojson }}
+            }
+          }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ]
+      }
+    </script>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="shell area-hero">
   <div class="area-hero__content">
@@ -135,210 +158,319 @@
   </div>
 </section>
 
-<section class="shell area-section" aria-label="Calculator results">
-  <h2>Results (structured tables)</h2>
+{% if article_context %}
+  <section class="shell area-section" aria-label="Context from article">
+    <div class="area-card area-card--context">
+      <p class="eyebrow">From the article</p>
+      <h2>{{ article_context.title or 'Use this calculator with confidence' }}</h2>
+      <p class="lead">{{ article_context.body or 'This calculator turns the article guidance into a clear room-by-room program.' }}</p>
+      <div class="area-actions">
+        <a class="btn btn-secondary" href="{{ url_for('blog.detail', slug=article_context.post.slug) }}">Back to the article</a>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+<section class="shell area-section" aria-label="Results overview">
+  <h2>Results overview</h2>
   <p>
-    The tables below summarize the room program that matches your inputs. Each space is sized in square meters and tied
-    to a transparent formula. If you need to share the results with a professional, these tables provide the right
-    structure to begin schematic planning.
+    Start with the high-level numbers first. These summarize the size, room count, and circulation allowance so you can
+    decide if the program feels compact, balanced, or spacious before diving into the detailed tables.
+  </p>
+
+  {% if result %}
+    <div class="area-summary-grid">
+      {% for card in result.summary_cards %}
+        <div class="area-card area-card--metric">
+          <div class="area-metric__label">{{ card.label }}</div>
+          <div class="area-metric__value">{{ card.value }}</div>
+          <div class="area-metric__helper">{{ card.helper }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="note">Complete the form to generate your results summary.</p>
+  {% endif %}
+</section>
+
+<section class="shell area-section" aria-label="What this means for you">
+  <h2>What this means for you</h2>
+  <p>These notes interpret the results in everyday language so you can plan with confidence.</p>
+
+  {% if result %}
+    <div class="area-callouts">
+      {% for insight in result.insights %}
+        <div class="area-callout area-callout--{{ insight.tone }}">
+          <h3>{{ insight.title }}</h3>
+          <p>{{ insight.body }}</p>
+        </div>
+      {% endfor %}
+      {% for warning in result.warnings %}
+        <div class="area-callout area-callout--{{ warning.tone }}">
+          <h3>{{ warning.title }}</h3>
+          <p>{{ warning.body }}</p>
+        </div>
+      {% endfor %}
+      {% for tradeoff in result.tradeoffs %}
+        <div class="area-callout area-callout--{{ tradeoff.tone }}">
+          <h3>{{ tradeoff.title }}</h3>
+          <p>{{ tradeoff.body }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="note">Submit the form to receive human-readable guidance.</p>
+  {% endif %}
+</section>
+
+<section class="shell area-section" aria-label="Alternative sizing options">
+  <h2>Alternative sizing options</h2>
+  <p>Use these as a quick decision set if you want to adjust comfort or footprint without changing the room count.</p>
+
+  {% if result and result.alternatives %}
+    <div class="area-alternatives">
+      {% for option in result.alternatives %}
+        <div class="area-card area-card--option">
+          <h3>{{ option.label }}</h3>
+          <p class="note">{{ option.description }}</p>
+          <div class="area-option-grid">
+            <div><span class="area-option__label">Gross area</span><strong>{{ option.gross_area }} m²</strong></div>
+            <div><span class="area-option__label">Net area</span><strong>{{ option.net_area }} m²</strong></div>
+            <div><span class="area-option__label">Bedrooms</span><strong>{{ option.bedrooms }}</strong></div>
+            <div><span class="area-option__label">Bathrooms</span><strong>{{ option.bathrooms }}</strong></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="note">Alternatives appear after your first calculation.</p>
+  {% endif %}
+</section>
+
+<section class="shell area-section" aria-label="Detailed breakdown">
+  <h2>Detailed breakdown</h2>
+  <p>
+    The tables below show the full room program. Each table is labeled so it stays readable on mobile without
+    horizontal scrolling.
   </p>
 
   <div class="area-results">
-    <div class="area-table">
-      <h3>Bedrooms</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Room Type</th>
-            <th>Quantity</th>
-            <th>Area per Room (m²)</th>
-            <th>Total Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.bedrooms %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.quantity }}</td>
-                <td>{{ row.area_each }}</td>
-                <td>{{ row.total_area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail" {% if result %}open{% endif %}>
+      <summary>Bedrooms</summary>
+      <div class="area-table">
+        <table>
+          <caption>Bedroom sizing based on occupants and comfort level.</caption>
+          <thead>
             <tr>
-              <td colspan="4">Complete the form to calculate bedroom sizes.</td>
+              <th>Room Type</th>
+              <th>Quantity</th>
+              <th>Area per Room (m²)</th>
+              <th>Total Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.bedrooms %}
+                <tr>
+                  <td data-label="Room Type">{{ row.label }}</td>
+                  <td data-label="Quantity">{{ row.quantity }}</td>
+                  <td data-label="Area per Room">{{ row.area_each }}</td>
+                  <td data-label="Total Area">{{ row.total_area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4">Complete the form to calculate bedroom sizes.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Living and Day Spaces</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Space</th>
-            <th>Quantity</th>
-            <th>Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.living_day %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.quantity }}</td>
-                <td>{{ row.total_area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail" {% if result %}open{% endif %}>
+      <summary>Living and day spaces</summary>
+      <div class="area-table">
+        <table>
+          <caption>Living, kitchen, and dining areas scaled by household size.</caption>
+          <thead>
             <tr>
-              <td colspan="3">Complete the form to calculate day-space areas.</td>
+              <th>Space</th>
+              <th>Quantity</th>
+              <th>Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.living_day %}
+                <tr>
+                  <td data-label="Space">{{ row.label }}</td>
+                  <td data-label="Quantity">{{ row.quantity }}</td>
+                  <td data-label="Area">{{ row.total_area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="3">Complete the form to calculate day-space areas.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Additional Rooms</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Space</th>
-            <th>Quantity</th>
-            <th>Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result and result.additional %}
-            {% for row in result.additional %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.quantity }}</td>
-                <td>{{ row.total_area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail">
+      <summary>Additional rooms</summary>
+      <div class="area-table">
+        <table>
+          <caption>Optional rooms and flex space chosen in the form.</caption>
+          <thead>
             <tr>
-              <td colspan="3">Optional rooms will appear here.</td>
+              <th>Space</th>
+              <th>Quantity</th>
+              <th>Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result and result.additional %}
+              {% for row in result.additional %}
+                <tr>
+                  <td data-label="Space">{{ row.label }}</td>
+                  <td data-label="Quantity">{{ row.quantity }}</td>
+                  <td data-label="Area">{{ row.total_area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="3">Optional rooms will appear here.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Sanitary Spaces</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Space</th>
-            <th>Quantity</th>
-            <th>Area per Unit (m²)</th>
-            <th>Total Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.sanitary %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.quantity }}</td>
-                <td>{{ row.area_each }}</td>
-                <td>{{ row.total_area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail">
+      <summary>Sanitary spaces</summary>
+      <div class="area-table">
+        <table>
+          <caption>Bathroom and WC sizing for daily routines.</caption>
+          <thead>
             <tr>
-              <td colspan="4">Sanitary sizing will appear here.</td>
+              <th>Space</th>
+              <th>Quantity</th>
+              <th>Area per Unit (m²)</th>
+              <th>Total Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.sanitary %}
+                <tr>
+                  <td data-label="Space">{{ row.label }}</td>
+                  <td data-label="Quantity">{{ row.quantity }}</td>
+                  <td data-label="Area per Unit">{{ row.area_each }}</td>
+                  <td data-label="Total Area">{{ row.total_area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4">Sanitary sizing will appear here.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Circulation</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Element</th>
-            <th>Calculation Method</th>
-            <th>Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.circulation %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.method }}</td>
-                <td>{{ row.area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail">
+      <summary>Circulation</summary>
+      <div class="area-table">
+        <table>
+          <caption>Movement and transition space based on rooms and occupants.</caption>
+          <thead>
             <tr>
-              <td colspan="3">Circulation results will appear here.</td>
+              <th>Element</th>
+              <th>Calculation Method</th>
+              <th>Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.circulation %}
+                <tr>
+                  <td data-label="Element">{{ row.label }}</td>
+                  <td data-label="Method">{{ row.method }}</td>
+                  <td data-label="Area">{{ row.area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="3">Circulation results will appear here.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Total Areas</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Area (m²)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.totals %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.area }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail" {% if result %}open{% endif %}>
+      <summary>Total areas</summary>
+      <div class="area-table">
+        <table>
+          <caption>Net, circulation, and gross area totals.</caption>
+          <thead>
             <tr>
-              <td colspan="2">Total areas will appear here.</td>
+              <th>Category</th>
+              <th>Area (m²)</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.totals %}
+                <tr class="area-row--total">
+                  <td data-label="Category">{{ row.label }}</td>
+                  <td data-label="Area">{{ row.area }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="2">Total areas will appear here.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
 
-    <div class="area-table">
-      <h3>Land Compatibility</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Parameter</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if result %}
-            {% for row in result.land %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.value }}</td>
-              </tr>
-            {% endfor %}
-          {% else %}
+    <details class="area-detail">
+      <summary>Land compatibility</summary>
+      <div class="area-table">
+        <table>
+          <caption>Footprint and site coverage insights based on your land size.</caption>
+          <thead>
             <tr>
-              <td colspan="2">Provide land size to evaluate footprint compatibility.</td>
+              <th>Parameter</th>
+              <th>Value</th>
             </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in result.land %}
+                <tr>
+                  <td data-label="Parameter">{{ row.label }}</td>
+                  <td data-label="Value">{{ row.value }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="2">Provide land size to evaluate footprint compatibility.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -352,15 +484,45 @@
 
   <div class="area-recommendations">
     {% if result %}
-      <ul>
+      <div class="area-callouts">
         {% for rec in result.recommendations %}
-          <li>{{ rec }}</li>
+          <div class="area-callout area-callout--{{ rec.tone }}">
+            <h3>{{ rec.title }}</h3>
+            <p>{{ rec.detail }}</p>
+          </div>
         {% endfor %}
-      </ul>
+      </div>
+
+      <div class="area-next-steps">
+        <h3>Next steps</h3>
+        <ul>
+          {% for step in result.next_steps %}
+            <li>{{ step }}</li>
+          {% endfor %}
+        </ul>
+      </div>
     {% else %}
       <p class="note">Submit the form to receive personalized recommendations.</p>
     {% endif %}
   </div>
+</section>
+
+<section class="shell area-section" aria-label="Frequently asked questions">
+  <h2>FAQ for your results</h2>
+  <p>Short answers to the most common questions about the numbers above.</p>
+
+  {% if result and result.faq %}
+    <div class="area-faq">
+      {% for item in result.faq %}
+        <details class="area-faq__item">
+          <summary>{{ item.question }}</summary>
+          <p>{{ item.answer }}</p>
+        </details>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="note">Run the calculator to see FAQ answers tailored to your result.</p>
+  {% endif %}
 </section>
 
 <section class="shell area-section" aria-label="Related resources">
@@ -387,9 +549,10 @@
     <div>
       <h3>Educational articles</h3>
       <ul class="area-links__list">
-        {% for post in recommended_articles %}
+        {% for item in recommended_articles %}
           <li>
-            <a href="{{ url_for('blog.detail', slug=post.slug) }}">{{ post.title }}</a>
+            <a href="{{ url_for('blog.detail', slug=item.post.slug) }}">{{ item.title }}</a>
+            {% if item.body %}<span class="muted">— {{ item.body }}</span>{% endif %}
           </li>
         {% else %}
           <li>New articles are coming soon.</li>
