@@ -32,6 +32,11 @@
             <strong class="visitor-card__value">{{ stats.total }}</strong>
             <p class="visitor-card__note">Since tracking was enabled.</p>
         </article>
+        <article class="visitor-card">
+            <p class="visitor-card__label">Filtered visits</p>
+            <strong class="visitor-card__value">{{ filtered_stats.total }}</strong>
+            <p class="visitor-card__note">{{ filtered_stats.unique_ips }} unique IPs · {{ filtered_stats.contacts }} contacts</p>
+        </article>
     </section>
 
     <section class="admin-panel" aria-labelledby="visitor-table-heading">
@@ -41,7 +46,79 @@
                 <h2 class="admin-panel__title" id="visitor-table-heading">Visitors grouped by day</h2>
                 <p class="admin-panel__hint">Each row shows page, time, and whether the visitor stayed anonymous or shared contact details.</p>
             </div>
+            <div class="visitors-tools" aria-label="Visitor tools">
+                <form class="visitors-filters" method="get" action="{{ url_for('admin.visitors') }}">
+                    <div class="visitors-filters__row">
+                        <div class="field">
+                            <label class="field__label" for="start">From</label>
+                            <input class="field__input" id="start" name="start" type="date" value="{{ filtered_stats.start.isoformat() if filtered_stats.start else '' }}">
+                        </div>
+                        <div class="field">
+                            <label class="field__label" for="end">To</label>
+                            <input class="field__input" id="end" name="end" type="date" value="{{ filtered_stats.end.isoformat() if filtered_stats.end else '' }}">
+                        </div>
+                        <div class="field field--grow">
+                            <label class="field__label" for="q">Search</label>
+                            <input class="field__input" id="q" name="q" type="search" placeholder="IP, page, email, UA…" value="{{ filtered_stats.q }}">
+                        </div>
+                    </div>
+                    <div class="visitors-filters__row visitors-filters__row--bottom">
+                        <label class="toggle">
+                            <input type="checkbox" name="contact" value="1" {% if filtered_stats.contact_only %}checked{% endif %}>
+                            <span class="toggle__track" aria-hidden="true"></span>
+                            <span class="toggle__label">Contacts only</span>
+                        </label>
+
+                        <div class="field field--compact">
+                            <label class="field__label" for="per_page">Per page</label>
+                            <select class="field__input" id="per_page" name="per_page">
+                                {% for n in [10, 25, 50, 100] %}
+                                    <option value="{{ n }}" {% if filtered_stats.per_page == n %}selected{% endif %}>{{ n }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="field field--compact">
+                            <label class="field__label" for="sort">Sort</label>
+                            <select class="field__input" id="sort" name="sort">
+                                <option value="newest" {% if filtered_stats.sort != 'oldest' %}selected{% endif %}>Newest</option>
+                                <option value="oldest" {% if filtered_stats.sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                            </select>
+                        </div>
+
+                        <input type="hidden" name="range" value="">
+
+                        <div class="visitors-filters__actions">
+                            <button class="btn-admin btn-admin--primary" type="submit">Apply</button>
+                            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors') }}">Reset</a>
+                            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.visitors_export', **query_args) }}">Export CSV</a>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="visitors-quick" aria-label="Quick ranges">
+                    <a class="badge badge--outline" href="{{ url_for('admin.visitors', range='today', q=filtered_stats.q, contact=('1' if filtered_stats.contact_only else None), per_page=filtered_stats.per_page, sort=filtered_stats.sort) }}">Today</a>
+                    <a class="badge badge--outline" href="{{ url_for('admin.visitors', range='7d', q=filtered_stats.q, contact=('1' if filtered_stats.contact_only else None), per_page=filtered_stats.per_page, sort=filtered_stats.sort) }}">7 days</a>
+                    <a class="badge badge--outline" href="{{ url_for('admin.visitors', range='30d', q=filtered_stats.q, contact=('1' if filtered_stats.contact_only else None), per_page=filtered_stats.per_page, sort=filtered_stats.sort) }}">30 days</a>
+                </div>
+            </div>
         </div>
+
+        {% if top_pages %}
+        <div class="visitors-insights" aria-label="Insights">
+            <div class="visitors-insights__card">
+                <h3 class="visitors-insights__title">Top pages (filtered)</h3>
+                <ol class="visitors-top-pages">
+                    {% for page_path, count in top_pages %}
+                        <li>
+                            <a href="{{ page_path }}" target="_blank" rel="noopener" class="visitors-top-pages__link">{{ page_path }}</a>
+                            <span class="badge badge--outline">{{ count }}</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+        {% endif %}
         <div class="admin-table-wrapper">
             {% if visitors %}
             <table class="admin-table visitors-table">
@@ -53,6 +130,7 @@
                         <th>Time</th>
                         <th>IP Address</th>
                         <th>Country</th>
+                        <th>Device</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,7 +139,7 @@
                         {% if current_date != visit.visit_date %}
                             {% set current_date = visit.visit_date %}
                             <tr class="visitors-date-row">
-                                <td colspan="6">
+                                <td colspan="7">
                                     <div class="visitors-date">
                                         <div>
                                             <p class="eyebrow">{{ visit.visit_date.strftime('%A, %B %d, %Y') }}</p>
@@ -73,7 +151,7 @@
                             </tr>
                         {% endif %}
                         <tr>
-                            <td>
+                            <td data-label="Visitor">
                                 <div class="visitor-identity">
                                     <strong>{{ visit.visitor_name or 'Anonymous visitor' }}</strong>
                                     <p class="visitor-note">
@@ -85,13 +163,25 @@
                                     </p>
                                 </div>
                             </td>
-                            <td>{{ visit.email or '—' }}</td>
-                            <td>
-                                <span class="visitor-page">{{ visit.page_visited }}</span>
+                            <td data-label="Email">{{ visit.email or '—' }}</td>
+                            <td data-label="Page">
+                                <a class="visitor-page" href="{{ visit.page_visited }}" target="_blank" rel="noopener">{{ visit.page_visited }}</a>
                             </td>
-                            <td>{{ visit.created_at.strftime('%H:%M') }}</td>
-                            <td>{{ visit.ip_address }}</td>
-                            <td>{{ geoip_country(visit.ip_address) }}</td>
+                            <td data-label="Time">{{ visit.created_at.strftime('%H:%M') }}</td>
+                            <td data-label="IP">
+                                <div class="visitors-ip">
+                                    <span class="visitors-ip__text">{{ visit.ip_address }}</span>
+                                    <button class="btn-admin btn-admin--ghost visitors-ip__copy" type="button" data-copy="{{ visit.ip_address }}">Copy</button>
+                                </div>
+                            </td>
+                            <td data-label="Country">{{ geoip_country(visit.ip_address) }}</td>
+                            <td data-label="Device">
+                                {% if visit.user_agent and 'Mobile' in visit.user_agent %}
+                                    <span class="badge badge--outline">Mobile</span>
+                                {% else %}
+                                    <span class="badge badge--outline">Desktop</span>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -120,4 +210,26 @@
         {% endif %}
     </section>
 </div>
+
+<script>
+    (function () {
+        function copyText(text) {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(function () {
+                    window.prompt('Copy to clipboard:', text);
+                });
+                return;
+            }
+            window.prompt('Copy to clipboard:', text);
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-copy]');
+            if (!btn) return;
+            e.preventDefault();
+            copyText(btn.getAttribute('data-copy'));
+        });
+    })();
+</script>
 {% endblock %}

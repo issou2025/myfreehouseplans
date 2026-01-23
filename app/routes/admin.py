@@ -461,27 +461,99 @@ def delete_staff(user_id):
 def visitors():
     """Visitor analytics dashboard."""
 
+    from sqlalchemy import or_
+
+    def _parse_date(value: str | None):
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return None
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
     per_page = max(10, min(per_page, 100))
 
-    pagination = (
-        Visitor.query
-        .order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
-        .paginate(page=page, per_page=per_page, error_out=False)
-    )
+    # Filters
+    quick_range = (request.args.get('range') or '').strip().lower()
+    search = (request.args.get('q') or '').strip()
+    contact_only = request.args.get('contact') in {'1', 'true', 'yes', 'on'}
 
     today = date.today()
-    week_start = today - timedelta(days=6)
+    start_date = _parse_date(request.args.get('start'))
+    end_date = _parse_date(request.args.get('end'))
+    if not start_date and not end_date and quick_range in {'today', '24h'}:
+        start_date = today
+        end_date = today
+    elif not start_date and not end_date and quick_range in {'7d', 'week'}:
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif not start_date and not end_date and quick_range in {'30d', 'month'}:
+        start_date = today - timedelta(days=29)
+        end_date = today
 
-    stats = {
+    sort = (request.args.get('sort') or 'newest').strip().lower()
+
+    query = Visitor.query
+    if start_date:
+        query = query.filter(Visitor.visit_date >= start_date)
+    if end_date:
+        query = query.filter(Visitor.visit_date <= end_date)
+    if contact_only:
+        query = query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Visitor.visitor_name.ilike(like_pattern),
+                Visitor.email.ilike(like_pattern),
+                Visitor.ip_address.ilike(like_pattern),
+                Visitor.page_visited.ilike(like_pattern),
+                Visitor.user_agent.ilike(like_pattern),
+            )
+        )
+
+    filtered_query = query.order_by(None)
+
+    if sort == 'oldest':
+        query = query.order_by(Visitor.visit_date.asc(), Visitor.created_at.asc())
+    else:
+        query = query.order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Global stats (unfiltered quick overview)
+    week_start = today - timedelta(days=6)
+    global_stats = {
         'today': Visitor.query.filter(Visitor.visit_date == today).count(),
         'week': Visitor.query.filter(Visitor.visit_date >= week_start).count(),
         'total': Visitor.query.count(),
     }
 
+    # Filtered stats (match current view)
+    filtered_total = filtered_query.with_entities(func.count(Visitor.id)).scalar() or 0
+    unique_ips = (
+        filtered_query.with_entities(func.count(func.distinct(Visitor.ip_address))).scalar()
+        or 0
+    )
+    contacts = (
+        filtered_query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
+        .with_entities(func.count(Visitor.id))
+        .scalar()
+        or 0
+    )
+
+    top_pages = (
+        filtered_query.with_entities(Visitor.page_visited, func.count(Visitor.id))
+        .group_by(Visitor.page_visited)
+        .order_by(func.count(Visitor.id).desc())
+        .limit(8)
+        .all()
+    )
+
     page_dates = {visit.visit_date for visit in pagination.items}
-    date_counts = {}
+    date_counts: dict[date, int] = {}
     if page_dates:
         rows = (
             db.session.query(Visitor.visit_date, func.count(Visitor.id))
@@ -498,9 +570,113 @@ def visitors():
         'admin/visitors.html',
         visitors=pagination.items,
         pagination=pagination,
-        stats=stats,
+        stats=global_stats,
+        filtered_stats={
+            'total': filtered_total,
+            'unique_ips': unique_ips,
+            'contacts': contacts,
+            'start': start_date,
+            'end': end_date,
+            'q': search,
+            'contact_only': contact_only,
+            'range': quick_range,
+            'sort': sort,
+            'per_page': per_page,
+        },
+        top_pages=top_pages,
         date_counts=date_counts,
         query_args=query_args,
+    )
+
+
+@admin_bp.route('/visitors/export')
+@login_required
+@admin_required
+def visitors_export():
+    """Export visitor list as CSV (respects current filters)."""
+
+    import csv
+    import io
+    from sqlalchemy import or_
+    from flask import Response
+    from app.utils.geoip import get_country_for_ip
+
+    def _parse_date(value: str | None):
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return None
+
+    today = date.today()
+    quick_range = (request.args.get('range') or '').strip().lower()
+    search = (request.args.get('q') or '').strip()
+    contact_only = request.args.get('contact') in {'1', 'true', 'yes', 'on'}
+    start_date = _parse_date(request.args.get('start'))
+    end_date = _parse_date(request.args.get('end'))
+    if not start_date and not end_date and quick_range in {'today', '24h'}:
+        start_date = today
+        end_date = today
+    elif not start_date and not end_date and quick_range in {'7d', 'week'}:
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif not start_date and not end_date and quick_range in {'30d', 'month'}:
+        start_date = today - timedelta(days=29)
+        end_date = today
+
+    query = Visitor.query
+    if start_date:
+        query = query.filter(Visitor.visit_date >= start_date)
+    if end_date:
+        query = query.filter(Visitor.visit_date <= end_date)
+    if contact_only:
+        query = query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Visitor.visitor_name.ilike(like_pattern),
+                Visitor.email.ilike(like_pattern),
+                Visitor.ip_address.ilike(like_pattern),
+                Visitor.page_visited.ilike(like_pattern),
+                Visitor.user_agent.ilike(like_pattern),
+            )
+        )
+
+    limit = request.args.get('limit', 5000, type=int)
+    limit = max(100, min(limit, 20000))
+
+    rows = (
+        query.order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(['visit_date', 'created_at', 'visitor_name', 'email', 'ip_address', 'page_visited', 'country', 'user_agent'])
+    for visit in rows:
+        writer.writerow(
+            [
+                visit.visit_date.isoformat() if visit.visit_date else '',
+                visit.created_at.isoformat() if visit.created_at else '',
+                visit.visitor_name or '',
+                visit.email or '',
+                visit.ip_address or '',
+                visit.page_visited or '',
+                (get_country_for_ip(visit.ip_address) if visit.ip_address else ''),
+                (visit.user_agent or ''),
+            ]
+        )
+
+    filename = f"visitors_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        buffer.getvalue(),
+        mimetype='text/csv; charset=utf-8',
+        headers={
+            'Content-Disposition': f'attachment; filename={filename}',
+        },
     )
 
 

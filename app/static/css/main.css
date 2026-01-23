@@ -6608,6 +6608,209 @@ input[type="file"] {
 	border: 1px dashed var(--color-border);
 }
 
+/* Admin visitors: filters + insights */
+.visitors-tools {
+	width: 100%;
+	display: grid;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.visitors-filters {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: 14px;
+	box-shadow: var(--shadow-sm);
+}
+
+.visitors-filters__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: flex-end;
+}
+
+.visitors-filters__row--bottom {
+	margin-top: 10px;
+}
+
+.field {
+	display: grid;
+	gap: 6px;
+	min-width: 140px;
+}
+
+.field--grow {
+	flex: 1 1 240px;
+}
+
+.field--compact {
+	min-width: 140px;
+}
+
+.field__label {
+	font-size: 0.82rem;
+	color: var(--color-soft);
+	letter-spacing: 0.02em;
+}
+
+.field__input {
+	width: 100%;
+	min-height: 40px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	border: 1px solid var(--color-border);
+	background: #fff;
+	color: var(--color-text);
+}
+
+.field__input:focus {
+	outline: none;
+	border-color: rgba(59,130,246,0.55);
+	box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.visitors-filters__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-left: auto;
+}
+
+.visitors-quick {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.visitors-insights {
+	margin-top: 14px;
+}
+
+.visitors-insights__card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: 14px;
+	box-shadow: var(--shadow-sm);
+}
+
+.visitors-insights__title {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.visitors-top-pages {
+	margin: 10px 0 0;
+	padding-left: 18px;
+	display: grid;
+	gap: 8px;
+}
+
+.visitors-top-pages li {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	justify-content: space-between;
+}
+
+.visitors-top-pages__link {
+	color: var(--color-text);
+	text-decoration: none;
+	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+	font-size: 0.92rem;
+	overflow-wrap: anywhere;
+}
+
+.visitors-top-pages__link:hover {
+	text-decoration: underline;
+}
+
+.visitors-ip {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.visitors-ip__text {
+	font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+	font-size: 0.92rem;
+}
+
+.visitors-ip__copy {
+	padding: 6px 10px;
+	min-height: 32px;
+}
+
+@media (max-width: 680px) {
+	.visitors-filters__actions { width: 100%; margin-left: 0; }
+	.visitors-filters__actions .btn-admin { flex: 1 1 auto; justify-content: center; }
+}
+
+/* Visitors table: mobile card layout */
+@media (max-width: 860px) {
+	.visitors-table thead { display: none; }
+	.visitors-table,
+	.visitors-table tbody,
+	.visitors-table tr,
+	.visitors-table td { display: block; width: 100%; }
+
+	.visitors-table tr {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		padding: 12px;
+		margin: 10px 0;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.visitors-table tr.visitors-date-row {
+		background: transparent;
+		border: none;
+		padding: 0;
+		margin: 18px 0 6px;
+		box-shadow: none;
+	}
+
+	.visitors-date-row td {
+		background: transparent;
+		border: none;
+		padding: 0;
+	}
+
+	.visitors-table td {
+		border: none;
+		padding: 8px 0;
+		display: flex;
+		gap: 12px;
+		justify-content: space-between;
+		align-items: flex-start;
+	}
+
+	.visitors-table td::before {
+		content: attr(data-label);
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--color-soft);
+		padding-top: 2px;
+		flex: 0 0 92px;
+	}
+
+	.visitors-table td[data-label="Visitor"] {
+		display: block;
+		padding-bottom: 10px;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.visitors-table td[data-label="Visitor"]::before {
+		content: "";
+		display: none;
+	}
+}
+
 .admin-pagination {
 	display: flex;
 	justify-content: space-between;
@@ -9445,6 +9648,8 @@ body {
 		grid-template-columns: 1fr;
 	}
 }
+
+.back-to-top {
 	position: fixed;
 	right: 20px;
 	bottom: 24px;
