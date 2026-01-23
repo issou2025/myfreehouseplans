@@ -514,6 +514,7 @@ def register_blueprints(app):
     from app.blueprints.planner import planner_bp
     from app.blueprints.room_checker import room_checker_bp
     from app.blueprints.progress_intelligence import progress_intelligence_bp
+    from app.blueprints.area_calculator import area_calculator_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -524,6 +525,7 @@ def register_blueprints(app):
     app.register_blueprint(planner_bp, url_prefix='/planner')
     app.register_blueprint(room_checker_bp, url_prefix='/room-checker')
     app.register_blueprint(progress_intelligence_bp, url_prefix='/progress-intelligence')
+    app.register_blueprint(area_calculator_bp, url_prefix='/house-area-calculator')
 
 
 def register_error_handlers(app):

@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+
+{% block title %}House Area Calculator | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/area_calculator.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="shell area-hero">
+  <div class="area-hero__content">
+    <p class="eyebrow">International planning tool</p>
+    <h1>House Area Calculator</h1>
+    <p class="lead">
+      Estimate the right house size, room mix, and circulation footprint for any household worldwide. This tool uses
+      internationally accepted residential benchmarks so you can avoid overbuilding, under‑sizing, or wasting land.
+    </p>
+  </div>
+</section>
+
+<section class="shell area-section" aria-label="How this calculator works">
+  <h2>How the calculator works (international, not country‑specific)</h2>
+  <p>
+    The goal of this calculator is simple: transform “How big should our house be?” into a clear, defensible program
+    of rooms and areas. It does not rely on any local building code. Instead, it uses globally used architectural
+    planning benchmarks: sleeping zones scale with occupants, living zones grow with household activity, and circulation
+    space expands as the number of rooms increases. The result is a balanced net area, then a gross area that adds
+    realistic allowance for walls, storage shafts, and technical thickness.
+  </p>
+  <p>
+    You start by describing your household in human terms. We ask how many people will live in the home, the household
+    type (single, couple, family, extended family), your comfort level, and whether you expect future growth. Optional
+    inputs such as land size and extra rooms help the calculator validate the footprint and recommend a more suitable
+    layout, including the option of a two‑storey plan when land becomes tight.
+  </p>
+  <p>
+    Every output is expressed in plain language. Tables break down bedroom counts, living spaces, optional rooms,
+    sanitary spaces, and circulation. This prevents guesswork and lets you compare plans with confidence. The entire
+    page is server‑rendered so search engines can fully index the explanations and tables. The result is a high‑clarity
+    tool for planning, budgeting, and long‑term comfort.
+  </p>
+</section>
+
+<section class="shell area-section" aria-label="House area calculator tool">
+  <h2>Use the House Area Calculator</h2>
+  <div class="area-grid">
+    <div class="area-card">
+      <h3>Tell us about your household</h3>
+      <form method="post" class="area-form" novalidate>
+        <div class="area-field">
+          <label for="occupants">Number of people living in the house</label>
+          <input id="occupants" name="occupants" type="number" min="1" max="10" value="{{ form.occupants }}" required>
+        </div>
+
+        <div class="area-field">
+          <label for="household_type">Household type</label>
+          <select id="household_type" name="household_type">
+            <option value="single" {% if form.household_type == 'single' %}selected{% endif %}>Single</option>
+            <option value="couple" {% if form.household_type == 'couple' %}selected{% endif %}>Couple</option>
+            <option value="family" {% if form.household_type == 'family' %}selected{% endif %}>Family</option>
+            <option value="extended_family" {% if form.household_type == 'extended_family' %}selected{% endif %}>Extended family</option>
+          </select>
+        </div>
+
+        <div class="area-field">
+          <label for="comfort_level">Comfort level</label>
+          <select id="comfort_level" name="comfort_level">
+            <option value="essential" {% if form.comfort_level == 'essential' %}selected{% endif %}>Essential</option>
+            <option value="standard" {% if form.comfort_level == 'standard' %}selected{% endif %}>Standard</option>
+            <option value="high" {% if form.comfort_level == 'high' %}selected{% endif %}>High</option>
+          </select>
+        </div>
+
+        <div class="area-field">
+          <label for="future_growth">Future household growth</label>
+          <select id="future_growth" name="future_growth">
+            <option value="no" {% if form.future_growth == 'no' %}selected{% endif %}>No</option>
+            <option value="maybe" {% if form.future_growth == 'maybe' %}selected{% endif %}>Maybe</option>
+            <option value="yes" {% if form.future_growth == 'yes' %}selected{% endif %}>Yes</option>
+          </select>
+        </div>
+
+        <fieldset class="area-fieldset">
+          <legend>Extra rooms (optional)</legend>
+          <label class="check">
+            <input type="checkbox" name="extra_rooms" value="home_office" {% if 'home_office' in form.extra_rooms %}checked{% endif %}>
+            <span>Home office</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="extra_rooms" value="guest_room" {% if 'guest_room' in form.extra_rooms %}checked{% endif %}>
+            <span>Guest room</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="extra_rooms" value="storage" {% if 'storage' in form.extra_rooms %}checked{% endif %}>
+            <span>Storage</span>
+          </label>
+        </fieldset>
+
+        <div class="area-field">
+          <label for="land_size">Land size in square meters (optional)</label>
+          <input id="land_size" name="land_size" type="number" min="1" value="{{ form.land_size }}" placeholder="e.g., 350">
+        </div>
+
+        <div class="area-field">
+          <label for="layout">Preferred layout</label>
+          <select id="layout" name="layout">
+            <option value="no_preference" {% if form.layout == 'no_preference' %}selected{% endif %}>No preference</option>
+            <option value="single_storey" {% if form.layout == 'single_storey' %}selected{% endif %}>Single-storey</option>
+            <option value="two_storey" {% if form.layout == 'two_storey' %}selected{% endif %}>Two-storey</option>
+          </select>
+        </div>
+
+        <div class="area-actions">
+          <button class="btn btn-primary" type="submit">Calculate area</button>
+          <a class="btn btn-secondary" href="{{ url_for('area_calculator.index') }}">Reset</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="area-card area-card--summary">
+      <h3>What you will get</h3>
+      <ul>
+        <li>Bedroom count and sizing by occupants</li>
+        <li>Living, kitchen, dining, and day‑space estimates</li>
+        <li>Sanitary program (bathrooms + WC)</li>
+        <li>Circulation allowance based on rooms + people</li>
+        <li>Net and gross area totals with explanations</li>
+        <li>Land compatibility check when land size is provided</li>
+      </ul>
+      <p class="note">
+        This is a planning and sizing tool. It is not a local regulation, permit, or budget approval. Use it to align your
+        program, then validate with a professional for your location.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="shell area-section" aria-label="Calculator results">
+  <h2>Results (structured tables)</h2>
+  <p>
+    The tables below summarize the room program that matches your inputs. Each space is sized in square meters and tied
+    to a transparent formula. If you need to share the results with a professional, these tables provide the right
+    structure to begin schematic planning.
+  </p>
+
+  <div class="area-results">
+    <div class="area-table">
+      <h3>Bedrooms</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Room Type</th>
+            <th>Quantity</th>
+            <th>Area per Room (m²)</th>
+            <th>Total Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.bedrooms %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.quantity }}</td>
+                <td>{{ row.area_each }}</td>
+                <td>{{ row.total_area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4">Complete the form to calculate bedroom sizes.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Living and Day Spaces</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Space</th>
+            <th>Quantity</th>
+            <th>Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.living_day %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.quantity }}</td>
+                <td>{{ row.total_area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3">Complete the form to calculate day-space areas.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Additional Rooms</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Space</th>
+            <th>Quantity</th>
+            <th>Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result and result.additional %}
+            {% for row in result.additional %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.quantity }}</td>
+                <td>{{ row.total_area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3">Optional rooms will appear here.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Sanitary Spaces</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Space</th>
+            <th>Quantity</th>
+            <th>Area per Unit (m²)</th>
+            <th>Total Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.sanitary %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.quantity }}</td>
+                <td>{{ row.area_each }}</td>
+                <td>{{ row.total_area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4">Sanitary sizing will appear here.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Circulation</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Calculation Method</th>
+            <th>Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.circulation %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.method }}</td>
+                <td>{{ row.area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3">Circulation results will appear here.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Total Areas</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Area (m²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.totals %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.area }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="2">Total areas will appear here.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="area-table">
+      <h3>Land Compatibility</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if result %}
+            {% for row in result.land %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.value }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="2">Provide land size to evaluate footprint compatibility.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="shell area-section" aria-label="Recommendations">
+  <h2>Recommendations & next steps</h2>
+  <p>
+    The calculator translates raw numbers into clear recommendations. Use these to decide whether you should shift to a
+    two‑storey option, add a bedroom for privacy, or focus on saving land for outdoor comfort. These recommendations are
+    intentionally general and internationally applicable.
+  </p>
+
+  <div class="area-recommendations">
+    {% if result %}
+      <ul>
+        {% for rec in result.recommendations %}
+          <li>{{ rec }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="note">Submit the form to receive personalized recommendations.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="shell area-section" aria-label="Related resources">
+  <h2>Related plans and educational resources</h2>
+  <p>
+    Planning works best when you can immediately compare real plans that match your size program. Below are a few
+    relevant plans and educational articles to keep your decision grounded in real examples.
+  </p>
+
+  <div class="area-links">
+    <div>
+      <h3>Recommended house plans</h3>
+      <ul class="area-links__list">
+        {% for plan in recommended_plans %}
+          <li>
+            <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a>
+            {% if plan.short_description %}<span class="muted">— {{ plan.short_description }}</span>{% endif %}
+          </li>
+        {% else %}
+          <li>No plans available yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h3>Educational articles</h3>
+      <ul class="area-links__list">
+        {% for post in recommended_articles %}
+          <li>
+            <a href="{{ url_for('blog.detail', slug=post.slug) }}">{{ post.title }}</a>
+          </li>
+        {% else %}
+          <li>New articles are coming soon.</li>
+        {% endfor %}
+      </ul>
+      <p class="note">You can also explore the <a href="{{ url_for('space_planner.index') }}">Space Planner tools</a> for room‑level checks.</p>
+    </div>
+  </div>
+</section>
+
+<section class="shell area-section" aria-label="Why these rules are trustworthy">
+  <h2>Why these rules are trustworthy</h2>
+  <p>
+    The sizing logic uses global residential planning norms: a minimum master bedroom that scales with household size,
+    secondary bedrooms sized to allow sleeping and circulation, living spaces that expand with social activity, and a
+    circulation ratio that grows as the plan becomes more complex. These are not legal limits; they are the practical
+    ranges used by architects to reduce daily friction. Because the same family behavior appears worldwide, these rules
+    travel well across climates and budgets.
+  </p>
+  <p>
+    This is why the calculator never returns a single "magic" number. Instead, it explains how each area was derived and
+    keeps every decision visible. That transparency is what turns a simple calculator into a planning tool you can trust.
+  </p>
+</section>
+{% endblock %}

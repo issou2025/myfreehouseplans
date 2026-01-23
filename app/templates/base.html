@@ -108,6 +108,8 @@
                             {% set tools_value = 'space_planner' %}
                         {% elif current_endpoint and (current_endpoint.startswith('planner.') or current_endpoint == 'space_planner.furniture_fit') %}
                             {% set tools_value = 'furniture_fit' %}
+                        {% elif current_endpoint and current_endpoint.startswith('area_calculator.') %}
+                            {% set tools_value = 'house_area' %}
                         {% elif current_endpoint and current_endpoint.startswith('progress_intelligence.') %}
                             {% set tools_value = 'progress_intelligence' %}
                         {% endif %}
@@ -123,6 +125,7 @@
                                 <option value="{{ url_for('main.compare') }}" {% if tools_value == 'compare' %}selected{% endif %}>Compare</option>
                                 <option value="{{ url_for('space_planner.index') }}" {% if tools_value == 'space_planner' %}selected{% endif %}>Space Planner</option>
                                 <option value="{{ url_for('space_planner.furniture_fit') }}" {% if tools_value == 'furniture_fit' %}selected{% endif %}>Furniture Fit</option>
+                                <option value="{{ url_for('area_calculator.index') }}" {% if tools_value == 'house_area' %}selected{% endif %}>House Area Calculator</option>
                             </select>
                         </div>
 
@@ -146,6 +149,10 @@
                             <a class="nav-link {% if tools_value == 'furniture_fit' %}is-active{% endif %}" href="{{ url_for('space_planner.furniture_fit') }}" {% if tools_value == 'furniture_fit' %}aria-current="page"{% endif %}>
                                 <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                                 <span>Furniture Fit</span>
+                            </a>
+                            <a class="nav-link {% if tools_value == 'house_area' %}is-active{% endif %}" href="{{ url_for('area_calculator.index') }}" {% if tools_value == 'house_area' %}aria-current="page"{% endif %}>
+                                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                                <span>House Area Calculator</span>
                             </a>
                         </div>
                     </div>

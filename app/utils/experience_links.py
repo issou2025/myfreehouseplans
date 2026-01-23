@@ -111,6 +111,16 @@ def _experience_definitions() -> dict[str, ExperienceDefinition]:
             article_cta='Check furniture fit',
             article_body='Check if furniture and appliances will feel comfortable in real life.',
         ),
+        'house-area-calculator': ExperienceDefinition(
+            key='house-area-calculator',
+            label='House area calculator',
+            description='Estimate overall house size, room counts, and circulation using international benchmarks.',
+            href=url_for('area_calculator.index'),
+            article_heading='Why this recommendation?',
+            article_anchor='House area calculator explained: bedrooms, living space, circulation',
+            article_cta='Estimate your house area',
+            article_body='Get a room-by-room breakdown with net and gross area totals.',
+        ),
     }
 
 

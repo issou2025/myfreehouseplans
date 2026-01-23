@@ -1,0 +1,150 @@
+.area-hero {
+  padding: 2.5rem 0 1.5rem;
+}
+
+.area-hero__content {
+  max-width: 72ch;
+}
+
+.area-hero .lead {
+  font-size: 1.05rem;
+  color: var(--color-muted);
+}
+
+.area-section {
+  padding: 1.5rem 0 2rem;
+}
+
+.area-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 960px) {
+  .area-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  }
+}
+
+.area-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.area-card--summary ul {
+  margin: 0 0 1rem 1.1rem;
+}
+
+.area-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.area-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.area-field input,
+.area-field select {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+}
+
+.area-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.area-fieldset legend {
+  padding: 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-soft);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.area-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.area-results {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.area-table {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.area-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.area-table th,
+.area-table td {
+  text-align: left;
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.95rem;
+}
+
+.area-table tr:last-child td {
+  border-bottom: none;
+}
+
+.area-recommendations ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.area-links {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .area-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.area-links__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.area-links__list a {
+  font-weight: 600;
+}
+
+.note {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
