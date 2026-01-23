@@ -1,0 +1,156 @@
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family: "Inter", "Helvetica", "Arial", sans-serif;
+  color: #111827;
+  line-height: 1.5;
+  font-size: 12.5px;
+}
+
+h1, h2, h3 {
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-top: 18px;
+}
+
+h3 {
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+.cover {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.cover .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.cover .lead {
+  font-size: 13px;
+  color: #475569;
+}
+
+.cover .meta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 14px;
+}
+
+.table caption {
+  caption-side: top;
+  text-align: left;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+
+.summary-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.summary-helper {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.callouts {
+  display: grid;
+  gap: 8px;
+}
+
+.callout {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+
+.callout--positive {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.callout--caution {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.callout--neutral {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.disclaimer {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 16px;
+  padding-top: 10px;
+  font-size: 11px;
+  color: #6b7280;
+}

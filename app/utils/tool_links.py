@@ -14,8 +14,8 @@ def tool_definitions() -> Dict[str, ToolDefinition]:
     return {
         "house-area-calculator": {
             "key": "house-area-calculator",
-            "label": "House Area Calculator",
-            "description": "Estimate full house size, room mix, and circulation with international benchmarks.",
+            "label": "Home Space Decision Assistant",
+            "description": "Make confident home size decisions with room-by-room programs, circulation, and land fit.",
             "href": url_for("area_calculator.index"),
         },
         "room-size": {

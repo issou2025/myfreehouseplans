@@ -30,3 +30,6 @@ geoip2==4.8.0
 
 # Date and Time
 python-dateutil==2.8.2
+
+# PDF generation
+WeasyPrint==60.2

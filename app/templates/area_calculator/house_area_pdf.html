@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Home Space Decision Assistant Report</title>
+</head>
+<body>
+  <header class="cover">
+    <p class="eyebrow">Home Space Decision Assistant</p>
+    <h1>Your Home Space Decision Report</h1>
+    <p class="lead">A calm, decision-focused summary for planning a comfortable home program.</p>
+    <p class="meta">Unit preference: {{ unit_label }} ({{ unit_name }})</p>
+  </header>
+
+  <section>
+    <h2>User input summary</h2>
+    <table class="table">
+      <caption>Your inputs, captured exactly as entered.</caption>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in input_summary %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Key decision summary</h2>
+    <div class="summary-grid">
+      {% for card in summary_cards %}
+        <div class="summary-card">
+          <div class="summary-label">{{ card.label }}</div>
+          <div class="summary-value">{{ card.value }}</div>
+          <div class="summary-helper">{{ card.helper }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2>Room-by-room program</h2>
+
+    <h3>Bedrooms</h3>
+    <table class="table">
+      <caption>Bedroom sizing based on occupants and comfort level.</caption>
+      <thead>
+        <tr>
+          <th>Room Type</th>
+          <th>Quantity</th>
+          <th>Area per Room ({{ unit_label }})</th>
+          <th>Total Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.bedrooms %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ format_area_value(row.area_each) }}</td>
+            <td>{{ format_area_value(row.total_area) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Living & day spaces</h3>
+    <table class="table">
+      <caption>Living, kitchen, and dining areas scaled by household size.</caption>
+      <thead>
+        <tr>
+          <th>Space</th>
+          <th>Quantity</th>
+          <th>Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.living_day %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ format_area_value(row.total_area) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Additional rooms</h3>
+    <table class="table">
+      <caption>Optional rooms and flex space selected in the form.</caption>
+      <thead>
+        <tr>
+          <th>Space</th>
+          <th>Quantity</th>
+          <th>Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if result.additional %}
+          {% for row in result.additional %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.quantity }}</td>
+              <td>{{ format_area_value(row.total_area) }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="3">No additional rooms selected.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <h3>Sanitary spaces</h3>
+    <table class="table">
+      <caption>Bathroom and WC sizing for daily routines.</caption>
+      <thead>
+        <tr>
+          <th>Space</th>
+          <th>Quantity</th>
+          <th>Area per Unit ({{ unit_label }})</th>
+          <th>Total Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.sanitary %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ format_area_value(row.area_each) }}</td>
+            <td>{{ format_area_value(row.total_area) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Circulation</h3>
+    <table class="table">
+      <caption>Movement and transition space based on rooms and occupants.</caption>
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Calculation Method</th>
+          <th>Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.circulation %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.method }}</td>
+            <td>{{ format_area_value(row.area) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Total areas</h3>
+    <table class="table">
+      <caption>Net, circulation, and gross area totals.</caption>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Area ({{ unit_label }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.totals %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ format_area_value(row.area) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Land compatibility</h3>
+    <table class="table">
+      <caption>Footprint and site coverage insights based on your land size.</caption>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in land_rows %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>What this means for you</h2>
+    <div class="callouts">
+      {% for insight in result.insights %}
+        <div class="callout callout--{{ insight.tone }}">
+          <strong>{{ insight.title }}</strong>
+          <p>{{ insight.body }}</p>
+        </div>
+      {% endfor %}
+      {% for warning in result.warnings %}
+        <div class="callout callout--{{ warning.tone }}">
+          <strong>{{ warning.title }}</strong>
+          <p>{{ warning.body }}</p>
+        </div>
+      {% endfor %}
+      {% for tradeoff in result.tradeoffs %}
+        <div class="callout callout--{{ tradeoff.tone }}">
+          <strong>{{ tradeoff.title }}</strong>
+          <p>{{ tradeoff.body }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2>Recommendations & next steps</h2>
+    <ul>
+      {% for rec in result.recommendations %}
+        <li><strong>{{ rec.title }}</strong> — {{ rec.detail }}</li>
+      {% endfor %}
+    </ul>
+    <h3>Next steps</h3>
+    <ul>
+      {% for step in next_steps_display %}
+        <li>{{ step }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="disclaimer">
+    <h2>Disclaimer</h2>
+    <p>
+      This report is an international planning aid and does not replace local regulations, permits, or professional
+      architectural advice. Use it to clarify your program and confirm with local professionals before construction.
+    </p>
+  </section>
+</body>
+</html>

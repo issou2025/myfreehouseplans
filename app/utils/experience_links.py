@@ -113,12 +113,12 @@ def _experience_definitions() -> dict[str, ExperienceDefinition]:
         ),
         'house-area-calculator': ExperienceDefinition(
             key='house-area-calculator',
-            label='House area calculator',
-            description='Estimate overall house size, room counts, and circulation using international benchmarks.',
+            label='Home Space Decision Assistant',
+            description='Plan home size decisions with room-by-room programs, circulation, and land fit.',
             href=url_for('area_calculator.index'),
             article_heading='Why this recommendation?',
-            article_anchor='House area calculator explained: bedrooms, living space, circulation',
-            article_cta='Estimate your house area',
+            article_anchor='Home space decision assistant: bedrooms, living space, circulation',
+            article_cta='Plan your home space',
             article_body='Get a room-by-room breakdown with net and gross area totals.',
         ),
     }

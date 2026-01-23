@@ -75,6 +75,22 @@
   gap: 0.5rem;
 }
 
+.unit-toggle {
+  display: grid;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+}
+
+.unit-toggle__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
 .area-fieldset legend {
   padding: 0 0.5rem;
   font-size: 0.9rem;
@@ -96,6 +112,12 @@
 .area-results {
   display: grid;
   gap: 1.25rem;
+}
+
+.area-download {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 .area-summary-grid {
@@ -266,12 +288,41 @@
   font-weight: 600;
 }
 
+.area-sticky {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+  display: none;
+  justify-content: center;
+}
+
+.area-sticky-spacer {
+  display: none;
+}
+
+.area-sticky .btn {
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-md);
+}
+
 .note {
   color: var(--color-muted);
   font-size: 0.95rem;
 }
 
 @media (max-width: 720px) {
+  .area-sticky {
+    display: flex;
+  }
+
+  .area-sticky-spacer {
+    display: block;
+    height: 4.5rem;
+  }
+
   .area-table table,
   .area-table thead,
   .area-table tbody,

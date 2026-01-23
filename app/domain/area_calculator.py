@@ -12,7 +12,7 @@ class CalculatorInput:
     comfort_level: str
     future_growth: str
     extra_rooms: tuple[str, ...]
-    land_size: Optional[int]
+    land_size: Optional[float]
     layout: str
 
 
@@ -310,7 +310,7 @@ def _growth_buffer(occupants: int, future_growth: str) -> float:
     return 0.0
 
 
-def _land_metrics(land_size: Optional[int], gross_area: float, layout: str) -> dict[str, float | None]:
+def _land_metrics(land_size: Optional[float], gross_area: float, layout: str) -> dict[str, float | None]:
     if not land_size:
         return {'coverage': None, 'footprint': None}
 
@@ -327,7 +327,7 @@ def _land_metrics(land_size: Optional[int], gross_area: float, layout: str) -> d
     return {'coverage': coverage, 'footprint': footprint}
 
 
-def _land_rows(land_size: Optional[int], gross_area: float, layout: str) -> list[LandRow]:
+def _land_rows(land_size: Optional[float], gross_area: float, layout: str) -> list[LandRow]:
     if not land_size:
         return [
             LandRow('Land size provided', 'Not provided'),
@@ -583,7 +583,7 @@ def _faq(summary: dict[str, float | int | str]) -> list[FaqItem]:
     bathrooms = int(summary.get('bathrooms', 0) or 0)
     circulation_ratio = float(summary.get('circulation_ratio', 0.0) or 0.0)
     gross_multiplier = float(summary.get('gross_multiplier', 0.0) or 0.0)
-    land_size = int(summary.get('land_size', 0) or 0)
+    land_size = float(summary.get('land_size', 0) or 0)
 
     faqs = [
         FaqItem(

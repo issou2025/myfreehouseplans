@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}House Area Calculator | {{ site_name }}{% endblock %}
+{% block title %}Home Space Decision Assistant | {{ site_name }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/area_calculator.css') }}">
@@ -33,11 +33,12 @@
 <section class="shell area-hero">
   <div class="area-hero__content">
     <p class="eyebrow">International planning tool</p>
-    <h1>House Area Calculator</h1>
+    <h1>Home Space Decision Assistant</h1>
     <p class="lead">
-      Estimate the right house size, room mix, and circulation footprint for any household worldwide. This tool uses
-      internationally accepted residential benchmarks so you can avoid overbuilding, under‑sizing, or wasting land.
+      Make confident decisions about your future home. We translate household needs into a clear room program, gross area,
+      and land fit so you can avoid overbuilding, under‑sizing, or wasting land.
     </p>
+    <p class="note">Also known as Smart Home Space Planner • House Size Decision Tool • Living Space Advisor</p>
   </div>
 </section>
 
@@ -64,8 +65,8 @@
   </p>
 </section>
 
-<section class="shell area-section" aria-label="House area calculator tool">
-  <h2>Use the House Area Calculator</h2>
+<section class="shell area-section" aria-label="Home space decision assistant tool">
+  <h2>Use the Home Space Decision Assistant</h2>
   <div class="area-grid">
     <div class="area-card">
       <h3>Tell us about your household</h3>
@@ -120,7 +121,21 @@
         </fieldset>
 
         <div class="area-field">
-          <label for="land_size">Land size in square meters (optional)</label>
+          <label>Preferred unit</label>
+          <div class="unit-toggle">
+            <label class="unit-toggle__option">
+              <input type="radio" name="unit" value="m2" {% if unit == 'm2' %}checked{% endif %}>
+              <span>m² (square meters)</span>
+            </label>
+            <label class="unit-toggle__option">
+              <input type="radio" name="unit" value="ft2" {% if unit == 'ft2' %}checked{% endif %}>
+              <span>ft² (square feet)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="area-field">
+          <label for="land_size">Land size ({{ unit_label }}) — optional</label>
           <input id="land_size" name="land_size" type="number" min="1" value="{{ form.land_size }}" placeholder="e.g., 350">
         </div>
 
@@ -180,7 +195,7 @@
 
   {% if result %}
     <div class="area-summary-grid">
-      {% for card in result.summary_cards %}
+      {% for card in summary_cards %}
         <div class="area-card area-card--metric">
           <div class="area-metric__label">{{ card.label }}</div>
           <div class="area-metric__value">{{ card.value }}</div>
@@ -188,6 +203,12 @@
         </div>
       {% endfor %}
     </div>
+    {% if pdf_url %}
+      <div class="area-download">
+        <a class="btn btn-primary" href="{{ pdf_url }}">Download PDF</a>
+        <p class="note">Your report uses {{ unit_label }} ({{ unit_name }}) and includes all tables below.</p>
+      </div>
+    {% endif %}
   {% else %}
     <p class="note">Complete the form to generate your results summary.</p>
   {% endif %}
@@ -234,8 +255,8 @@
           <h3>{{ option.label }}</h3>
           <p class="note">{{ option.description }}</p>
           <div class="area-option-grid">
-            <div><span class="area-option__label">Gross area</span><strong>{{ option.gross_area }} m²</strong></div>
-            <div><span class="area-option__label">Net area</span><strong>{{ option.net_area }} m²</strong></div>
+            <div><span class="area-option__label">Gross area</span><strong>{{ format_area(option.gross_area) }}</strong></div>
+            <div><span class="area-option__label">Net area</span><strong>{{ format_area(option.net_area) }}</strong></div>
             <div><span class="area-option__label">Bedrooms</span><strong>{{ option.bedrooms }}</strong></div>
             <div><span class="area-option__label">Bathrooms</span><strong>{{ option.bathrooms }}</strong></div>
           </div>
@@ -256,6 +277,35 @@
 
   <div class="area-results">
     <details class="area-detail" {% if result %}open{% endif %}>
+      <summary>User inputs summary</summary>
+      <div class="area-table">
+        <table>
+          <caption>Your inputs, shown exactly as entered.</caption>
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if result %}
+              {% for row in input_summary %}
+                <tr>
+                  <td data-label="Parameter">{{ row.label }}</td>
+                  <td data-label="Value">{{ row.value }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="2">Submit the form to summarize your inputs.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="area-detail" {% if result %}open{% endif %}>
       <summary>Bedrooms</summary>
       <div class="area-table">
         <table>
@@ -264,8 +314,8 @@
             <tr>
               <th>Room Type</th>
               <th>Quantity</th>
-              <th>Area per Room (m²)</th>
-              <th>Total Area (m²)</th>
+              <th>Area per Room ({{ unit_label }})</th>
+              <th>Total Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -274,8 +324,8 @@
                 <tr>
                   <td data-label="Room Type">{{ row.label }}</td>
                   <td data-label="Quantity">{{ row.quantity }}</td>
-                  <td data-label="Area per Room">{{ row.area_each }}</td>
-                  <td data-label="Total Area">{{ row.total_area }}</td>
+                  <td data-label="Area per Room">{{ format_area_value(row.area_each) }}</td>
+                  <td data-label="Total Area">{{ format_area_value(row.total_area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -297,7 +347,7 @@
             <tr>
               <th>Space</th>
               <th>Quantity</th>
-              <th>Area (m²)</th>
+              <th>Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -306,7 +356,7 @@
                 <tr>
                   <td data-label="Space">{{ row.label }}</td>
                   <td data-label="Quantity">{{ row.quantity }}</td>
-                  <td data-label="Area">{{ row.total_area }}</td>
+                  <td data-label="Area">{{ format_area_value(row.total_area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -328,7 +378,7 @@
             <tr>
               <th>Space</th>
               <th>Quantity</th>
-              <th>Area (m²)</th>
+              <th>Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -337,7 +387,7 @@
                 <tr>
                   <td data-label="Space">{{ row.label }}</td>
                   <td data-label="Quantity">{{ row.quantity }}</td>
-                  <td data-label="Area">{{ row.total_area }}</td>
+                  <td data-label="Area">{{ format_area_value(row.total_area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -359,8 +409,8 @@
             <tr>
               <th>Space</th>
               <th>Quantity</th>
-              <th>Area per Unit (m²)</th>
-              <th>Total Area (m²)</th>
+              <th>Area per Unit ({{ unit_label }})</th>
+              <th>Total Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -369,8 +419,8 @@
                 <tr>
                   <td data-label="Space">{{ row.label }}</td>
                   <td data-label="Quantity">{{ row.quantity }}</td>
-                  <td data-label="Area per Unit">{{ row.area_each }}</td>
-                  <td data-label="Total Area">{{ row.total_area }}</td>
+                  <td data-label="Area per Unit">{{ format_area_value(row.area_each) }}</td>
+                  <td data-label="Total Area">{{ format_area_value(row.total_area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -392,7 +442,7 @@
             <tr>
               <th>Element</th>
               <th>Calculation Method</th>
-              <th>Area (m²)</th>
+              <th>Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -401,7 +451,7 @@
                 <tr>
                   <td data-label="Element">{{ row.label }}</td>
                   <td data-label="Method">{{ row.method }}</td>
-                  <td data-label="Area">{{ row.area }}</td>
+                  <td data-label="Area">{{ format_area_value(row.area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -422,7 +472,7 @@
           <thead>
             <tr>
               <th>Category</th>
-              <th>Area (m²)</th>
+              <th>Area ({{ unit_label }})</th>
             </tr>
           </thead>
           <tbody>
@@ -430,7 +480,7 @@
               {% for row in result.totals %}
                 <tr class="area-row--total">
                   <td data-label="Category">{{ row.label }}</td>
-                  <td data-label="Area">{{ row.area }}</td>
+                  <td data-label="Area">{{ format_area_value(row.area) }}</td>
                 </tr>
               {% endfor %}
             {% else %}
@@ -456,7 +506,7 @@
           </thead>
           <tbody>
             {% if result %}
-              {% for row in result.land %}
+              {% for row in land_rows %}
                 <tr>
                   <td data-label="Parameter">{{ row.label }}</td>
                   <td data-label="Value">{{ row.value }}</td>
@@ -496,7 +546,7 @@
       <div class="area-next-steps">
         <h3>Next steps</h3>
         <ul>
-          {% for step in result.next_steps %}
+          {% for step in next_steps_display %}
             <li>{{ step }}</li>
           {% endfor %}
         </ul>
@@ -563,6 +613,13 @@
   </div>
 </section>
 
+{% if result and pdf_url %}
+  <div class="area-sticky-spacer" aria-hidden="true"></div>
+  <div class="area-sticky" aria-label="Download PDF">
+    <a class="btn btn-primary" href="{{ pdf_url }}">Download PDF</a>
+  </div>
+{% endif %}
+
 <section class="shell area-section" aria-label="Why these rules are trustworthy">
   <h2>Why these rules are trustworthy</h2>
   <p>
@@ -577,4 +634,21 @@
     keeps every decision visible. That transparency is what turns a simple calculator into a planning tool you can trust.
   </p>
 </section>
+
+<script>
+  (() => {
+    const form = document.querySelector('.area-form');
+    const unitInputs = document.querySelectorAll('input[name="unit"]');
+    if (!form || unitInputs.length === 0) return;
+    unitInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          form.submit();
+        }
+      });
+    });
+  })();
+</script>
 {% endblock %}
