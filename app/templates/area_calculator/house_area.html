@@ -203,12 +203,6 @@
         </div>
       {% endfor %}
     </div>
-    {% if pdf_url %}
-      <div class="area-download">
-        <a class="btn btn-primary" href="{{ pdf_url }}">Download PDF</a>
-        <p class="note">Your report uses {{ unit_label }} ({{ unit_name }}) and includes all tables below.</p>
-      </div>
-    {% endif %}
   {% else %}
     <p class="note">Complete the form to generate your results summary.</p>
   {% endif %}
@@ -557,6 +551,21 @@
   </div>
 </section>
 
+{% if result and pdf_url %}
+<section class="shell area-section area-section--download" aria-label="Download your report">
+  <div class="area-download-cta">
+    <div class="area-download-cta__content">
+      <h2>Download your complete report</h2>
+      <p>Get a professional PDF with all calculations, tables, and recommendations in {{ unit_label }} ({{ unit_name }}).</p>
+    </div>
+    <a class="btn btn-primary btn-lg" href="{{ pdf_url }}" aria-label="Download PDF report">
+      <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+      <span>Download PDF Report</span>
+    </a>
+  </div>
+</section>
+{% endif %}
+
 <section class="shell area-section" aria-label="Frequently asked questions">
   <h2>FAQ for your results</h2>
   <p>Short answers to the most common questions about the numbers above.</p>
@@ -615,8 +624,11 @@
 
 {% if result and pdf_url %}
   <div class="area-sticky-spacer" aria-hidden="true"></div>
-  <div class="area-sticky" aria-label="Download PDF">
-    <a class="btn btn-primary" href="{{ pdf_url }}">Download PDF</a>
+  <div class="area-sticky area-sticky--mobile" aria-label="Download PDF">
+    <a class="btn btn-primary" href="{{ pdf_url }}">
+      <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+      <span>Download PDF</span>
+    </a>
   </div>
 {% endif %}
 
