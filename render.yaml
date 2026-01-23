@@ -11,7 +11,7 @@ services:
     branch: main
     autodeploy: true
     healthCheckPath: /health
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get update && apt-get install -y wkhtmltopdf && pip install -r requirements.txt
     releaseCommand: flask db upgrade && flask reset-admin-password --username ${ADMIN_USERNAME}
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --log-level info
     envVars:

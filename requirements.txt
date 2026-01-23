@@ -35,6 +35,7 @@ python-dateutil==2.8.2
 # PDF generation (Render-friendly)
 reportlab==4.2.5
 WeasyPrint==60.2
+pdfkit==1.0.0
 
 # PDF charts (PDF only)
 matplotlib==3.10.0

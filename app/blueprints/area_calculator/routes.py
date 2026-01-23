@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 from flask import current_app, flash, make_response, redirect, render_template, request, url_for
+from flask_login import current_user
 
 from app.domain.area_calculator import CalculatorInput, calculate_house_area
 from app.models import BlogPost, HousePlan
 from app.seo import generate_meta_tags
 from app.utils.article_extras import load_article_extras, normalize_article_extras
 from app.utils.tool_links import resolve_tool_link
+from app.services.pdfkit_renderer import PdfEngineUnavailable, render_pdf_from_html
 from . import area_calculator_bp
 
 UNIT_LABELS = {
@@ -113,6 +114,13 @@ def index():
 
 @area_calculator_bp.route('/pdf', methods=['GET'])
 def pdf():
+    """Backwards-compatible PDF endpoint (kept for existing links)."""
+
+    return download_pdf()
+
+
+@area_calculator_bp.route('/download-pdf', methods=['GET'])
+def download_pdf():
     """Generate a professional PDF report for the calculator result."""
 
     form = {
@@ -158,7 +166,7 @@ def pdf():
 
     display = _build_display_context(result=result, form=form, unit=unit)
     html = render_template(
-        'area_calculator/house_area_pdf.html',
+        'area_calculator/pdf_report.html',
         form=form,
         result=result,
         summary_cards=display.get('summary_cards'),
@@ -172,14 +180,38 @@ def pdf():
         format_area_value=display.get('format_area_value'),
     )
 
+    css_path = Path(current_app.static_folder) / 'css' / 'pdf' / 'area_calculator.css'
     try:
-        from app.services.blog.article_pdf_html import build_article_pdf_weasyprint
+        pdf_bytes = render_pdf_from_html(
+            html=html,
+            css_paths=[css_path],
+            filename='home-space-decision-assistant.pdf',
+        )
+    except PdfEngineUnavailable as exc:
+        current_app.logger.error('PDF engine unavailable for area calculator: %s', exc, exc_info=True)
 
-        css_path = Path(current_app.static_folder) / 'css' / 'pdf' / 'area_calculator.css'
-        pdf_bytes = build_article_pdf_weasyprint(html=html, stylesheets=[css_path])
+        # Admins get a clear diagnostic; end-users get a safe message.
+        is_admin = bool(
+            getattr(current_user, 'is_authenticated', False)
+            and getattr(current_user, 'is_admin', False)
+        )
+        if is_admin or current_app.debug or current_app.testing:
+            return (
+                "PDF engine is not configured.\n\n"
+                "Required: wkhtmltopdf + pdfkit\n"
+                "- Install wkhtmltopdf on the host\n"
+                "- Ensure it is on PATH or set WKHTMLTOPDF_PATH\n\n"
+                f"Details: {exc}\n",
+                500,
+                {"Content-Type": "text/plain; charset=utf-8"},
+            )
+
+        flash('PDF download is temporarily unavailable. Please try again later.', 'warning')
+        return redirect(url_for('area_calculator.index', **request.args))
     except Exception as exc:
-        current_app.logger.warning('HTML-to-PDF failed for area calculator: %s', exc)
-        pdf_bytes = _fallback_area_pdf_bytes()
+        current_app.logger.error('HTML-to-PDF failed for area calculator: %s', exc, exc_info=True)
+        flash('PDF download failed. Please try again later.', 'warning')
+        return redirect(url_for('area_calculator.index', **request.args))
 
     filename = 'home-space-decision-assistant.pdf'
     response = make_response(pdf_bytes)
@@ -438,31 +470,9 @@ def _build_pdf_url(*, form: dict, unit: str) -> Optional[str]:
             'unit': unit,
             'extra_rooms': form.get('extra_rooms', []),
         }
-        return url_for('area_calculator.pdf', **params)
+        return url_for('area_calculator.download_pdf', **params)
     except Exception:
         return None
-
-
-def _fallback_area_pdf_bytes() -> bytes:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.pdfgen import canvas
-
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(2 * cm, height - 2.5 * cm, "Home Space Decision Assistant")
-
-    pdf.setFont("Helvetica", 11)
-    pdf.drawString(2 * cm, height - 3.5 * cm, "PDF generation is unavailable in this environment.")
-    pdf.drawString(2 * cm, height - 4.2 * cm, "Please enable HTML-to-PDF rendering for full reports.")
-
-    pdf.showPage()
-    pdf.save()
-    buffer.seek(0)
-    return buffer.read()
 
 
 def _recommended_plans(result):
