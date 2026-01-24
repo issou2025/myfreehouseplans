@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shell admin-shell">
+    <header class="admin-header">
+        <div class="admin-header__content">
+            <p class="admin-eyebrow">🛡️ Smart Analytics</p>
+            <h1 class="admin-title">Traffic & security overview</h1>
+            <p class="admin-subtitle">Signal-over-noise analytics: humans, SEO bots, and blocked probe attacks. Recent logs are retained briefly; daily stats stay compact.</p>
+            {% if cleanup_ran %}
+                <p class="admin-subtitle" style="margin-top: 8px; opacity: .85;">Maintenance ran on load (retention cleanup).</p>
+            {% elif cleanup_error %}
+                <p class="admin-subtitle" style="margin-top: 8px; opacity: .85;">Maintenance error: {{ cleanup_error }}</p>
+            {% endif %}
+        </div>
+        <div class="admin-header__actions">
+            <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.dashboard') }}">
+                <span class="btn-admin__icon">↩</span>
+                <span>Back to dashboard</span>
+            </a>
+            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors') }}">
+                <span class="btn-admin__icon">👀</span>
+                <span>Legacy visitors</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="visitor-metrics" aria-label="Smart analytics highlights">
+        <article class="visitor-card visitor-card--primary">
+            <p class="visitor-card__label">Humans ({{ payload.window_days }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.human }}</strong>
+            <p class="visitor-card__note">Estimated real visitors.</p>
+        </article>
+        <article class="visitor-card visitor-card--accent">
+            <p class="visitor-card__label">Bots ({{ payload.window_days }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.bot }}</strong>
+            <p class="visitor-card__note">Includes SEO crawlers (not blocked).</p>
+        </article>
+        <article class="visitor-card">
+            <p class="visitor-card__label">Blocked attacks ({{ payload.window_days }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.attack }}</strong>
+            <p class="visitor-card__note">WP/PHP/.env/.git probes, etc.</p>
+        </article>
+        <article class="visitor-card">
+            <p class="visitor-card__label">Sales & conversion ({{ payload.window_days }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.sales }}</strong>
+            <p class="visitor-card__note">
+                {{ (payload.totals.conversion_rate * 100) | round(2) }}% conversion · ${{ payload.totals.revenue | round(2) }} revenue
+            </p>
+        </article>
+    </section>
+
+    <section class="admin-panel" aria-labelledby="analytics-charts-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">Last {{ payload.window_days }} days</p>
+                <h2 class="admin-panel__title" id="analytics-charts-heading">Trends</h2>
+                <p class="admin-panel__hint">Daily counts combine aggregated stats + recent sampled logs. If you run multiple workers, in-memory counters are per-worker.</p>
+            </div>
+            <div class="visitors-tools">
+                <a class="btn btn-soft" href="{{ url_for('admin.analytics', skip_cleanup=1) }}">Reload (skip cleanup)</a>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start;">
+            <div class="admin-panel__body">
+                <canvas id="trendChart" height="120"></canvas>
+            </div>
+            <div class="admin-panel__body">
+                <canvas id="shareChart" height="120"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-panel" aria-labelledby="top-countries-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">Geo (humans)</p>
+                <h2 class="admin-panel__title" id="top-countries-heading">Top countries</h2>
+                <p class="admin-panel__hint">Country is best-effort from IP; unknown is expected for some networks.</p>
+            </div>
+        </div>
+
+        <div class="admin-panel__body">
+            {% if payload.top_countries and payload.top_countries|length %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Country</th>
+                            <th style="text-align:right;">Humans</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in payload.top_countries %}
+                        <tr>
+                            <td>
+                                {{ row.name }}
+                                {% if row.code %}<span style="opacity:.6; margin-left: 6px;">({{ row.code }})</span>{% endif %}
+                            </td>
+                            <td style="text-align:right;">{{ row.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p style="margin:0; opacity:.8;">No country data yet. Once traffic comes in, this will fill automatically.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const payload = {{ payload | tojson }};
+    const labels = (payload.series || []).map(d => d.label);
+    const humans = (payload.series || []).map(d => d.human);
+    const bots = (payload.series || []).map(d => d.bot);
+    const attacks = (payload.series || []).map(d => d.attack);
+
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Humans', data: humans, backgroundColor: 'rgba(34, 197, 94, 0.7)' },
+                    { label: 'Bots', data: bots, backgroundColor: 'rgba(148, 163, 184, 0.7)' },
+                    { label: 'Attacks', data: attacks, backgroundColor: 'rgba(239, 68, 68, 0.7)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                },
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    const shareCtx = document.getElementById('shareChart');
+    if (shareCtx) {
+        new Chart(shareCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Humans', 'Bots', 'Attacks'],
+                datasets: [{
+                    data: [payload.totals.human || 0, payload.totals.bot || 0, payload.totals.attack || 0],
+                    backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(148, 163, 184, 0.8)', 'rgba(239, 68, 68, 0.8)']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

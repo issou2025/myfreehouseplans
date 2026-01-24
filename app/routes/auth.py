@@ -7,7 +7,7 @@ This blueprint handles user authentication including:
 - Password reset
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app
 from flask_login import logout_user, current_user, login_required
 from app.models import User
 from app.forms import PasswordResetRequestForm, PasswordResetForm

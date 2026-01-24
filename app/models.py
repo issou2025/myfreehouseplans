@@ -802,3 +802,58 @@ class Visitor(db.Model):
 
     def __repr__(self):
         return f"<Visitor {self.visit_date} {self.page_visited}>"
+
+
+class DailyTrafficStat(db.Model):
+    """Aggregated daily traffic stats (long-term, bounded growth)."""
+
+    __tablename__ = 'daily_traffic_stats'
+
+    date = db.Column(db.Date, primary_key=True)
+    human_visits = db.Column(db.Integer, nullable=False, default=0)
+    bot_visits = db.Column(db.Integer, nullable=False, default=0)
+    blocked_attacks = db.Column(db.Integer, nullable=False, default=0)
+
+    # Revenue (completed orders) for that day.
+    revenue = db.Column(db.Float, nullable=False, default=0.0)
+
+    # JSON payload, typically a list of {code,name,count} or a dict mapping.
+    top_countries = db.Column(db.JSON)
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        server_default=db.func.now(),
+    )
+
+    __table_args__ = (
+        db.Index('ix_daily_traffic_stats_date', 'date'),
+    )
+
+
+class RecentLog(db.Model):
+    """Short-term request log for forensics/UI (auto-retained ~7 days)."""
+
+    __tablename__ = 'recent_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(64), nullable=False, index=True)
+    country_code = db.Column(db.String(8))
+    country_name = db.Column(db.String(80))
+    request_path = db.Column(db.String(255), nullable=False, index=True)
+    user_agent = db.Column(db.String(500))
+    traffic_type = db.Column(db.String(16), nullable=False, index=True)  # human | bot | attack
+
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=db.func.now(),
+        index=True,
+    )
+
+    __table_args__ = (
+        db.Index('ix_recent_logs_type_time', 'traffic_type', 'timestamp'),
+    )

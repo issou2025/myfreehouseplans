@@ -18,7 +18,8 @@ except Exception:  # pragma: no cover - optional dependency
     AddressNotFoundError = Exception
 
 
-UNKNOWN_COUNTRY = 'Unknown country'
+UNKNOWN_COUNTRY = 'Unknown'
+UNKNOWN_COUNTRY_CODE = 'UN'
 
 _reader = None
 _reader_error = None
@@ -30,6 +31,7 @@ _cache_ttl_seconds = 86400
 _negative_cache_ttl_seconds = 900
 
 _country_cache = TTLCache[str, str](ttl_seconds=_cache_ttl_seconds, max_items=8192)
+_country_details_cache = TTLCache[str, tuple[str, str]](ttl_seconds=_cache_ttl_seconds, max_items=8192)
 
 
 def init_geoip_reader(db_path: str | None, logger=None):
@@ -79,7 +81,7 @@ def init_geoip_settings(
 ):
     """Configure GeoIP lookup behavior (optional)."""
     global _fallback_enabled, _fallback_url_template, _fallback_timeout
-    global _cache_ttl_seconds, _negative_cache_ttl_seconds, _country_cache
+    global _cache_ttl_seconds, _negative_cache_ttl_seconds, _country_cache, _country_details_cache
 
     if fallback_enabled is not None:
         _fallback_enabled = bool(fallback_enabled)
@@ -101,6 +103,7 @@ def init_geoip_settings(
         except Exception:
             pass
     _country_cache = TTLCache[str, str](ttl_seconds=_cache_ttl_seconds, max_items=8192)
+    _country_details_cache = TTLCache[str, tuple[str, str]](ttl_seconds=_cache_ttl_seconds, max_items=8192)
 
 
 def _normalize_ip(value: str | None) -> str | None:
@@ -313,3 +316,57 @@ def get_country_for_ip(ip: str | None) -> str:
 
     _country_cache.set(normalized, UNKNOWN_COUNTRY, ttl_seconds=_negative_cache_ttl_seconds)
     return UNKNOWN_COUNTRY
+
+
+def get_country_details_for_ip(ip: str | None) -> tuple[str, str]:
+    """Return (country_code, country_name) for IP (fail-safe, read-only)."""
+
+    normalized = _normalize_ip(ip)
+    if not normalized:
+        return UNKNOWN_COUNTRY_CODE, UNKNOWN_COUNTRY
+
+    cached = _country_details_cache.get(normalized)
+    if cached is not None:
+        return cached
+
+    try:
+        parsed = ip_address(normalized)
+        if not parsed.is_global:
+            value = (UNKNOWN_COUNTRY_CODE, UNKNOWN_COUNTRY)
+            _country_details_cache.set(normalized, value, ttl_seconds=_negative_cache_ttl_seconds)
+            return value
+    except Exception:
+        value = (UNKNOWN_COUNTRY_CODE, UNKNOWN_COUNTRY)
+        _country_details_cache.set(normalized, value, ttl_seconds=_negative_cache_ttl_seconds)
+        return value
+
+    if _reader is not None:
+        try:
+            response = _reader.country(normalized)
+            code = response.country.iso_code or UNKNOWN_COUNTRY_CODE
+            name = response.country.name or UNKNOWN_COUNTRY
+            if not isinstance(code, str):
+                code = UNKNOWN_COUNTRY_CODE
+            if not isinstance(name, str):
+                name = UNKNOWN_COUNTRY
+            code = code.strip() or UNKNOWN_COUNTRY_CODE
+            name = name.strip() or UNKNOWN_COUNTRY
+            ttl = _cache_ttl_seconds if name != UNKNOWN_COUNTRY else _negative_cache_ttl_seconds
+            value = (code, name)
+            _country_details_cache.set(normalized, value, ttl_seconds=ttl)
+            return value
+        except AddressNotFoundError:
+            pass
+        except Exception:
+            pass
+
+    # Fallback HTTP lookup only yields country name in our current parser.
+    fallback = _external_country_lookup(normalized)
+    if fallback:
+        value = (UNKNOWN_COUNTRY_CODE, fallback)
+        _country_details_cache.set(normalized, value, ttl_seconds=_cache_ttl_seconds)
+        return value
+
+    value = (UNKNOWN_COUNTRY_CODE, UNKNOWN_COUNTRY)
+    _country_details_cache.set(normalized, value, ttl_seconds=_negative_cache_ttl_seconds)
+    return value

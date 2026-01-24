@@ -64,6 +64,7 @@ def service_worker():
 
 
 @main_bp.route('/search')
+@limiter.limit('60 per minute; 2000 per day')
 def global_search():
     """Global search across Space Planner checks, blog articles, guides, and plan pages."""
 
@@ -646,6 +647,7 @@ def packs():
 
 
 @main_bp.route('/plans/fragment')
+@limiter.limit('90 per minute; 3000 per day')
 def plans_fragment():
     """HTML fragment endpoint for progressively loading more plans."""
 
@@ -662,6 +664,7 @@ def plans_fragment():
 
 
 @main_bp.route('/plans/data')
+@limiter.limit('90 per minute; 3000 per day')
 def plans_data():
     """JSON endpoint powering real-time catalog filtering."""
 
@@ -692,6 +695,7 @@ def plans_data():
 
 
 @main_bp.route('/plans/similar/<string:slug>')
+@limiter.limit('60 per minute; 2000 per day')
 def plans_similar(slug: str):
     """Return similar plans for personalization rails."""
 
@@ -826,8 +830,14 @@ def pack_detail(slug):
 
         category_name = plan.category.name if getattr(plan, 'category', None) else 'Uncategorized'
 
-        print(f'DEBUG: pack_detail slug={slug!r} resolved plan id={getattr(plan, "id", None)} title={getattr(plan, "title", None)!r}')
-        print(f'DEBUG: pack_detail plan has category? {bool(getattr(plan, "category", None))}')
+        if current_app.debug or current_app.config.get('LOG_PLAN_DEBUG') == '1':
+            current_app.logger.debug(
+                'pack_detail slug=%r resolved plan id=%s title=%r',
+                slug,
+                getattr(plan, 'id', None),
+                getattr(plan, 'title', None),
+            )
+            current_app.logger.debug('pack_detail plan has category? %s', bool(getattr(plan, 'category', None)))
 
         # Increment view count (non-fatal).
         try:
@@ -932,7 +942,6 @@ def pack_detail(slug):
             db.session.rollback()
         except Exception as rollback_exc:
             current_app.logger.error('Rollback failed after pack_detail DB error: %s', rollback_exc, exc_info=True)
-        print(traceback.format_exc())
         current_app.logger.error('pack_detail DB error slug=%s: %s', slug, db_exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later.', status=503)
     except Exception as exc:
@@ -940,7 +949,6 @@ def pack_detail(slug):
             db.session.rollback()
         except Exception as rollback_exc:
             current_app.logger.error('Rollback failed after pack_detail error: %s', rollback_exc, exc_info=True)
-        print(traceback.format_exc())
         current_app.logger.error('pack_detail failed slug=%s: %s', slug, exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later.', status=503)
 
@@ -964,7 +972,6 @@ def plan_detail_by_id(id: int):
             db.session.rollback()
         except Exception:
             pass
-        print(traceback.format_exc())
         current_app.logger.error('Plan detail DB error for ID %s: %s', id, db_exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later.', status=503)
     except Exception as e:
@@ -972,7 +979,6 @@ def plan_detail_by_id(id: int):
             db.session.rollback()
         except Exception:
             pass
-        print(traceback.format_exc())
         current_app.logger.error('Plan detail error for ID %s: %s', id, e, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later.', status=503)
 
@@ -996,8 +1002,9 @@ def plan_detail(plan_id: int):
         if not getattr(plan, 'is_published', False):
             abort(404)
 
-        print(f'DEBUG: Plan ID {plan_id} found: {plan}')
-        print(f'DEBUG: Plan ID {plan_id} category exists: {bool(getattr(plan, "category", None))}')
+        if current_app.debug or current_app.config.get('LOG_PLAN_DEBUG') == '1':
+            current_app.logger.debug('Plan ID %s found: %r', plan_id, plan)
+            current_app.logger.debug('Plan ID %s category exists: %s', plan_id, bool(getattr(plan, 'category', None)))
 
         meta = generate_meta_tags(
             title=getattr(plan, 'meta_title', None) or getattr(plan, 'title', 'House Plan'),
@@ -1015,7 +1022,6 @@ def plan_detail(plan_id: int):
             db.session.rollback()
         except Exception as rollback_exc:
             current_app.logger.error('Rollback failed after plan detail DB error: %s', rollback_exc, exc_info=True)
-        print(traceback.format_exc())
         current_app.logger.error('Plan detail DB error for id=%s: %s', plan_id, db_exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later or contact support.', status=503)
     except Exception as exc:
@@ -1023,7 +1029,6 @@ def plan_detail(plan_id: int):
             db.session.rollback()
         except Exception as rollback_exc:
             current_app.logger.error('Rollback failed after plan detail error: %s', rollback_exc, exc_info=True)
-        print(traceback.format_exc())
         current_app.logger.error('Plan detail rendering failed for id=%s: %s', plan_id, exc, exc_info=True)
         return Response('Plan temporarily unavailable. Please try again later or contact support.', status=503)
 
@@ -1055,6 +1060,7 @@ def compare():
 
 
 @main_bp.route('/compare/data')
+@limiter.limit('60 per minute; 2000 per day')
 def compare_data():
     slugs_param = (request.args.get('slugs') or '').strip()
     if not slugs_param:

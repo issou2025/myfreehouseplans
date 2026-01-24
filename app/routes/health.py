@@ -60,6 +60,8 @@ def readiness_check():
     
     status_code = 200
     
+    include_details = bool(current_app.debug) or os.environ.get('HEALTH_INCLUDE_DETAILS') == '1'
+
     # Check database connectivity
     try:
         # Simple query to verify database is responsive
@@ -68,7 +70,8 @@ def readiness_check():
         checks['database'] = 'healthy'
     except Exception as exc:
         checks['database'] = 'unhealthy'
-        checks['database_error'] = str(exc)
+        if include_details:
+            checks['database_error'] = str(exc)
         status_code = 503
         current_app.logger.error('Database health check failed: %s', exc, exc_info=True)
         try:
@@ -93,7 +96,8 @@ def readiness_check():
                 checks['schema'] = 'complete'
         except Exception as exc:
             checks['schema'] = 'unknown'
-            checks['schema_error'] = str(exc)
+            if include_details:
+                checks['schema_error'] = str(exc)
             current_app.logger.error('Schema health check failed: %s', exc, exc_info=True)
     
     checks['overall'] = 'healthy' if status_code == 200 else 'unhealthy'

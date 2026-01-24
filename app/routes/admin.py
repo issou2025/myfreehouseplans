@@ -589,6 +589,51 @@ def visitors():
     )
 
 
+@admin_bp.route('/analytics')
+@login_required
+@admin_required
+def analytics():
+    """Smart analytics dashboard (aggregated + bounded retention)."""
+
+    from app.services.analytics.dashboard import build_dashboard_payload
+    from app.services.analytics.maintenance import clean_old_logs
+
+    skip_cleanup = (request.args.get('skip_cleanup') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    cleanup_ran = False
+    cleanup_error = None
+
+    if not skip_cleanup:
+        try:
+            retention_days = int(current_app.config.get('ANALYTICS_RETENTION_DAYS', 7) or 7)
+            clean_old_logs(retention_days=retention_days)
+            cleanup_ran = True
+        except Exception as exc:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            cleanup_error = str(exc)
+            current_app.logger.warning('Smart analytics cleanup failed: %s', exc)
+
+    try:
+        payload = build_dashboard_payload(days=7)
+    except Exception as exc:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.exception('Failed to build smart analytics dashboard: %s', exc)
+        flash('Unable to load smart analytics right now. Please try again.', 'warning')
+        payload = {'window_days': 7, 'series': [], 'totals': {}, 'top_countries': []}
+
+    return render_template(
+        'admin/analytics.html',
+        payload=payload,
+        cleanup_ran=cleanup_ran,
+        cleanup_error=cleanup_error,
+    )
+
+
 @admin_bp.route('/visitors/export')
 @login_required
 @admin_required

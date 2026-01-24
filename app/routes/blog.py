@@ -10,7 +10,7 @@ from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
 from slugify import slugify
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.forms import PowerfulPostForm
 from app.models import BlogPost, HousePlan, Category
 from app.seo import generate_meta_tags
@@ -188,6 +188,7 @@ def detail(slug):
 
 
 @blog_bp.route('/blog/<slug>/pdf')
+@limiter.limit('10 per hour')
 def download_pdf(slug):
     post = BlogPost.query.filter_by(slug=slug, status=BlogPost.STATUS_PUBLISHED).first_or_404()
 

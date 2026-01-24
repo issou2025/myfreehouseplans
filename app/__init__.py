@@ -722,39 +722,137 @@ def register_request_hooks(app):
         ) or '0.0.0.0'
 
     @app.before_request
-    def _prepare_visit_tracking():
-        path = (request.path or '/').strip()
-        if not path:
-            path = '/'
+    def _block_common_bot_probes():
+        """Return a fast 404 for common scanner/bot probe paths.
+
+        Counts as "blocked_attacks" but does not persist full per-request logs.
+        """
+
+        try:
+            path = (request.path or '/').strip() or '/'
+        except Exception:
+            return
+
+        # Never interfere with SEO-critical or static routes.
+        if path in ('/robots.txt', '/sitemap.xml', '/sw.js', '/offline', '/favicon.ico'):
+            return
+        if path.startswith('/static/'):
+            return
+
+        try:
+            from app.services.analytics.traffic import is_obvious_attack_path
+
+            if is_obvious_attack_path(path):
+                from datetime import datetime
+                from flask import abort
+                from app.services.analytics.counters import increment_attack
+
+                increment_attack(datetime.utcnow().date())
+                abort(404)
+        except Exception:
+            return
+
+    @app.before_request
+    def _prepare_smart_analytics():
+        """Classify traffic and keep only useful signals."""
+
+        g.analytics_event = None
+        g.visit_track = None
+
+        if not app.config.get('ANALYTICS_ENABLED', True):
+            return
+
+        path = (request.path or '/').strip() or '/'
+
+        # Skip noisy/low-value endpoints.
         if path == '/favicon.ico':
-            g.visit_track = None
             return
         if path.startswith('/static/') or request.endpoint == 'static':
-            g.visit_track = None
             return
         if path.startswith('/admin'):
-            g.visit_track = None
+            return
+        if path.startswith('/health'):
             return
         if request.method not in ('GET', 'POST'):
-            g.visit_track = None
             return
         if current_user.is_authenticated and getattr(current_user, 'role', None) == 'superadmin':
-            g.visit_track = None
             return
+
+        ua = (request.headers.get('User-Agent') or '')[:500]
+
+        try:
+            from app.services.analytics.traffic import classify_traffic
+            from app.services.analytics.counters import increment_bot, increment_human
+            from app.services.analytics.tracking import AnalyticsEvent
+
+            classification = classify_traffic(path=path, user_agent=ua)
+            now = datetime.utcnow()
+            day = now.date()
+
+            if classification.traffic_type == 'bot':
+                increment_bot(day)
+            else:
+                increment_human(day)
+
+            # Resolve GeoIP only when likely to be logged.
+            should_lookup_country = (
+                classification.traffic_type == 'human'
+                or classification.is_search_bot
+                or app.config.get('ANALYTICS_LOG_GENERIC_BOTS', False)
+            )
+
+            country_code = ''
+            country_name = ''
+            if should_lookup_country:
+                try:
+                    from app.services.analytics.tracking import safe_country_for_ip
+
+                    country_code, country_name = safe_country_for_ip(_client_ip())
+                except Exception:
+                    country_code, country_name = 'UN', 'Unknown'
+
+            g.analytics_event = AnalyticsEvent(
+                timestamp=now,
+                ip_address=_client_ip(),
+                country_code=country_code,
+                country_name=country_name,
+                request_path=path[:255],
+                user_agent=ua,
+                traffic_type=classification.traffic_type,
+                is_search_bot=classification.is_search_bot,
+            )
+        except Exception:
+            # Never break requests due to analytics.
+            g.analytics_event = None
+
+        # Optional legacy visitor logging (unbounded growth). Disabled by default.
+        if not app.config.get('ENABLE_LEGACY_VISITOR_LOGGING', False):
+            return
+
         g.visit_track = {
             'timestamp': datetime.utcnow(),
             'ip': _client_ip(),
-            'ua': (request.headers.get('User-Agent') or '')[:500],
+            'ua': ua,
             'page': path[:255],
         }
 
     @app.after_request
-    def _persist_visit(response):
+    def _persist_analytics(response):
+        event = getattr(g, 'analytics_event', None)
+        if event is not None:
+            try:
+                from app.services.analytics.tracking import record_event
+
+                record_event(event)
+            except Exception:
+                pass
+
         payload = getattr(g, 'visit_track', None)
         if not payload:
             return response
         try:
             from app.models import Visitor
+
             visit = Visitor(
                 visit_date=payload['timestamp'].date(),
                 visitor_name=payload.get('name'),
@@ -768,13 +866,11 @@ def register_request_hooks(app):
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            # Analytics failures should not break the request, but we must log them
-            # Use print() as fallback if logger itself is broken
             try:
                 app.logger.warning('Visitor logging failed: %s', exc, exc_info=True)
             except Exception as log_exc:
-                # Last resort: write to stderr if logger is completely broken
                 import sys
+
                 print(f"CRITICAL: Logger failure in visitor tracking: {log_exc}", file=sys.stderr)
                 print(f"Original error: {exc}", file=sys.stderr)
         finally:

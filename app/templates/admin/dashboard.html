@@ -35,6 +35,10 @@
                 <span class="btn-admin__icon">✨</span>
                 <span>Add New Plan</span>
             </a>
+            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.analytics') }}">
+                <span class="btn-admin__icon">🛡️</span>
+                <span>Smart Analytics</span>
+            </a>
             <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors') }}">
                 <span class="btn-admin__icon">👀</span>
                 <span>Visitor Analytics</span>
@@ -47,6 +51,7 @@
         <a class="btn btn-soft" href="{{ url_for('admin.plans') }}">Open plans</a>
         <a class="btn btn-soft" href="{{ url_for('blog.admin_list') }}">Blog</a>
         <a class="btn btn-soft" href="{{ url_for('admin.messages') }}">Inbox</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.analytics') }}">Smart analytics</a>
         <a class="btn btn-soft" href="{{ url_for('admin.visitors') }}">Visitors</a>
         {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
         <a class="btn btn-soft" href="{{ url_for('admin.manage_categories') }}">Categories</a>
@@ -105,6 +110,14 @@
                     <p>Track purchases and order statuses in one place.</p>
                 </div>
                 <div class="admin-tool-card__meta">{{ stats.total_orders }} orders</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.analytics') }}">
+                <div class="admin-tool-card__icon">🛡️</div>
+                <div class="admin-tool-card__content">
+                    <h3>Smart analytics</h3>
+                    <p>Humans vs bots, blocked probe attacks, and conversion rate.</p>
+                </div>
+                <div class="admin-tool-card__meta">Signal over noise</div>
             </a>
             <a class="admin-tool-card" href="{{ url_for('admin.visitors') }}">
                 <div class="admin-tool-card__icon">📈</div>

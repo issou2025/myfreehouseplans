@@ -12,6 +12,21 @@ from pathlib import Path
 from datetime import timedelta
 
 
+def _config_debug_enabled() -> bool:
+    return os.environ.get('CONFIG_DEBUG') == '1'
+
+
+def _stderr_log(message: str) -> None:
+    if not _config_debug_enabled():
+        return
+    try:
+        import sys
+
+        print(message, file=sys.stderr)
+    except Exception:
+        pass
+
+
 class Config:
     """Base configuration with common settings"""
     
@@ -85,6 +100,15 @@ class Config:
     # Spam heuristics
     SPAM_MAX_URLS = int(os.environ.get('SPAM_MAX_URLS', 3))
 
+    # Smart analytics (signal-over-noise)
+    ANALYTICS_ENABLED = os.environ.get('ANALYTICS_ENABLED', 'true').lower() == 'true'
+    ANALYTICS_LOG_GENERIC_BOTS = os.environ.get('ANALYTICS_LOG_GENERIC_BOTS', 'false').lower() == 'true'
+    ANALYTICS_BOT_DEDUPE_SECONDS = int(os.environ.get('ANALYTICS_BOT_DEDUPE_SECONDS', 3600))
+    ANALYTICS_RETENTION_DAYS = int(os.environ.get('ANALYTICS_RETENTION_DAYS', 7))
+
+    # Legacy visitor table logging (unbounded growth). Keep disabled by default.
+    ENABLE_LEGACY_VISITOR_LOGGING = os.environ.get('ENABLE_LEGACY_VISITOR_LOGGING', 'false').lower() == 'true'
+
     # Cloudinary (Render): provide CLOUDINARY_URL in environment.
     CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 
@@ -139,10 +163,7 @@ class ProductionConfig(Config):
         db_uri = os.environ.get('DATABASE_URL')
         
         if not db_uri:
-            # Log detailed error for debugging
-            import sys
-            print('❌ FATAL: DATABASE_URL not set in environment', file=sys.stderr)
-            print('Available env vars:', list(os.environ.keys()), file=sys.stderr)
+            _stderr_log('❌ FATAL: DATABASE_URL not set in environment')
             return None
         
         original_uri = db_uri
@@ -150,21 +171,21 @@ class ProductionConfig(Config):
         # Fix postgres:// -> postgresql:// (Render/Heroku compatibility)
         if db_uri.startswith('postgres://'):
             db_uri = 'postgresql://' + db_uri[len('postgres://'):]
-            print(f'✓ Fixed DATABASE_URL prefix: postgres:// -> postgresql://', file=sys.stderr)
+            _stderr_log('✓ Fixed DATABASE_URL prefix: postgres:// -> postgresql://')
         
         # Enforce SSL for PostgreSQL connections (security best practice)
         if db_uri.startswith('postgresql://'):
             if 'sslmode=' not in db_uri:
                 separator = '&' if '?' in db_uri else '?'
                 db_uri = f"{db_uri}{separator}sslmode=require"
-                print(f'✓ Added SSL requirement to PostgreSQL connection', file=sys.stderr)
+                _stderr_log('✓ Added SSL requirement to PostgreSQL connection')
         
         # Log sanitized connection info (hide password)
         try:
             from urllib.parse import urlparse
             parsed = urlparse(db_uri)
             safe_uri = f"{parsed.scheme}://{parsed.username}:***@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
-            print(f'✓ Database URI configured: {safe_uri}', file=sys.stderr)
+            _stderr_log(f'✓ Database URI configured: {safe_uri}')
         except Exception:
             pass
         
