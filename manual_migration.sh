@@ -39,5 +39,25 @@ with app.app_context():
 "
 
 echo ""
+echo "✅ Verifying smart analytics tables exist..."
+python -c "
+from app import create_app
+from sqlalchemy import inspect
+
+app = create_app()
+with app.app_context():
+    inspector = inspect(app.extensions['sqlalchemy'].engine)
+    tables = set(inspector.get_table_names())
+    for t in ['daily_traffic_stats', 'recent_logs']:
+        if t in tables:
+            cols = [col['name'] for col in inspector.get_columns(t)]
+            print(f'✅ {t} table EXISTS')
+            print(f'   Columns: {cols}')
+        else:
+            print(f'❌ {t} table DOES NOT EXIST')
+            print('   Run: flask db upgrade')
+"
+
+echo ""
 echo "🎯 Current migration status:"
 flask db current

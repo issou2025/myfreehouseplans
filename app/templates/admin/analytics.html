@@ -27,25 +27,25 @@
 
     <section class="visitor-metrics" aria-label="Smart analytics highlights">
         <article class="visitor-card visitor-card--primary">
-            <p class="visitor-card__label">Humans ({{ payload.window_days }} days)</p>
-            <strong class="visitor-card__value">{{ payload.totals.human }}</strong>
+            <p class="visitor-card__label">Humans ({{ payload.window_days | default(7) }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.human | default(0) }}</strong>
             <p class="visitor-card__note">Estimated real visitors.</p>
         </article>
         <article class="visitor-card visitor-card--accent">
-            <p class="visitor-card__label">Bots ({{ payload.window_days }} days)</p>
-            <strong class="visitor-card__value">{{ payload.totals.bot }}</strong>
+            <p class="visitor-card__label">Bots ({{ payload.window_days | default(7) }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.bot | default(0) }}</strong>
             <p class="visitor-card__note">Includes SEO crawlers (not blocked).</p>
         </article>
         <article class="visitor-card">
-            <p class="visitor-card__label">Blocked attacks ({{ payload.window_days }} days)</p>
-            <strong class="visitor-card__value">{{ payload.totals.attack }}</strong>
+            <p class="visitor-card__label">Blocked attacks ({{ payload.window_days | default(7) }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.attack | default(0) }}</strong>
             <p class="visitor-card__note">WP/PHP/.env/.git probes, etc.</p>
         </article>
         <article class="visitor-card">
-            <p class="visitor-card__label">Sales & conversion ({{ payload.window_days }} days)</p>
-            <strong class="visitor-card__value">{{ payload.totals.sales }}</strong>
+            <p class="visitor-card__label">Sales & conversion ({{ payload.window_days | default(7) }} days)</p>
+            <strong class="visitor-card__value">{{ payload.totals.sales | default(0) }}</strong>
             <p class="visitor-card__note">
-                {{ (payload.totals.conversion_rate * 100) | round(2) }}% conversion · ${{ payload.totals.revenue | round(2) }} revenue
+                {{ ((payload.totals.conversion_rate | default(0)) * 100) | round(2) }}% conversion · ${{ (payload.totals.revenue | default(0)) | round(2) }} revenue
             </p>
         </article>
     </section>
@@ -146,12 +146,13 @@
 
     const shareCtx = document.getElementById('shareChart');
     if (shareCtx) {
+        const totals = payload.totals || {};
         new Chart(shareCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Humans', 'Bots', 'Attacks'],
                 datasets: [{
-                    data: [payload.totals.human || 0, payload.totals.bot || 0, payload.totals.attack || 0],
+                    data: [totals.human || 0, totals.bot || 0, totals.attack || 0],
                     backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(148, 163, 184, 0.8)', 'rgba(239, 68, 68, 0.8)']
                 }]
             },
