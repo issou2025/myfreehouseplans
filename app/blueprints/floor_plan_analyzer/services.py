@@ -2,6 +2,11 @@
 
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from datetime import datetime
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 
 @dataclass
@@ -305,24 +310,43 @@ def validate_room_dimensions(room_type: str, length_m: float, width_m: float, ar
     area_status = 'optimal'
     area_feedback = ''
     waste_level = 0.0
+    waste_m2 = 0.0
+
+    # Some spaces (e.g., Corridor/Hallway) have no meaningful "optimal area".
+    # For those, treat waste primarily as excess width beyond the recommended range.
+    has_area_standards = standard.optimal_max_m2 > 0 and standard.oversized_threshold_m2 > 0
     
-    if area_m2 < standard.min_area_m2:
-        area_status = 'critical'
-        area_feedback = standard.efficiency_notes['undersized']
-    elif area_m2 < standard.optimal_min_m2:
-        area_status = 'warning'
-        area_feedback = 'This space is slightly below recommended standards.'
-    elif area_m2 <= standard.optimal_max_m2:
-        area_status = 'optimal'
-        area_feedback = standard.efficiency_notes['optimal']
-    elif area_m2 <= standard.oversized_threshold_m2:
-        area_status = 'warning'
-        area_feedback = standard.efficiency_notes['oversized']
-        waste_level = (area_m2 - standard.optimal_max_m2) / area_m2
+    if has_area_standards:
+        if area_m2 < standard.min_area_m2:
+            area_status = 'critical'
+            area_feedback = standard.efficiency_notes['undersized']
+        elif area_m2 < standard.optimal_min_m2:
+            area_status = 'warning'
+            area_feedback = 'This space is slightly below recommended standards.'
+        elif area_m2 <= standard.optimal_max_m2:
+            area_status = 'optimal'
+            area_feedback = standard.efficiency_notes['optimal']
+        elif area_m2 <= standard.oversized_threshold_m2:
+            area_status = 'warning'
+            area_feedback = standard.efficiency_notes['oversized']
+        else:
+            area_status = 'critical'
+            area_feedback = standard.efficiency_notes['oversized']
+
+        # Waste is the *excess* area beyond optimal max (not a penalty on the whole room).
+        waste_m2 = max(0.0, area_m2 - standard.optimal_max_m2)
     else:
-        area_status = 'critical'
-        area_feedback = standard.efficiency_notes['oversized']
-        waste_level = (area_m2 - standard.optimal_max_m2) / area_m2
+        # Area-based oversize does not apply.
+        area_status = 'optimal'
+        area_feedback = standard.efficiency_notes.get('optimal', '')
+
+        # Corridor/ hallway waste = excess width beyond optimal upper bound * length
+        optimal_width_max = standard.optimal_width_range[1]
+        if optimal_width_max > 0 and width_m > optimal_width_max and length_m > 0:
+            waste_m2 = (width_m - optimal_width_max) * length_m
+
+    if area_m2 > 0:
+        waste_level = max(0.0, min(1.0, waste_m2 / area_m2))
     
     # Overall status
     if area_status == 'critical' or width_status == 'critical':
@@ -343,6 +367,7 @@ def validate_room_dimensions(room_type: str, length_m: float, width_m: float, ar
         'feedback': area_feedback,
         'width_feedback': width_feedback,
         'waste_level': waste_level,
+        'waste_m2': waste_m2,
         'optimal_min_m2': standard.optimal_min_m2,
         'optimal_max_m2': standard.optimal_max_m2,
         'optimal_range': f"{standard.optimal_min_m2:.0f}-{standard.optimal_max_m2:.0f} m²"
@@ -369,10 +394,13 @@ def detect_wasted_space(rooms: List[Dict]) -> Dict:
         if room_type in ['Corridor', 'Hallway', 'Entrance', 'Lobby']:
             circulation_area += area
         
-        # Calculate waste from oversized rooms
-        waste_level = validation.get('waste_level', 0)
-        if waste_level > 0:
+        # Calculate waste from oversized / inefficient rooms
+        waste = float(validation.get('waste_m2') or 0)
+        if waste <= 0:
+            waste_level = float(validation.get('waste_level') or 0)
             waste = area * waste_level
+
+        if waste > 0:
             total_waste += waste
             oversized_rooms.append({
                 'type': room_type,
@@ -522,12 +550,79 @@ def generate_optimization_report(
     rooms: List[Dict],
     unit_system: str,
     budget: Optional[float],
-    country: str
-) -> str:
+    country: str,
+    output_dir: Path,
+) -> Path:
+    """Generate a simple, useful PDF optimization report.
+
+    Note: This is intentionally lightweight (no payment gating yet).
     """
-    Generate premium PDF optimization report.
-    (Stub - full implementation would use ReportLab)
-    """
-    # This would generate a comprehensive PDF report
-    # For now, return a placeholder
-    return 'floor_plan_analysis_report.pdf'
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+    filename = f"floor_plan_report_{stamp}.pdf"
+    output_path = output_dir / filename
+
+    # Compute core stats
+    total_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
+    area_factor = 1.0 if unit_system == 'metric' else 10.7639
+    area_unit = 'm²' if unit_system == 'metric' else 'ft²'
+
+    c = canvas.Canvas(str(output_path), pagesize=letter)
+    width, height = letter
+    y = height - 54
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(54, y, "Floor Plan Optimization Report")
+    y -= 22
+
+    c.setFont("Helvetica", 10)
+    c.drawString(54, y, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    y -= 14
+    c.drawString(54, y, f"Country: {country}   |   Unit system: {unit_system} ({area_unit})")
+    y -= 22
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(54, y, "Summary")
+    y -= 16
+    c.setFont("Helvetica", 11)
+    c.drawString(54, y, f"Rooms: {len(rooms)}")
+    y -= 14
+    c.drawString(54, y, f"Total area: {(total_area_m2 * area_factor):.1f} {area_unit}")
+    y -= 22
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(54, y, "Room-by-room notes")
+    y -= 16
+
+    c.setFont("Helvetica", 10)
+    for idx, room in enumerate(rooms, start=1):
+        room_type = room.get('room_type', room.get('type', 'Unknown'))
+        area_display = float(room.get('area_m2') or 0) * area_factor
+        validation = room.get('validation') or {}
+        status_icon = validation.get('status_icon', '')
+        feedback = (validation.get('feedback') or '').strip()
+        optimal_min = float(validation.get('optimal_min_m2') or 0) * area_factor
+        optimal_max = float(validation.get('optimal_max_m2') or 0) * area_factor
+
+        line = f"{idx}. {status_icon} {room_type} — {area_display:.1f} {area_unit}"
+        if optimal_max > 0:
+            line += f" (target {optimal_min:.0f}-{optimal_max:.0f} {area_unit})"
+
+        c.drawString(54, y, line)
+        y -= 12
+        if feedback:
+            c.setFont("Helvetica-Oblique", 9)
+            c.drawString(66, y, feedback[:110])
+            c.setFont("Helvetica", 10)
+            y -= 12
+
+        if y < 72:
+            c.showPage()
+            c.setFont("Helvetica", 10)
+            y = height - 54
+
+    c.showPage()
+    c.save()
+
+    return output_path

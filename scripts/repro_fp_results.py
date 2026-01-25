@@ -25,6 +25,7 @@ def main() -> int:
     from wsgi import app  # noqa: WPS433
 
     app.testing = True
+    app.config['PROPAGATE_EXCEPTIONS'] = True
 
     with app.test_client() as client:
         # Step 0
@@ -82,6 +83,13 @@ def main() -> int:
         if r.status_code != 200:
             print(r.data[:2000])
             return 2
+
+        # PDF report (should return a PDF)
+        r = client.post("/tools/floor-plan-analyzer/report/generate")
+        print("POST /tools/floor-plan-analyzer/report/generate ->", r.status_code, r.content_type)
+        if r.status_code != 200 or (r.content_type or "").split(";")[0] != "application/pdf":
+            print(r.data[:2000])
+            return 3
 
     print("OK: /results rendered successfully")
     return 0

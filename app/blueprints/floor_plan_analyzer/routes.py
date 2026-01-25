@@ -1,6 +1,8 @@
 """Routes for ImmoCash Smart Floor Plan Analyzer."""
 
-from flask import render_template, request, session, redirect, url_for, jsonify, flash
+from pathlib import Path
+
+from flask import render_template, request, session, redirect, url_for, jsonify, flash, send_file, current_app
 from . import floor_plan_bp
 from .services import (
     validate_room_dimensions,
@@ -151,8 +153,8 @@ def results():
     budget = session.get('fp_budget')
     country = session.get('fp_country', 'International')
     
-    # Calculate total areas
-    total_built_area = sum(r['area_m2'] for r in rooms)
+    # Calculate total areas (internal = m²)
+    total_built_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
     
     # Detect wasted space
     waste_analysis = detect_wasted_space(rooms)
@@ -162,7 +164,7 @@ def results():
     
     # Estimate costs
     cost_analysis = estimate_construction_cost(
-        total_built_area,
+        total_built_area_m2,
         waste_analysis['wasted_area_m2'],
         budget,
         country
@@ -187,13 +189,20 @@ def results():
         optimal_max_m2 = float(item.get('optimal_max_m2') or 0)
         item['optimal_min'] = optimal_min_m2 * area_factor
         item['optimal_max'] = optimal_max_m2 * area_factor
+
+    # Convert summary numbers to the user's unit system for display (keep m² internally above)
+    waste_view = dict(waste_analysis)
+    waste_view['total_area_m2'] = float(waste_view.get('total_area_m2') or 0) * area_factor
+    waste_view['wasted_area_m2'] = float(waste_view.get('wasted_area_m2') or 0) * area_factor
+    waste_view['total_waste_m2'] = float(waste_view.get('total_waste_m2') or 0) * area_factor
+    waste_view['circulation_area_m2'] = float(waste_view.get('circulation_area_m2') or 0) * area_factor
     
     # Build analysis object for template
     analysis = {
         'total_rooms': len(rooms),
-        'total_area': total_built_area,
+        'total_area': total_built_area_m2 * area_factor,
         'scores': scores,
-        'waste_data': waste_analysis,
+        'waste_data': waste_view,
         'cost_impact': cost_analysis
     }
     
@@ -217,16 +226,18 @@ def generate_report():
     budget = session.get('fp_budget')
     country = session.get('fp_country', 'International')
     
-    # Generate report
-    pdf_path = generate_optimization_report(rooms, unit_system, budget, country)
-    
-    # In production, this would handle payment/authentication
-    # For now, return success
-    return jsonify({
-        'success': True,
-        'message': 'Report generated successfully',
-        'download_url': url_for('floor_plan.download_report', filename=pdf_path.name)
-    })
+    # Generate report (free for now)
+    output_dir = Path(current_app.instance_path) / 'floor_plan_reports'
+    pdf_path = generate_optimization_report(rooms, unit_system, budget, country, output_dir=output_dir)
+
+    # For now: return a direct download so the button "just works".
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=pdf_path.name,
+        mimetype='application/pdf',
+        max_age=0,
+    )
 
 
 @floor_plan_bp.route('/reset')
