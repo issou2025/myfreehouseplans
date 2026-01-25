@@ -12,8 +12,10 @@ from app.extensions import db as _db
 def app():
     """Create application for testing."""
     db_fd, db_path = tempfile.mkstemp()
-    
-    app = create_app({
+
+    # create_app expects a config name string; apply overrides via app.config
+    app = create_app('testing')
+    app.config.update({
         'TESTING': True,
         'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
         'SECRET_KEY': 'test-secret-key',
@@ -26,7 +28,12 @@ def app():
         yield app
         _db.session.remove()
         _db.drop_all()
-    
+
+    try:
+        import os
+        os.close(db_fd)
+    except Exception:
+        pass
     Path(db_path).unlink(missing_ok=True)
 
 

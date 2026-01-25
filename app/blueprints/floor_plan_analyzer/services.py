@@ -735,7 +735,7 @@ def generate_optimization_report(
         
         if input_method == 'surface' or length_val is None or width_val is None:
             # Surface-only input - no specific dimensions
-            dimensions_display = 'Surface input'
+            dimensions_display = 'Input Method: Surface'
         else:
             # Dimension-based input
             length_display = float(length_val) if length_val else 0

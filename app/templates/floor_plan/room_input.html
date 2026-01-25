@@ -145,8 +145,12 @@
                     </div>
 
                     <div class="room-card__dimensions">
-                        {{ "%.1f"|format(room.length|default(0)) }} × {{ "%.1f"|format(room.width|default(0)) }} 
-                        {{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }}
+                        {% if room.get('input_method', 'dimensions') == 'surface' %}
+                            Input Method: Surface
+                        {% else %}
+                            {{ "%.1f"|format(room.length|default(0, true)) }} × {{ "%.1f"|format(room.width|default(0, true)) }}
+                            {{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }}
+                        {% endif %}
                     </div>
 
                     <div class="room-card__status">

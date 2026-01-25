@@ -235,6 +235,23 @@ def results():
         budget = session.get('fp_budget')
         country = session.get('fp_country', 'International')
 
+        # Backward compatibility: ensure each room has a display-safe `area` value
+        # (older sessions/tests may only store `area_m2`).
+        normalized_rooms = []
+        for r in rooms:
+            if not isinstance(r, dict):
+                normalized_rooms.append(r)
+                continue
+
+            rr = dict(r)
+            if rr.get('area') is None:
+                area_m2 = float(rr.get('area_m2') or 0)
+                rr['area'] = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+            normalized_rooms.append(rr)
+
+        rooms = normalized_rooms
+        session['fp_rooms'] = rooms
+
         # Calculate total areas (internal = m²)
         total_built_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
 

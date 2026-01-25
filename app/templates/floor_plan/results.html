@@ -33,7 +33,7 @@
                     </thead>
                     <tbody id="roomsTableBody">
                         {% for room in rooms %}
-                        <tr data-room-index="{{ loop.index0 }}" class="room-row" data-input-method="{{ room.get('input_method', 'dimensions') }}">
+                        <tr data-room-index="{{ loop.index0 }}" class="room-row" data-input-method="{{ room.get('input_method', 'dimensions') }}" data-area-m2="{{ room.area_m2 if room.area_m2 is not none else '' }}">
                             <td>
                                 <input type="text" class="room-input" data-field="type" value="{{ room.type }}" />
                             </td>
@@ -907,6 +907,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTotalArea();
     });
     
+    const IS_METRIC = {{ 'true' if session.get('fp_unit_system') == 'metric' else 'false' }};
+
     // Recalculate button - POST updated rooms to backend
     document.getElementById('recalculateBtn').addEventListener('click', function() {
         const rows = tableBody.querySelectorAll('tr');
@@ -923,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (inputMethod === 'surface') {
                 // Surface-based room - preserve original data
                 const area = parseFloat(row.querySelector('.room-area').textContent) || 0;
-                const areaM2 = {{ 'area' if session.get('fp_unit_system') == 'metric' else 'area / 10.7639' }};
+                const areaM2 = parseFloat(row.dataset.areaM2) || (IS_METRIC ? area : (area / 10.7639));
                 
                 if (type && area > 0) {
                     rooms.push({ 
