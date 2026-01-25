@@ -565,21 +565,11 @@ def index():
         description='Browse our collection of premium architectural house plans for your dream home',
         url=url_for('main.index', _external=True)
     )
-
-    # Smart Architectural Analyzer (homepage embedded widget)
-    try:
-        from app.blueprints.floor_plan_analyzer.services import get_room_type_options
-
-        analyzer_room_options = get_room_type_options()
-    except Exception as exc:
-        current_app.logger.warning('Failed to load analyzer room options: %s', exc)
-        analyzer_room_options = []
     
     return render_template('home.html',
                          featured_plans=featured_plans,
                          recent_plans=recent_plans,
-                         meta=meta,
-                         analyzer_room_options=analyzer_room_options)
+                         meta=meta)
 
 
 @main_bp.route('/plans')
