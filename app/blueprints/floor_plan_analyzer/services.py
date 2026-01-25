@@ -181,6 +181,376 @@ ROOM_STANDARDS = {
     ),
 }
 
+# --- Room catalog extensions (aliases + additional standards) ---
+
+# Exterior room labels (used for PDF clarity)
+EXTERIOR_ROOM_TYPES = {
+    'Terrace',
+    'Covered Terrace',
+    'Balcony',
+    'Porch',
+    'Veranda',
+    'Courtyard',
+    'Patio',
+    'Garden Area',
+    'Outdoor Kitchen',
+    'Outdoor Storage',
+}
+
+# Add standards for commonly used types that previously fell back to DEFAULT_STANDARD.
+ROOM_STANDARDS.update({
+    # Kitchen naming compatibility
+    'Kitchen': ROOM_STANDARDS.get('Closed Kitchen') or ROOM_STANDARDS.get('Open Kitchen'),
+
+    # Bathrooms / sanitary
+    'Master Bathroom': ROOM_STANDARDS.get('Bathroom'),
+    'Toilet': RoomStandard(
+        min_area_m2=1.2,
+        optimal_min_m2=1.5,
+        optimal_max_m2=2.2,
+        oversized_threshold_m2=3.0,
+        min_width_m=0.9,
+        optimal_width_range=(1.0, 1.4),
+        efficiency_notes={
+            'undersized': 'This toilet is too small for comfortable use.',
+            'optimal': 'This toilet is appropriately sized.',
+            'oversized': 'This toilet is larger than necessary. Consider reallocating space.'
+        }
+    ),
+    'Guest Toilet': RoomStandard(
+        min_area_m2=1.2,
+        optimal_min_m2=1.6,
+        optimal_max_m2=2.5,
+        oversized_threshold_m2=3.2,
+        min_width_m=0.9,
+        optimal_width_range=(1.0, 1.5),
+        efficiency_notes={
+            'undersized': 'This guest toilet is too small for comfortable access.',
+            'optimal': 'This guest toilet is efficiently sized.',
+            'oversized': 'This guest toilet is oversized; compact guest WCs are more efficient.'
+        }
+    ),
+
+    # Utility / service
+    'Laundry Room': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=7.0,
+        oversized_threshold_m2=9.0,
+        min_width_m=1.6,
+        optimal_width_range=(1.8, 2.6),
+        efficiency_notes={
+            'undersized': 'This laundry room is too small for efficient workflow.',
+            'optimal': 'This laundry room provides practical working space.',
+            'oversized': 'This laundry room is larger than necessary. Keep service spaces compact.'
+        }
+    ),
+    'Utility Room': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=8.0,
+        oversized_threshold_m2=10.0,
+        min_width_m=1.6,
+        optimal_width_range=(1.8, 2.8),
+        efficiency_notes={
+            'undersized': 'This utility room is undersized for appliances and storage.',
+            'optimal': 'This utility room is well sized for service functions.',
+            'oversized': 'This utility room is oversized; consider optimizing for cost.'
+        }
+    ),
+    'Mechanical Room': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=8.0,
+        oversized_threshold_m2=12.0,
+        min_width_m=1.5,
+        optimal_width_range=(1.8, 3.0),
+        efficiency_notes={
+            'undersized': 'This mechanical room is too small for safe equipment access.',
+            'optimal': 'This mechanical room provides adequate clearance for equipment.',
+            'oversized': 'This mechanical room is larger than typically required.'
+        }
+    ),
+    'Electrical Room': RoomStandard(
+        min_area_m2=2.0,
+        optimal_min_m2=2.5,
+        optimal_max_m2=5.0,
+        oversized_threshold_m2=7.0,
+        min_width_m=1.2,
+        optimal_width_range=(1.5, 2.5),
+        efficiency_notes={
+            'undersized': 'This electrical room is too small for safe clearances.',
+            'optimal': 'This electrical room is appropriately sized.',
+            'oversized': 'This electrical room is larger than necessary.'
+        }
+    ),
+    'Generator Room': RoomStandard(
+        min_area_m2=4.0,
+        optimal_min_m2=6.0,
+        optimal_max_m2=12.0,
+        oversized_threshold_m2=16.0,
+        min_width_m=2.0,
+        optimal_width_range=(2.2, 3.5),
+        efficiency_notes={
+            'undersized': 'This generator room is too small for ventilation and maintenance clearance.',
+            'optimal': 'This generator room provides workable clearances.',
+            'oversized': 'This generator room is larger than needed for typical residential use.'
+        }
+    ),
+    'Water Tank Room': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=10.0,
+        oversized_threshold_m2=14.0,
+        min_width_m=1.6,
+        optimal_width_range=(1.8, 3.2),
+        efficiency_notes={
+            'undersized': 'This water tank room is too small for safe access around tanks.',
+            'optimal': 'This water tank room is appropriately sized.',
+            'oversized': 'This water tank room is larger than necessary.'
+        }
+    ),
+
+    # Work / study
+    'Office': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=12.0,
+        oversized_threshold_m2=16.0,
+        min_width_m=2.1,
+        optimal_width_range=(2.4, 3.6),
+        efficiency_notes={
+            'undersized': 'This office is too small for a desk, chair, and circulation.',
+            'optimal': 'This office is well sized for focused work.',
+            'oversized': 'This office is larger than necessary; consider reallocating area.'
+        }
+    ),
+    'Home Office': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=12.0,
+        oversized_threshold_m2=16.0,
+        min_width_m=2.1,
+        optimal_width_range=(2.4, 3.6),
+        efficiency_notes={
+            'undersized': 'This home office is too small for comfortable remote work.',
+            'optimal': 'This home office is well sized for daily use.',
+            'oversized': 'This home office is larger than necessary; optimize to reduce cost.'
+        }
+    ),
+    'Study / Office': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=12.0,
+        oversized_threshold_m2=16.0,
+        min_width_m=2.1,
+        optimal_width_range=(2.4, 3.6),
+        efficiency_notes={
+            'undersized': 'This study is too small for efficient furniture layout.',
+            'optimal': 'This study is appropriately sized.',
+            'oversized': 'This study is larger than required for typical use.'
+        }
+    ),
+    'Library': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=9.0,
+        optimal_max_m2=14.0,
+        oversized_threshold_m2=18.0,
+        min_width_m=2.2,
+        optimal_width_range=(2.6, 3.8),
+        efficiency_notes={
+            'undersized': 'This library is too small for shelving and comfortable seating.',
+            'optimal': 'This library is well sized for shelves and reading.',
+            'oversized': 'This library is larger than necessary unless it doubles as a lounge.'
+        }
+    ),
+
+    # Circulation
+    'Hall': ROOM_STANDARDS.get('Hallway'),
+    'Entrance Hall': ROOM_STANDARDS.get('Hallway'),
+    'Staircase': RoomStandard(
+        min_area_m2=0.0,
+        optimal_min_m2=0.0,
+        optimal_max_m2=0.0,
+        oversized_threshold_m2=0.0,
+        min_width_m=0.9,
+        optimal_width_range=(1.0, 1.2),
+        efficiency_notes={
+            'undersized': 'This staircase is too narrow for safe circulation.',
+            'optimal': 'This staircase width is efficient.',
+            'oversized': 'This staircase is wider than necessary; extra width increases waste along the full run.'
+        }
+    ),
+    'Stair Landing': RoomStandard(
+        min_area_m2=1.5,
+        optimal_min_m2=2.0,
+        optimal_max_m2=4.0,
+        oversized_threshold_m2=6.0,
+        min_width_m=0.9,
+        optimal_width_range=(1.0, 1.5),
+        efficiency_notes={
+            'undersized': 'This stair landing is too small for safe turning and door clearance.',
+            'optimal': 'This stair landing size is appropriate.',
+            'oversized': 'This stair landing is larger than necessary.'
+        }
+    ),
+    'Internal Passage': ROOM_STANDARDS.get('Corridor'),
+
+    # Parking / storage variants
+    'Garage (Single)': RoomStandard(
+        min_area_m2=15.0,
+        optimal_min_m2=18.0,
+        optimal_max_m2=22.0,
+        oversized_threshold_m2=28.0,
+        min_width_m=2.8,
+        optimal_width_range=(3.0, 4.0),
+        efficiency_notes={
+            'undersized': 'This single garage is too tight for a vehicle plus door clearance.',
+            'optimal': 'This single garage is appropriately sized.',
+            'oversized': 'This single garage is oversized; consider optimizing storage separately.'
+        }
+    ),
+    'Garage (Double)': RoomStandard(
+        min_area_m2=30.0,
+        optimal_min_m2=34.0,
+        optimal_max_m2=44.0,
+        oversized_threshold_m2=55.0,
+        min_width_m=5.2,
+        optimal_width_range=(5.5, 6.5),
+        efficiency_notes={
+            'undersized': 'This double garage is too small for two vehicles and circulation.',
+            'optimal': 'This double garage is appropriately sized.',
+            'oversized': 'This double garage is larger than necessary; extra area adds cost quickly.'
+        }
+    ),
+    'Carport': RoomStandard(
+        min_area_m2=14.0,
+        optimal_min_m2=16.0,
+        optimal_max_m2=24.0,
+        oversized_threshold_m2=30.0,
+        min_width_m=2.8,
+        optimal_width_range=(3.0, 4.2),
+        efficiency_notes={
+            'undersized': 'This carport is too small for a standard vehicle.',
+            'optimal': 'This carport is appropriately sized.',
+            'oversized': 'This carport is larger than necessary.'
+        }
+    ),
+    'Tool Room': ROOM_STANDARDS.get('Storage'),
+    'Storage Room': ROOM_STANDARDS.get('Storage'),
+    'Store Room': ROOM_STANDARDS.get('Storage'),
+
+    # Exterior
+    'Terrace': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=18.0,
+        oversized_threshold_m2=28.0,
+        min_width_m=2.0,
+        optimal_width_range=(2.4, 4.5),
+        efficiency_notes={
+            'undersized': 'This terrace is too small for seating and circulation.',
+            'optimal': 'This terrace is a comfortable size for outdoor use.',
+            'oversized': 'This terrace is very large; ensure it aligns with budget and climate use.'
+        }
+    ),
+    'Covered Terrace': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=18.0,
+        oversized_threshold_m2=28.0,
+        min_width_m=2.2,
+        optimal_width_range=(2.6, 4.5),
+        efficiency_notes={
+            'undersized': 'This covered terrace is too small for comfortable use.',
+            'optimal': 'This covered terrace is well sized.',
+            'oversized': 'This covered terrace is very large; verify structural and cost impact.'
+        }
+    ),
+    'Balcony': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=10.0,
+        oversized_threshold_m2=14.0,
+        min_width_m=1.1,
+        optimal_width_range=(1.2, 2.5),
+        efficiency_notes={
+            'undersized': 'This balcony is too small for usable outdoor space.',
+            'optimal': 'This balcony size is usable and efficient.',
+            'oversized': 'This balcony is large; ensure it is intentional and cost-justified.'
+        }
+    ),
+    'Porch': RoomStandard(
+        min_area_m2=3.0,
+        optimal_min_m2=4.0,
+        optimal_max_m2=10.0,
+        oversized_threshold_m2=14.0,
+        min_width_m=1.2,
+        optimal_width_range=(1.5, 3.0),
+        efficiency_notes={
+            'undersized': 'This porch is too small for comfortable entry shelter.',
+            'optimal': 'This porch is appropriately sized.',
+            'oversized': 'This porch is larger than needed for typical entry shelter.'
+        }
+    ),
+    'Veranda': RoomStandard(
+        min_area_m2=8.0,
+        optimal_min_m2=10.0,
+        optimal_max_m2=22.0,
+        oversized_threshold_m2=32.0,
+        min_width_m=2.2,
+        optimal_width_range=(2.6, 5.0),
+        efficiency_notes={
+            'undersized': 'This veranda is too small to function as usable outdoor living space.',
+            'optimal': 'This veranda is well sized for outdoor living.',
+            'oversized': 'This veranda is very large; confirm it fits budget and structure.'
+        }
+    ),
+    'Courtyard': RoomStandard(
+        min_area_m2=10.0,
+        optimal_min_m2=15.0,
+        optimal_max_m2=60.0,
+        oversized_threshold_m2=120.0,
+        min_width_m=3.0,
+        optimal_width_range=(4.0, 10.0),
+        efficiency_notes={
+            'undersized': 'This courtyard is too small for meaningful outdoor use and light.',
+            'optimal': 'This courtyard size supports light, ventilation, and outdoor use.',
+            'oversized': 'This courtyard is very large; ensure it is intentional in the design.'
+        }
+    ),
+    'Patio': RoomStandard(
+        min_area_m2=6.0,
+        optimal_min_m2=8.0,
+        optimal_max_m2=25.0,
+        oversized_threshold_m2=40.0,
+        min_width_m=2.0,
+        optimal_width_range=(2.5, 6.0),
+        efficiency_notes={
+            'undersized': 'This patio is too small for seating and circulation.',
+            'optimal': 'This patio is well sized for outdoor seating.',
+            'oversized': 'This patio is very large; verify it aligns with use and budget.'
+        }
+    ),
+    'Garden Area': RoomStandard(
+        min_area_m2=20.0,
+        optimal_min_m2=40.0,
+        optimal_max_m2=200.0,
+        oversized_threshold_m2=400.0,
+        min_width_m=4.0,
+        optimal_width_range=(6.0, 20.0),
+        efficiency_notes={
+            'undersized': 'This garden area is quite small for meaningful outdoor use.',
+            'optimal': 'This garden area size supports outdoor use and landscaping.',
+            'oversized': 'This garden area is very large; ensure it matches site and maintenance goals.'
+        }
+    ),
+    'Outdoor Kitchen': ROOM_STANDARDS.get('Closed Kitchen') or ROOM_STANDARDS.get('Open Kitchen'),
+    'Outdoor Storage': ROOM_STANDARDS.get('Storage'),
+    'Food Storage': ROOM_STANDARDS.get('Storage'),
+    'Cold Room': ROOM_STANDARDS.get('Storage'),
+})
+
 # Default standard for unmapped room types
 DEFAULT_STANDARD = RoomStandard(
     min_area_m2=6.0,
@@ -197,69 +567,113 @@ DEFAULT_STANDARD = RoomStandard(
 )
 
 
-def get_room_type_options() -> List[Dict[str, str]]:
-    """Return all room type options for the spinner/dropdown."""
+def get_room_type_options() -> Dict[str, List[str]]:
+    """Return all room type options for the dropdown, grouped by category."""
     categories = {
-        'Living Areas': [
+        # Requested catalog (kept logically grouped)
+        'Interior Living Spaces': [
             'Living Room',
-            'Family Room',
             'Dining Room',
-            'Living + Dining (Open Plan)'
-        ],
-        'Bedrooms': [
-            'Bedroom',
+            'Family Room',
+            'Lounge',
+            'TV Room',
+            'Guest Room',
             'Master Bedroom',
-            "Children's Bedroom",
+            'Bedroom',
+            'Study / Office',
+            'Home Office',
+            'Library',
+
+            # Existing variants (kept for compatibility)
+            'Living + Dining (Open Plan)',
             'Guest Bedroom',
-            'Dormitory'
+            "Children's Bedroom",
+            'Dormitory',
         ],
-        'Kitchen Areas': [
+        'Sanitary Spaces': [
+            'Bathroom',
+            'Master Bathroom',
+            'Shower Room',
+            'Toilet',
+            'Guest Toilet',
+            'WC',
+            'Guest WC',
+            'Laundry Room',
+            'Utility Room',
+        ],
+        'Kitchen & Service': [
+            'Kitchen',
             'Closed Kitchen',
             'Open Kitchen',
             'Kitchen + Dining',
-            'Kitchenette'
-        ],
-        'Bathrooms': [
-            'Bathroom',
-            'Shower Room',
-            'WC',
-            'Guest WC'
-        ],
-        'Circulation Areas': [
-            'Corridor',
-            'Hallway',
-            'Entrance',
-            'Lobby'
-        ],
-        'Technical / Utility': [
-            'Storage',
+            'Kitchenette',
             'Pantry',
-            'Laundry Room',
-            'Utility Room',
-            'Mechanical Room'
+            'Store Room',
+            'Storage Room',
+            'Food Storage',
+            'Cold Room',
         ],
+        'Circulation Spaces': [
+            'Corridor',
+            'Hall',
+            'Hallway',
+            'Entrance Hall',
+            'Entrance',
+            'Lobby',
+            'Entrance Hall',
+            'Staircase',
+            'Stair Landing',
+            'Internal Passage',
+        ],
+        'Technical Spaces': [
+            'Mechanical Room',
+            'Electrical Room',
+            'Generator Room',
+            'Water Tank Room',
+        ],
+        'Parking & Storage': [
+            'Garage',
+            'Garage (Single)',
+            'Garage (Double)',
+            'Carport',
+            'Storage',
+            'Storage Room',
+            'Tool Room',
+            'Workshop',
+        ],
+        'Exterior Spaces': [
+            'Terrace',
+            'Covered Terrace',
+            'Balcony',
+            'Porch',
+            'Veranda',
+            'Courtyard',
+            'Patio',
+            'Garden Area',
+            'Outdoor Kitchen',
+            'Outdoor Storage',
+        ],
+
+        # Keep legacy/special entries
         'Special Use': [
             'Office',
             'Prayer Room',
             'Multipurpose Room',
-            'Library'
+            'Shop / Commercial Space',
+            'Other Space',
         ],
-        'Annexes': [
-            'Garage',
-            'Carport',
-            'Workshop',
-            'Shop / Commercial Space'
-        ],
-        'Covered Outdoor': [
-            'Covered Terrace',
-            'Veranda',
-            'Balcony'
-        ],
-        'Other': [
-            'Other Space'
-        ]
     }
     
+    # Remove accidental duplicates while preserving order
+    for group, items in list(categories.items()):
+        seen = set()
+        deduped = []
+        for it in items:
+            if it not in seen:
+                seen.add(it)
+                deduped.append(it)
+        categories[group] = deduped
+
     return categories
 
 
@@ -723,9 +1137,10 @@ def generate_optimization_report(
     # Section 2: Room-by-Room Details
     story.append(Paragraph("Room-by-Room Analysis", heading_style))
     
-    room_details = [['#', 'Room Type', f'Dimensions ({area_unit})', f'Area ({area_unit})', 'Status', 'Notes']]
+    room_details = [['#', 'Room Type', 'Input Method / Dimensions', f'Area ({area_unit})', 'Status', 'Notes']]
     for idx, room in enumerate(rooms, start=1):
         room_type = room.get('room_type', room.get('type', 'Unknown'))
+        room_type_display = f"Exterior: {room_type}" if room_type in EXTERIOR_ROOM_TYPES else room_type
         area_display = float(room.get('area_m2') or 0) * area_factor
         
         # Handle both dimension-based and surface-based input
@@ -735,12 +1150,12 @@ def generate_optimization_report(
         
         if input_method == 'surface' or length_val is None or width_val is None:
             # Surface-only input - no specific dimensions
-            dimensions_display = 'Input Method: Surface'
+            dimensions_display = 'Surface'
         else:
             # Dimension-based input
             length_display = float(length_val) if length_val else 0
             width_display = float(width_val) if width_val else 0
-            dimensions_display = f"{length_display:.1f} × {width_display:.1f}"
+            dimensions_display = f"Dimensions: {length_display:.1f} × {width_display:.1f}"
         
         validation = room.get('validation') or {}
         status_icon = validation.get('status_icon', '✓')
@@ -748,7 +1163,7 @@ def generate_optimization_report(
         
         room_details.append([
             str(idx),
-            room_type,
+            room_type_display,
             dimensions_display,
             f"{area_display:.1f}",
             status_icon,

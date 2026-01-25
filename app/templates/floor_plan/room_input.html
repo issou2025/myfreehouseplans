@@ -38,21 +38,13 @@
                         <label for="room_type" class="form-label">Room Type</label>
                         <select name="room_type" id="room_type" class="form-control" required>
                             <option value="">-- Select room type --</option>
-                            <option value="Bedroom">🛏️ Bedroom</option>
-                            <option value="Master Bedroom">🛏️ Master Bedroom</option>
-                            <option value="Living Room">🛋️ Living Room</option>
-                            <option value="Dining Room">🍽️ Dining Room</option>
-                            <option value="Kitchen">🍳 Kitchen</option>
-                            <option value="Bathroom">🚿 Bathroom</option>
-                            <option value="Master Bathroom">🛁 Master Bathroom</option>
-                            <option value="Corridor">🚪 Corridor/Hallway</option>
-                            <option value="Entrance">🚪 Entrance Hall</option>
-                            <option value="Storage">📦 Storage/Utility</option>
-                            <option value="Garage">🚗 Garage</option>
-                            <option value="Office">💼 Home Office</option>
-                            <option value="Laundry">🧺 Laundry Room</option>
-                            <option value="Balcony">🌿 Balcony/Terrace</option>
-                            <option value="Other">🔧 Other Space</option>
+                            {% for group, items in room_options.items() %}
+                                <optgroup label="{{ group }}">
+                                    {% for item in items %}
+                                        <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% endfor %}
                         </select>
                     </div>
 
