@@ -610,6 +610,69 @@ def analytics():
             current_app.logger.exception('RecentLog explorer query failed: %s', exc)
             explore_pagination = None
 
+    # Fallback: if DB table is missing/empty, show in-memory events (per worker).
+    if (not has_recent_logs) or (explore_pagination is None) or (not getattr(explore_pagination, 'items', [])):
+        try:
+            from app.services.analytics.tracking import peek_recent_events
+
+            buffer_rows = peek_recent_events(limit=explore_per_page, since=since, traffic_type=explore_type)
+
+            # Apply text/country filters in-memory too.
+            if explore_country:
+                needle = explore_country.strip().lower()
+                buffer_rows = [
+                    r for r in buffer_rows
+                    if needle in (r.get('country_code') or '').lower() or needle in (r.get('country_name') or '').lower()
+                ]
+            if explore_q:
+                needle = explore_q.strip().lower()
+                def _hay(r):
+                    return ' '.join(
+                        [
+                            str(r.get('ip_address') or ''),
+                            str(r.get('request_path') or ''),
+                            str(r.get('user_agent') or ''),
+                            str(r.get('referrer') or ''),
+                            str(r.get('country_name') or ''),
+                            str(r.get('country_code') or ''),
+                            str(r.get('session_id') or ''),
+                        ]
+                    ).lower()
+                buffer_rows = [r for r in buffer_rows if needle in _hay(r)]
+
+            # Map dicts to lightweight objects so templates can use dot-access.
+            from types import SimpleNamespace
+
+            visits = [SimpleNamespace(**r) for r in buffer_rows]
+            explore_total = len(visits)
+            explore_unique_ips = len({(r.ip_address or '') for r in visits if r.ip_address})
+            explore_sessions = len({(r.session_id or '') for r in visits if r.session_id})
+
+            # Top pages/countries from buffer.
+            page_counts = {}
+            country_counts = {}
+            for r in visits:
+                p = r.request_path or '/'
+                page_counts[p] = page_counts.get(p, 0) + 1
+                key = (r.country_name or 'Unknown', r.country_code or '')
+                country_counts[key] = country_counts.get(key, 0) + 1
+            explore_top_pages = sorted(page_counts.items(), key=lambda x: x[1], reverse=True)[:8]
+            explore_top_countries = [(k[0], k[1], v) for k, v in sorted(country_counts.items(), key=lambda x: x[1], reverse=True)[:8]]
+
+            explore_pagination = SimpleNamespace(
+                items=visits,
+                page=1,
+                pages=1 if visits else 0,
+                per_page=explore_per_page,
+                total=explore_total,
+                has_prev=False,
+                has_next=False,
+                prev_num=None,
+                next_num=None,
+            )
+        except Exception as exc:
+            current_app.logger.warning('In-memory RecentLog fallback failed: %s', exc)
+
     if explore_pagination is None:
         from types import SimpleNamespace
 
@@ -679,6 +742,10 @@ def analytics_live():
     try:
         inspector = inspect(db.engine)
         if not inspector.has_table('recent_logs'):
+            from app.services.analytics.tracking import peek_recent_events
+            buffer_rows = peek_recent_events(limit=limit, since=since, traffic_type=traffic_type)
+            last_minute_since = now - timedelta(minutes=1)
+            last_minute_rows = peek_recent_events(limit=500, since=last_minute_since, traffic_type=traffic_type)
             return jsonify(
                 {
                     'now_utc': now.isoformat(),
@@ -686,11 +753,28 @@ def analytics_live():
                     'limit': limit,
                     'traffic_type': traffic_type,
                     'stats': {
-                        'events_last_minute': 0,
-                        'unique_ips_last_minute': 0,
-                        'active_sessions_last_minute': 0,
+                        'events_last_minute': int(len(last_minute_rows)),
+                        'unique_ips_last_minute': int(len({r.get('ip_address') for r in last_minute_rows if r.get('ip_address')})),
+                        'active_sessions_last_minute': int(len({r.get('session_id') for r in last_minute_rows if r.get('session_id')})),
                     },
-                    'rows': [],
+                    'rows': [
+                        {
+                            'timestamp': (r.get('timestamp').isoformat() if r.get('timestamp') else None),
+                            'ip': r.get('ip_address'),
+                            'country_code': r.get('country_code'),
+                            'country_name': r.get('country_name'),
+                            'path': r.get('request_path'),
+                            'type': ('crawler' if (r.get('traffic_type') == 'bot' and r.get('is_search_bot')) else r.get('traffic_type')),
+                            'method': r.get('method'),
+                            'status_code': r.get('status_code'),
+                            'response_time_ms': r.get('response_time_ms'),
+                            'user_agent': r.get('user_agent'),
+                            'device': r.get('device'),
+                            'referrer': r.get('referrer'),
+                            'session_id': r.get('session_id'),
+                        }
+                        for r in buffer_rows
+                    ],
                 }
             )
     except Exception as exc:
@@ -834,6 +918,40 @@ def analytics_export():
             except Exception:
                 pass
             current_app.logger.exception('RecentLog export query failed: %s', exc)
+
+    # Fallback: export in-memory events when DB is missing/empty.
+    if not rows:
+        try:
+            from app.services.analytics.tracking import peek_recent_events
+
+            buffer_rows = peek_recent_events(limit=limit, since=since, traffic_type=explore_type)
+
+            if explore_country:
+                needle = explore_country.strip().lower()
+                buffer_rows = [
+                    r for r in buffer_rows
+                    if needle in (r.get('country_code') or '').lower() or needle in (r.get('country_name') or '').lower()
+                ]
+            if explore_q:
+                needle = explore_q.strip().lower()
+                def _hay(r):
+                    return ' '.join(
+                        [
+                            str(r.get('ip_address') or ''),
+                            str(r.get('request_path') or ''),
+                            str(r.get('user_agent') or ''),
+                            str(r.get('referrer') or ''),
+                            str(r.get('country_name') or ''),
+                            str(r.get('country_code') or ''),
+                            str(r.get('session_id') or ''),
+                        ]
+                    ).lower()
+                buffer_rows = [r for r in buffer_rows if needle in _hay(r)]
+
+            from types import SimpleNamespace
+            rows = [SimpleNamespace(**r) for r in buffer_rows]
+        except Exception as exc:
+            current_app.logger.warning('RecentLog export fallback failed: %s', exc)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)

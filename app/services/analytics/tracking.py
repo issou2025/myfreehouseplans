@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, date
+from collections import deque
 from threading import Lock
 
 from flask import current_app
@@ -35,6 +36,11 @@ class AnalyticsEvent:
 # Dedupe cache to reduce bot log writes.
 _lock = Lock()
 _bot_last_logged: dict[str, datetime] = {}
+
+# In-memory last-N event buffer (per-process) to keep the admin UI useful even
+# when migrations are pending or the DB is temporarily unavailable.
+_recent_events_lock = Lock()
+_recent_events = deque(maxlen=1000)
 
 _recent_log_columns: set[str] | None = None
 _recent_log_columns_checked_at: datetime | None = None
@@ -117,6 +123,30 @@ def record_event(event: AnalyticsEvent) -> None:
         'timestamp': now,
     }
 
+    # Always keep a best-effort copy in memory for admin live view.
+    try:
+        with _recent_events_lock:
+            _recent_events.append(
+                {
+                    'timestamp': now,
+                    'traffic_type': traffic,
+                    'is_search_bot': bool(event.is_search_bot),
+                    'ip_address': event.ip_address,
+                    'country_code': event.country_code or '',
+                    'country_name': event.country_name or '',
+                    'request_path': payload.get('request_path') or '/',
+                    'method': payload.get('method') or '',
+                    'status_code': payload.get('status_code'),
+                    'response_time_ms': payload.get('response_time_ms'),
+                    'user_agent': payload.get('user_agent') or '',
+                    'device': payload.get('device') or '',
+                    'referrer': payload.get('referrer'),
+                    'session_id': payload.get('session_id'),
+                }
+            )
+    except Exception:
+        pass
+
     # Only insert columns that actually exist in the DB (handles partial migrations).
     columns = _get_recent_log_columns()
     if not columns:
@@ -133,6 +163,43 @@ def record_event(event: AnalyticsEvent) -> None:
     except Exception:
         # Analytics must never break user requests.
         return
+
+
+def peek_recent_events(
+    *,
+    limit: int = 50,
+    since: datetime | None = None,
+    traffic_type: str = 'human',
+) -> list[dict]:
+    """Return best-effort recent events from in-memory buffer.
+
+    traffic_type supports: human | bot | crawler | all
+    """
+
+    limit = max(1, min(int(limit or 50), 500))
+    tt = (traffic_type or 'human').strip().lower()
+    if tt not in {'human', 'bot', 'crawler', 'all'}:
+        tt = 'human'
+
+    def _match(row: dict) -> bool:
+        ts = row.get('timestamp')
+        if since is not None and isinstance(ts, datetime) and ts < since:
+            return False
+        if tt == 'all':
+            return True
+        if tt == 'crawler':
+            return row.get('traffic_type') == 'bot' and bool(row.get('is_search_bot'))
+        return row.get('traffic_type') == tt
+
+    try:
+        with _recent_events_lock:
+            rows = list(_recent_events)
+    except Exception:
+        rows = []
+
+    selected = [r for r in rows if _match(r)]
+    selected.sort(key=lambda r: r.get('timestamp') or datetime.min, reverse=True)
+    return selected[:limit]
 
 
 def safe_country_for_ip(ip: str) -> tuple[str, str]:
