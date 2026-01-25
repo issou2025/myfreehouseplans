@@ -168,14 +168,20 @@ def results():
         country
     )
     
+    # Build analysis object for template
+    analysis = {
+        'total_rooms': len(rooms),
+        'total_area': total_built_area,
+        'scores': scores,
+        'waste_data': waste_analysis,
+        'cost_impact': cost_analysis
+    }
+    
     return render_template(
         'floor_plan/results.html',
         unit_system=unit_system,
         rooms=rooms,
-        total_built_area=total_built_area,
-        waste_analysis=waste_analysis,
-        scores=scores,
-        cost_analysis=cost_analysis,
+        analysis=analysis,
         budget=budget
     )
 
