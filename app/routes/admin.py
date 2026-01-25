@@ -634,6 +634,78 @@ def analytics():
     )
 
 
+@admin_bp.route('/analytics/live')
+@login_required
+@admin_required
+def analytics_live():
+    """Live recent visits (JSON) for the admin analytics page.
+
+    Returns recent `RecentLog` rows, suitable for polling every minute.
+    """
+
+    from app.models import RecentLog
+
+    limit = request.args.get('limit', 50, type=int)
+    limit = max(10, min(limit, 200))
+
+    minutes = request.args.get('minutes', 60, type=int)
+    minutes = max(1, min(minutes, 24 * 60))
+
+    traffic_type = (request.args.get('type') or 'human').strip().lower()
+    if traffic_type not in {'human', 'bot', 'attack', 'all'}:
+        traffic_type = 'human'
+
+    now = datetime.utcnow()
+    since = now - timedelta(minutes=minutes)
+
+    query = RecentLog.query.filter(RecentLog.timestamp >= since)
+    if traffic_type != 'all':
+        query = query.filter(RecentLog.traffic_type == traffic_type)
+
+    rows = (
+        query
+        .order_by(RecentLog.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+
+    last_minute_since = now - timedelta(minutes=1)
+    last_minute_query = RecentLog.query.filter(RecentLog.timestamp >= last_minute_since)
+    if traffic_type != 'all':
+        last_minute_query = last_minute_query.filter(RecentLog.traffic_type == traffic_type)
+
+    last_minute_count = last_minute_query.with_entities(func.count(RecentLog.id)).scalar() or 0
+    last_minute_unique_ips = (
+        last_minute_query.with_entities(func.count(func.distinct(RecentLog.ip_address))).scalar()
+        or 0
+    )
+
+    return jsonify(
+        {
+            'now_utc': now.isoformat(),
+            'since_minutes': minutes,
+            'limit': limit,
+            'traffic_type': traffic_type,
+            'stats': {
+                'events_last_minute': int(last_minute_count),
+                'unique_ips_last_minute': int(last_minute_unique_ips),
+            },
+            'rows': [
+                {
+                    'timestamp': (r.timestamp.isoformat() if r.timestamp else None),
+                    'ip': r.ip_address,
+                    'country_code': r.country_code,
+                    'country_name': r.country_name,
+                    'path': r.request_path,
+                    'type': r.traffic_type,
+                    'ua': (r.user_agent or ''),
+                }
+                for r in rows
+            ],
+        }
+    )
+
+
 @admin_bp.route('/visitors/export')
 @login_required
 @admin_required

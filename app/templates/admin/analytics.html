@@ -109,11 +109,64 @@
             {% endif %}
         </div>
     </section>
+
+    <section class="admin-panel" aria-labelledby="live-visits-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">Live</p>
+                <h2 class="admin-panel__title" id="live-visits-heading">Recent visits (IPs)</h2>
+                <p class="admin-panel__hint">Auto-refreshes every 60 seconds. Shows recent requests from the short-term log.</p>
+            </div>
+            <div class="visitors-tools" style="display:flex; gap: 8px; flex-wrap: wrap; align-items:center;">
+                <label style="display:flex; gap:6px; align-items:center; font-size: 13px; opacity:.85;">
+                    Type
+                    <select id="liveType" class="btn btn-soft" style="padding: 6px 10px;">
+                        <option value="human" selected>Human</option>
+                        <option value="bot">Bot</option>
+                        <option value="all">All</option>
+                    </select>
+                </label>
+                <label style="display:flex; gap:6px; align-items:center; font-size: 13px; opacity:.85;">
+                    Rows
+                    <select id="liveLimit" class="btn btn-soft" style="padding: 6px 10px;">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                    </select>
+                </label>
+                <button id="liveRefresh" class="btn btn-soft" type="button">Refresh now</button>
+            </div>
+        </div>
+
+        <div class="admin-panel__body">
+            <div id="liveMeta" style="display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; opacity: .85;"></div>
+            <div class="table-responsive">
+                <table class="table" id="liveVisitsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 160px;">Time (UTC)</th>
+                            <th style="width: 140px;">IP</th>
+                            <th style="width: 100px;">Country</th>
+                            <th>Path</th>
+                            <th style="width: 110px;">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="opacity:.8;">Loading…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 </div>
 
+<script id="analyticsPayload" type="application/json">{{ payload | tojson }}</script>
+<script id="liveEndpoint" type="application/json">{{ url_for('admin.analytics_live') | tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-    const payload = {{ payload | tojson }};
+    const payload = JSON.parse((document.getElementById('analyticsPayload') || {}).textContent || '{}');
     const labels = (payload.series || []).map(d => d.label);
     const humans = (payload.series || []).map(d => d.human);
     const bots = (payload.series || []).map(d => d.bot);
@@ -164,5 +217,92 @@
             }
         });
     }
+
+    // --- Live visits polling (every 60 seconds) ---
+    const liveEndpoint = JSON.parse((document.getElementById('liveEndpoint') || {}).textContent || '""');
+    const liveMeta = document.getElementById('liveMeta');
+    const liveTable = document.getElementById('liveVisitsTable');
+    const liveType = document.getElementById('liveType');
+    const liveLimit = document.getElementById('liveLimit');
+    const liveRefresh = document.getElementById('liveRefresh');
+
+    function _escapeHtml(str) {
+        return String(str || '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function _renderLiveRows(data) {
+        if (!liveTable) return;
+        const tbody = liveTable.querySelector('tbody');
+        if (!tbody) return;
+
+        const rows = (data && data.rows) ? data.rows : [];
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="opacity:.8;">No recent visits yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map((r) => {
+            const ts = _escapeHtml((r.timestamp || '').replace('T', ' ').replace('Z', ''));
+            const ip = _escapeHtml(r.ip);
+            const cc = _escapeHtml(r.country_code || '');
+            const cn = _escapeHtml(r.country_name || '');
+            const country = cn ? `${cn}${cc ? ` (${cc})` : ''}` : (cc || '');
+            const path = _escapeHtml(r.path);
+            const type = _escapeHtml(r.type);
+            return `
+                <tr>
+                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ts}</td>
+                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ip}</td>
+                    <td style="font-size: 12px; opacity:.9;">${country || '-'}</td>
+                    <td style="font-size: 13px;">${path}</td>
+                    <td style="font-size: 12px; opacity:.9;">${type}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function fetchLiveVisits() {
+        if (!liveTable) return;
+        const type = (liveType && liveType.value) ? liveType.value : 'human';
+        const limit = (liveLimit && liveLimit.value) ? liveLimit.value : '50';
+        const url = `${liveEndpoint}?minutes=60&type=${encodeURIComponent(type)}&limit=${encodeURIComponent(limit)}`;
+
+        try {
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            const stats = (data && data.stats) ? data.stats : {};
+            const nowUtc = data && data.now_utc ? data.now_utc : '';
+            if (liveMeta) {
+                liveMeta.innerHTML = `
+                    <span><strong>Updated:</strong> ${_escapeHtml(nowUtc)}</span>
+                    <span><strong>Events last minute:</strong> ${_escapeHtml(stats.events_last_minute || 0)}</span>
+                    <span><strong>Unique IPs last minute:</strong> ${_escapeHtml(stats.unique_ips_last_minute || 0)}</span>
+                `;
+            }
+
+            _renderLiveRows(data);
+        } catch (e) {
+            const tbody = liveTable.querySelector('tbody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="5" style="color:#b91c1c;">Failed to load live visits: ${_escapeHtml(e.message || e)}</td></tr>`;
+            }
+        }
+    }
+
+    if (liveRefresh) {
+        liveRefresh.addEventListener('click', () => fetchLiveVisits());
+    }
+    if (liveType) {
+        liveType.addEventListener('change', () => fetchLiveVisits());
+    }
+    if (liveLimit) {
+        liveLimit.addEventListener('change', () => fetchLiveVisits());
+    }
+
+    // First load + interval
+    fetchLiveVisits();
+    setInterval(fetchLiveVisits, 60000);
 </script>
 {% endblock %}
