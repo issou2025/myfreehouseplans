@@ -5,7 +5,7 @@
     <header class="admin-header">
         <div class="admin-header__content">
             <p class="admin-eyebrow">🛡️ Smart Analytics</p>
-            <h1 class="admin-title">Traffic & security overview</h1>
+            <h1 class="admin-title">Traffic &amp; security overview</h1>
             <p class="admin-subtitle">Signal-over-noise analytics: humans, SEO bots, and blocked probe attacks. Recent logs are retained briefly; daily stats stay compact.</p>
             {% if cleanup_ran %}
                 <p class="admin-subtitle" style="margin-top: 8px; opacity: .85;">Maintenance ran on load (retention cleanup).</p>
@@ -38,7 +38,7 @@
             <p class="visitor-card__note">WP/PHP/.env/.git probes, etc.</p>
         </article>
         <article class="visitor-card">
-            <p class="visitor-card__label">Sales & conversion ({{ payload.window_days | default(7) }} days)</p>
+            <p class="visitor-card__label">Sales &amp; conversion ({{ payload.window_days | default(7) }} days)</p>
             <strong class="visitor-card__value">{{ payload.totals.sales | default(0) }}</strong>
             <p class="visitor-card__note">
                 {{ ((payload.totals.conversion_rate | default(0)) * 100) | round(2) }}% conversion · ${{ (payload.totals.revenue | default(0)) | round(2) }} revenue
@@ -106,79 +106,22 @@
         </div>
     </section>
 
-    <section class="admin-panel" aria-labelledby="live-visits-heading">
-        <div class="admin-panel__header">
-            <div>
-                <p class="admin-panel__eyebrow">Live</p>
-                <h2 class="admin-panel__title" id="live-visits-heading">Recent visits (IPs)</h2>
-                <p class="admin-panel__hint">Auto-refreshes every 60 seconds. Shows recent requests from the short-term log.</p>
-            </div>
-            <div class="visitors-tools" style="display:flex; gap: 8px; flex-wrap: wrap; align-items:center;">
-                <label style="display:flex; gap:6px; align-items:center; font-size: 13px; opacity:.85;">
-                    Type
-                    <select id="liveType" class="btn btn-soft" style="padding: 6px 10px;">
-                        <option value="human" selected>Human</option>
-                        <option value="crawler">Crawler</option>
-                        <option value="bot">Bot</option>
-                        <option value="all">All</option>
-                    </select>
-                </label>
-                <label style="display:flex; gap:6px; align-items:center; font-size: 13px; opacity:.85;">
-                    Rows
-                    <select id="liveLimit" class="btn btn-soft" style="padding: 6px 10px;">
-                        <option value="25">25</option>
-                        <option value="50" selected>50</option>
-                        <option value="100">100</option>
-                    </select>
-                </label>
-                <button id="liveRefresh" class="btn btn-soft" type="button">Refresh now</button>
-            </div>
-        </div>
-
-        <div class="admin-panel__body">
-            <div id="liveMeta" style="display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; opacity: .85;"></div>
-            <div class="table-responsive">
-                <table class="table" id="liveVisitsTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 160px;">Time (UTC)</th>
-                            <th style="width: 140px;">IP</th>
-                            <th style="width: 100px;">Country</th>
-                            <th>Path</th>
-                            <th style="width: 70px;">Method</th>
-                            <th style="width: 80px;">Status</th>
-                            <th style="width: 90px;">Resp (ms)</th>
-                            <th style="width: 90px;">Device</th>
-                            <th style="width: 110px;">Type</th>
-                            <th style="width: 280px;">User-Agent</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="10" style="opacity:.8;">Loading…</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
     <section class="admin-panel" aria-labelledby="visitor-explorer-heading">
         <div class="admin-panel__header">
             <div>
                 <p class="admin-panel__eyebrow">Explorer</p>
-                <h2 class="admin-panel__title" id="visitor-explorer-heading">Visitor tracking (IP + country)</h2>
-                <p class="admin-panel__hint">Search and filter the short-term traffic log (bounded retention). Exports match filters.</p>
+                <h2 class="admin-panel__title" id="visitor-explorer-heading">Visitors (grouped by IP)</h2>
+                <p class="admin-panel__hint">One IP = one card. System pages are muted. User-Agent is hidden by default.</p>
             </div>
             <div class="visitors-tools" style="display:flex; gap: 8px; flex-wrap: wrap; align-items:center;">
                 <span class="badge badge--outline">{{ visits_stats.total }} events</span>
-                <span class="badge badge--outline">{{ visits_stats.unique_ips }} unique IPs</span>
+                <span class="badge badge--outline">{{ visits_stats.unique_ips }} IPs</span>
                 <span class="badge badge--outline">{{ visits_stats.sessions }} sessions</span>
             </div>
         </div>
 
         <div class="admin-panel__body">
-            <form method="get" action="{{ url_for('admin.analytics') }}" style="display:flex; flex-wrap: wrap; gap: 10px; align-items: end;">
+            <form method="get" action="{{ url_for('admin.analytics') }}" class="ip-filters">
                 <div class="field" style="min-width: 140px;">
                     <label class="field__label" for="days">Days</label>
                     <select class="field__input" id="days" name="days">
@@ -202,13 +145,13 @@
                 </div>
                 <div class="field" style="flex: 1 1 320px; min-width: 220px;">
                     <label class="field__label" for="q">Search</label>
-                    <input class="field__input" id="q" name="q" type="search" placeholder="IP, path, UA, referrer, session…" value="{{ visits_stats.q }}">
+                    <input class="field__input" id="q" name="q" type="search" placeholder="IP, path, referrer, session…" value="{{ visits_stats.q }}">
                 </div>
-                <div class="field" style="min-width: 140px;">
-                    <label class="field__label" for="per_page">Rows</label>
-                    <select class="field__input" id="per_page" name="per_page">
-                        {% for n in [10, 25, 50, 100] %}
-                            <option value="{{ n }}" {% if visits_stats.per_page == n %}selected{% endif %}>{{ n }}</option>
+                <div class="field" style="min-width: 150px;">
+                    <label class="field__label" for="cards">Cards</label>
+                    <select class="field__input" id="cards" name="cards">
+                        {% for n in [10, 15, 25, 50, 100] %}
+                            <option value="{{ n }}" {% if request.args.get('cards', '25')|int == n %}selected{% endif %}>{{ n }} IPs</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -217,119 +160,85 @@
                     <input type="hidden" name="skip_cleanup" value="1">
                 {% endif %}
 
-                <div style="display:flex; gap: 8px; flex-wrap: wrap;">
+                <div class="ip-filters__actions">
                     <button class="btn btn-soft" type="submit">Apply</button>
                     <a class="btn btn-soft" href="{{ url_for('admin.analytics') }}">Reset</a>
                     <a class="btn btn-soft" href="{{ url_for('admin.analytics_export', **query_args) }}">Export CSV</a>
                 </div>
             </form>
 
-            <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; margin-top: 14px;">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th style="width: 160px;">Time (UTC)</th>
-                                <th style="width: 140px;">IP</th>
-                                <th style="width: 120px;">Country</th>
-                                <th>Path</th>
-                                <th style="width: 90px;">Type</th>
-                                <th style="width: 90px;">Device</th>
-                                <th style="width: 90px;">Status</th>
-                                <th style="width: 260px;">User-Agent</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if visits and visits|length %}
-                                {% for r in visits %}
-                                <tr>
-                                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">
-                                        {{ r.timestamp.strftime('%Y-%m-%d %H:%M:%S') if r.timestamp else '' }}
-                                    </td>
-                                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">
-                                        <span>{{ r.ip_address }}</span>
-                                        <button class="btn btn-soft" type="button" style="padding: 4px 8px; margin-left: 6px;" data-copy="{{ r.ip_address }}">Copy</button>
-                                    </td>
-                                    <td style="font-size: 12px; opacity:.9;">
-                                        {% if r.country_name %}{{ r.country_name }}{% else %}Unknown{% endif %}
-                                        {% if r.country_code %}<span style="opacity:.6;"> ({{ r.country_code }})</span>{% endif %}
-                                    </td>
-                                    <td style="font-size: 13px;">
-                                        <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{{ r.request_path }}</span>
-                                        {% if r.referrer %}
-                                            <div style="font-size: 12px; opacity:.75; margin-top: 4px;">Ref: {{ r.referrer }}</div>
-                                        {% endif %}
-                                    </td>
-                                    <td style="font-size: 12px; opacity:.9;">
-                                        {% if r.traffic_type == 'bot' and r.is_search_bot %}crawler{% else %}{{ r.traffic_type }}{% endif %}
-                                    </td>
-                                    <td style="font-size: 12px; opacity:.9;">{{ r.device or '—' }}</td>
-                                    <td style="font-size: 12px; opacity:.9;">{{ r.status_code or '—' }}</td>
-                                    <td style="font-size: 12px; opacity:.85;" title="{{ r.user_agent or '' }}">{{ (r.user_agent or '—') | truncate(120, True) }}</td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="8" style="opacity:.8;">No traffic found for these filters.</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+            {% if ip_cards and ip_cards|length %}
+            <div class="ip-cards" style="margin-top: 14px;">
+                {% for c in ip_cards %}
+                <article class="ip-card">
+                    <header class="ip-card__header">
+                        <div class="ip-card__identity">
+                            <div class="ip-card__ip">
+                                <span class="ip-card__ip-text" data-mono>{{ c.ip_address }}</span>
+                                <button class="btn btn-soft ip-card__copy" type="button" data-copy="{{ c.ip_address }}">Copy</button>
+                            </div>
+                            <div class="ip-card__country">
+                                <span class="ip-card__flag" aria-hidden="true">{{ c.country_flag }}</span>
+                                <span class="ip-card__country-name">{{ c.country_name }}</span>
+                                {% if c.country_code %}<span class="ip-card__country-code">({{ c.country_code }})</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="ip-card__badges">
+                            <span class="badge {{ c.type_style }}">{{ c.type_label }}</span>
+                            <span class="badge badge--outline">{{ c.device }}</span>
+                        </div>
+                    </header>
 
-                    {% if visits_pagination and visits_pagination.pages > 1 %}
-                    <nav class="admin-pagination" aria-label="Visitor explorer pagination" style="margin-top: 10px;">
-                        {% if visits_pagination.has_prev %}
-                        <a class="btn btn-soft" href="{{ url_for('admin.analytics', page=visits_pagination.prev_num, **query_args) }}">&larr; Newer</a>
-                        {% else %}
-                        <span class="btn btn-soft" style="opacity:.5; pointer-events:none;">&larr; Newer</span>
-                        {% endif %}
-                        <span class="admin-pagination__status">Page {{ visits_pagination.page }} of {{ visits_pagination.pages }}</span>
-                        {% if visits_pagination.has_next %}
-                        <a class="btn btn-soft" href="{{ url_for('admin.analytics', page=visits_pagination.next_num, **query_args) }}">Older &rarr;</a>
-                        {% else %}
-                        <span class="btn btn-soft" style="opacity:.5; pointer-events:none;">Older &rarr;</span>
-                        {% endif %}
-                    </nav>
-                    {% endif %}
-                </div>
+                    <div class="ip-card__stats">
+                        <div class="ip-stat">
+                            <span class="ip-stat__label">Visit duration</span>
+                            <strong class="ip-stat__value">{{ c.duration_label }}</strong>
+                        </div>
+                        <div class="ip-stat">
+                            <span class="ip-stat__label">Pages visited</span>
+                            <strong class="ip-stat__value">{{ c.pages_visited }}</strong>
+                        </div>
+                        <div class="ip-stat">
+                            <span class="ip-stat__label">Last seen (UTC)</span>
+                            <strong class="ip-stat__value" data-mono>{{ c.last_seen.strftime('%H:%M:%S') if c.last_seen else '—' }}</strong>
+                        </div>
+                    </div>
 
-                <div style="display:flex; flex-direction: column; gap: 12px;">
-                    {% if visits_top_pages and visits_top_pages|length %}
-                    <div class="admin-panel__body">
-                        <p class="admin-panel__eyebrow" style="margin-bottom: 6px;">Top pages</p>
-                        <ol style="margin:0; padding-left: 18px;">
-                            {% for path, count in visits_top_pages %}
-                                <li style="margin: 6px 0;">
-                                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{{ path }}</span>
-                                    <span class="badge badge--outline" style="margin-left: 6px;">{{ count }}</span>
+                    <div class="ip-card__pages">
+                        <p class="ip-card__pages-title">Visited pages</p>
+                        <ul class="ip-pages">
+                            {% for p in c.pages %}
+                                <li class="ip-page {% if p.is_system %}ip-page--system{% endif %}">
+                                    <span class="ip-page__path" data-mono>{{ p.path }}</span>
+                                    <span class="ip-page__meta">
+                                        {% if p.is_system %}<span class="badge badge--soft">system</span>{% endif %}
+                                        <span class="badge badge--outline">{{ p.count }}</span>
+                                    </span>
                                 </li>
                             {% endfor %}
-                        </ol>
+                        </ul>
+                        <p class="ip-card__hint">System pages are muted: {{ system_paths | join(', ') }}.</p>
                     </div>
-                    {% endif %}
 
-                    {% if visits_top_countries and visits_top_countries|length %}
-                    <div class="admin-panel__body">
-                        <p class="admin-panel__eyebrow" style="margin-bottom: 6px;">Top countries</p>
-                        <ol style="margin:0; padding-left: 18px;">
-                            {% for name, code, count in visits_top_countries %}
-                                <li style="margin: 6px 0;">
-                                    <span>{{ name or 'Unknown' }}</span>
-                                    {% if code %}<span style="opacity:.6;"> ({{ code }})</span>{% endif %}
-                                    <span class="badge badge--outline" style="margin-left: 6px;">{{ count }}</span>
-                                </li>
-                            {% endfor %}
-                        </ol>
-                    </div>
-                    {% endif %}
-                </div>
+                    <details class="ip-card__details">
+                        <summary>Technical details (hidden by default)</summary>
+                        <div class="ip-card__details-body">
+                            {% if c.session_id %}<p><strong>Session:</strong> <span data-mono>{{ c.session_id }}</span></p>{% endif %}
+                            {% if c.referrer %}<p><strong>Referrer:</strong> <span data-mono>{{ c.referrer }}</span></p>{% endif %}
+                            {% if c.user_agent %}<p><strong>User-Agent:</strong> <span data-mono>{{ c.user_agent }}</span></p>{% endif %}
+                        </div>
+                    </details>
+                </article>
+                {% endfor %}
             </div>
+            {% else %}
+                <p style="margin:0; opacity:.8;">No visitors found for these filters yet.</p>
+            {% endif %}
         </div>
     </section>
 </div>
 
 <script id="analyticsPayload" type="application/json">{{ payload | tojson }}</script>
-<script id="liveEndpoint" type="application/json">{{ url_for('admin.analytics_live') | tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     const payload = JSON.parse((document.getElementById('analyticsPayload') || {}).textContent || '{}');
@@ -383,106 +292,6 @@
             }
         });
     }
-
-    // --- Live visits polling (every 60 seconds) ---
-    const liveEndpoint = JSON.parse((document.getElementById('liveEndpoint') || {}).textContent || '""');
-    const liveMeta = document.getElementById('liveMeta');
-    const liveTable = document.getElementById('liveVisitsTable');
-    const liveType = document.getElementById('liveType');
-    const liveLimit = document.getElementById('liveLimit');
-    const liveRefresh = document.getElementById('liveRefresh');
-
-    function _escapeHtml(str) {
-        return String(str || '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    }
-
-    function _renderLiveRows(data) {
-        if (!liveTable) return;
-        const tbody = liveTable.querySelector('tbody');
-        if (!tbody) return;
-
-        const rows = (data && data.rows) ? data.rows : [];
-        if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="10" style="opacity:.8;">No recent visits yet.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = rows.map((r) => {
-            const ts = _escapeHtml((r.timestamp || '').replace('T', ' ').replace('Z', ''));
-            const ip = _escapeHtml(r.ip);
-            const cc = _escapeHtml(r.country_code || '');
-            const cn = _escapeHtml(r.country_name || '');
-            const country = cn ? `${cn}${cc ? ` (${cc})` : ''}` : (cc || '');
-            const path = _escapeHtml(r.path);
-            const type = _escapeHtml(r.type);
-            const method = _escapeHtml(r.method || '-');
-            const status = _escapeHtml(r.status_code || '-');
-            const resp = (r.response_time_ms !== null && r.response_time_ms !== undefined)
-                ? _escapeHtml(Math.round(r.response_time_ms))
-                : '-';
-            const device = _escapeHtml(r.device || '-');
-            const ua = _escapeHtml(r.user_agent || '-');
-            return `
-                <tr>
-                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ts}</td>
-                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ip}</td>
-                    <td style="font-size: 12px; opacity:.9;">${country || '-'}</td>
-                    <td style="font-size: 13px;">${path}</td>
-                    <td style="font-size: 12px; opacity:.9;">${method}</td>
-                    <td style="font-size: 12px; opacity:.9;">${status}</td>
-                    <td style="font-size: 12px; opacity:.9;">${resp}</td>
-                    <td style="font-size: 12px; opacity:.9;">${device}</td>
-                    <td style="font-size: 12px; opacity:.9;">${type}</td>
-                    <td style="font-size: 12px; opacity:.85;">${ua}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function fetchLiveVisits() {
-        if (!liveTable) return;
-        const type = (liveType && liveType.value) ? liveType.value : 'human';
-        const limit = (liveLimit && liveLimit.value) ? liveLimit.value : '50';
-        const url = `${liveEndpoint}?minutes=60&type=${encodeURIComponent(type)}&limit=${encodeURIComponent(limit)}`;
-
-        try {
-            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-
-            const stats = (data && data.stats) ? data.stats : {};
-            const nowUtc = data && data.now_utc ? data.now_utc : '';
-            if (liveMeta) {
-                liveMeta.innerHTML = `
-                    <span><strong>Updated:</strong> ${_escapeHtml(nowUtc)}</span>
-                    <span><strong>Events last minute:</strong> ${_escapeHtml(stats.events_last_minute || 0)}</span>
-                    <span><strong>Unique IPs last minute:</strong> ${_escapeHtml(stats.unique_ips_last_minute || 0)}</span>
-                    <span><strong>Active sessions last minute:</strong> ${_escapeHtml(stats.active_sessions_last_minute || 0)}</span>
-                `;
-            }
-
-            _renderLiveRows(data);
-        } catch (e) {
-            const tbody = liveTable.querySelector('tbody');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="10" style="color:#b91c1c;">Failed to load live visits: ${_escapeHtml(e.message || e)}</td></tr>`;
-            }
-        }
-    }
-
-    if (liveRefresh) {
-        liveRefresh.addEventListener('click', () => fetchLiveVisits());
-    }
-    if (liveType) {
-        liveType.addEventListener('change', () => fetchLiveVisits());
-    }
-    if (liveLimit) {
-        liveLimit.addEventListener('change', () => fetchLiveVisits());
-    }
-
-    // First load + interval
-    fetchLiveVisits();
-    setInterval(fetchLiveVisits, 60000);
 
     // Copy helpers (IP address)
     function copyText(text) {

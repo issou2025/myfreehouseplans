@@ -516,6 +516,9 @@ def analytics():
     explore_per_page = request.args.get('per_page', 50, type=int)
     explore_per_page = max(10, min(explore_per_page, 100))
 
+    cards_limit = request.args.get('cards', 25, type=int)
+    cards_limit = max(5, min(cards_limit, 100))
+
     explore_days = request.args.get('days', min(7, retention_days), type=int)
     explore_days = max(1, min(explore_days, retention_days))
 
@@ -691,6 +694,195 @@ def analytics():
     query_args = request.args.to_dict(flat=True)
     query_args.pop('page', None)
 
+    # --- IP grouped cards (mobile-first UX) ---
+    def _flag_for_country(code: str | None) -> str:
+        try:
+            cc = (code or '').strip().upper()
+            if len(cc) != 2 or not cc.isalpha():
+                return '🌐'
+            return chr(0x1F1E6 + (ord(cc[0]) - 65)) + chr(0x1F1E6 + (ord(cc[1]) - 65))
+        except Exception:
+            return '🌐'
+
+    system_paths = {'/sw.js', '/offline'}
+
+    # Build a dense event set for grouping (more than just the page).
+    max_events = min(2000, cards_limit * 30)
+    events_for_cards = []
+    if has_recent_logs:
+        try:
+            # Re-run without pagination to get enough events to group by IP.
+            base_query = RecentLog.query.filter(RecentLog.timestamp >= since)
+            if explore_type == 'crawler':
+                base_query = base_query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+            elif explore_type != 'all':
+                base_query = base_query.filter(RecentLog.traffic_type == explore_type)
+
+            if explore_country:
+                like_country = f"%{explore_country}%"
+                base_query = base_query.filter(or_(RecentLog.country_code.ilike(like_country), RecentLog.country_name.ilike(like_country)))
+
+            if explore_q:
+                like_pattern = f"%{explore_q}%"
+                base_query = base_query.filter(
+                    or_(
+                        RecentLog.ip_address.ilike(like_pattern),
+                        RecentLog.request_path.ilike(like_pattern),
+                        RecentLog.user_agent.ilike(like_pattern),
+                        RecentLog.referrer.ilike(like_pattern),
+                        RecentLog.country_name.ilike(like_pattern),
+                        RecentLog.country_code.ilike(like_pattern),
+                        RecentLog.session_id.ilike(like_pattern),
+                    )
+                )
+
+            events_for_cards = (
+                base_query
+                .order_by(RecentLog.timestamp.desc())
+                .limit(max_events)
+                .all()
+            )
+        except SQLAlchemyError as exc:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            current_app.logger.warning('Failed to build IP cards from RecentLog: %s', exc)
+            events_for_cards = []
+    else:
+        try:
+            from app.services.analytics.tracking import peek_recent_events
+
+            buffer_rows = peek_recent_events(limit=max_events, since=since, traffic_type=explore_type)
+            from types import SimpleNamespace
+            events_for_cards = [SimpleNamespace(**r) for r in buffer_rows]
+        except Exception:
+            events_for_cards = []
+
+    ip_cards = []
+    try:
+        from collections import OrderedDict
+
+        by_ip = {}
+        for r in events_for_cards:
+            ip = (getattr(r, 'ip_address', None) or '').strip()
+            if not ip:
+                continue
+            by_ip.setdefault(ip, []).append(r)
+
+        # Sort IPs by most recent timestamp.
+        def _ts(row):
+            return getattr(row, 'timestamp', None) or datetime.min
+
+        sorted_ips = sorted(by_ip.keys(), key=lambda ip: _ts(by_ip[ip][0]), reverse=True)
+        sorted_ips = sorted_ips[:cards_limit]
+
+        for ip in sorted_ips:
+            rows = sorted(by_ip[ip], key=_ts, reverse=True)
+            newest = rows[0] if rows else None
+            oldest = rows[-1] if rows else None
+
+            last_seen = getattr(newest, 'timestamp', None)
+            first_seen = getattr(oldest, 'timestamp', None)
+
+            duration_s = 0
+            if first_seen and last_seen:
+                try:
+                    duration_s = int(max(0, (last_seen - first_seen).total_seconds()))
+                except Exception:
+                    duration_s = 0
+
+            def _fmt_duration(seconds: int) -> str:
+                try:
+                    seconds = int(seconds or 0)
+                except Exception:
+                    seconds = 0
+                if seconds < 60:
+                    return f"{seconds}s"
+                if seconds < 3600:
+                    m, s = divmod(seconds, 60)
+                    return f"{m}m {s:02d}s"
+                h, rem = divmod(seconds, 3600)
+                m, _ = divmod(rem, 60)
+                return f"{h}h {m:02d}m"
+
+            # Country (prefer newest non-empty)
+            country_code = ''
+            country_name = ''
+            for r in rows:
+                cc = (getattr(r, 'country_code', None) or '').strip()
+                cn = (getattr(r, 'country_name', None) or '').strip()
+                if cc or cn:
+                    country_code = cc
+                    country_name = cn
+                    break
+
+            # Type badge
+            traffic_type = (getattr(newest, 'traffic_type', None) or 'human').strip().lower() if newest else 'human'
+            is_search_bot = bool(getattr(newest, 'is_search_bot', False)) if newest else False
+            if traffic_type == 'bot' and is_search_bot:
+                type_label = 'crawler'
+                type_style = 'badge--soft'
+            elif traffic_type == 'bot':
+                type_label = 'bot'
+                type_style = 'badge--soft'
+            else:
+                type_label = 'human'
+                type_style = 'badge--outline'
+
+            # Device (most common meaningful value)
+            device_counts = {}
+            for r in rows:
+                d = (getattr(r, 'device', None) or '').strip().lower()
+                if not d or d == 'unknown':
+                    continue
+                device_counts[d] = device_counts.get(d, 0) + 1
+            device = None
+            if device_counts:
+                device = sorted(device_counts.items(), key=lambda x: x[1], reverse=True)[0][0]
+            else:
+                device = (getattr(newest, 'device', None) or 'unknown').strip().lower() if newest else 'unknown'
+
+            # Pages list (grouped + system label)
+            page_counts = OrderedDict()
+            for r in rows:
+                p = (getattr(r, 'request_path', None) or '/').strip() or '/'
+                page_counts[p] = page_counts.get(p, 0) + 1
+
+            pages = []
+            unique_non_system = 0
+            for path, count in list(page_counts.items())[:12]:
+                is_system = path in system_paths
+                if not is_system:
+                    unique_non_system += 1
+                pages.append({'path': path, 'count': int(count), 'is_system': is_system})
+
+            ip_cards.append(
+                {
+                    'ip_address': ip,
+                    'country_code': country_code or '',
+                    'country_name': country_name or 'Unknown',
+                    'country_flag': _flag_for_country(country_code),
+                    'traffic_type': traffic_type,
+                    'type_label': type_label,
+                    'type_style': type_style,
+                    'device': device or 'unknown',
+                    'duration_seconds': duration_s,
+                    'duration_label': _fmt_duration(duration_s),
+                    'pages_visited': unique_non_system,
+                    'events': int(len(rows)),
+                    'last_seen': last_seen,
+                    'first_seen': first_seen,
+                    'pages': pages,
+                    'user_agent': (getattr(newest, 'user_agent', None) or '') if newest else '',
+                    'referrer': (getattr(newest, 'referrer', None) or '') if newest else '',
+                    'session_id': (getattr(newest, 'session_id', None) or '') if newest else '',
+                }
+            )
+    except Exception as exc:
+        current_app.logger.warning('Failed to build ip_cards: %s', exc)
+        ip_cards = []
+
     return render_template(
         'admin/analytics.html',
         payload=payload,
@@ -711,6 +903,8 @@ def analytics():
         visits_top_pages=explore_top_pages,
         visits_top_countries=explore_top_countries,
         query_args=query_args,
+        ip_cards=ip_cards,
+        system_paths=sorted(system_paths),
     )
 
 
