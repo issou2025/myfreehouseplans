@@ -18,10 +18,6 @@
                 <span class="btn-admin__icon">↩</span>
                 <span>Back to dashboard</span>
             </a>
-            <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.visitors') }}">
-                <span class="btn-admin__icon">👀</span>
-                <span>Legacy visitors</span>
-            </a>
         </div>
     </header>
 
@@ -163,6 +159,170 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-panel" aria-labelledby="visitor-explorer-heading">
+        <div class="admin-panel__header">
+            <div>
+                <p class="admin-panel__eyebrow">Explorer</p>
+                <h2 class="admin-panel__title" id="visitor-explorer-heading">Visitor tracking (IP + country)</h2>
+                <p class="admin-panel__hint">Search and filter the short-term traffic log (bounded retention). Exports match filters.</p>
+            </div>
+            <div class="visitors-tools" style="display:flex; gap: 8px; flex-wrap: wrap; align-items:center;">
+                <span class="badge badge--outline">{{ visits_stats.total }} events</span>
+                <span class="badge badge--outline">{{ visits_stats.unique_ips }} unique IPs</span>
+                <span class="badge badge--outline">{{ visits_stats.sessions }} sessions</span>
+            </div>
+        </div>
+
+        <div class="admin-panel__body">
+            <form method="get" action="{{ url_for('admin.analytics') }}" style="display:flex; flex-wrap: wrap; gap: 10px; align-items: end;">
+                <div class="field" style="min-width: 140px;">
+                    <label class="field__label" for="days">Days</label>
+                    <select class="field__input" id="days" name="days">
+                        {% for d in [1, 2, 3, 7, 14, 30] %}
+                            <option value="{{ d }}" {% if visits_stats.days == d %}selected{% endif %}>Last {{ d }} day{% if d != 1 %}s{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field" style="min-width: 150px;">
+                    <label class="field__label" for="type">Type</label>
+                    <select class="field__input" id="type" name="type">
+                        <option value="human" {% if visits_stats.type == 'human' %}selected{% endif %}>Human</option>
+                        <option value="crawler" {% if visits_stats.type == 'crawler' %}selected{% endif %}>Crawler</option>
+                        <option value="bot" {% if visits_stats.type == 'bot' %}selected{% endif %}>Bot</option>
+                        <option value="all" {% if visits_stats.type == 'all' %}selected{% endif %}>All</option>
+                    </select>
+                </div>
+                <div class="field" style="min-width: 170px;">
+                    <label class="field__label" for="country">Country</label>
+                    <input class="field__input" id="country" name="country" type="text" placeholder="US or United States" value="{{ visits_stats.country }}">
+                </div>
+                <div class="field" style="flex: 1 1 320px; min-width: 220px;">
+                    <label class="field__label" for="q">Search</label>
+                    <input class="field__input" id="q" name="q" type="search" placeholder="IP, path, UA, referrer, session…" value="{{ visits_stats.q }}">
+                </div>
+                <div class="field" style="min-width: 140px;">
+                    <label class="field__label" for="per_page">Rows</label>
+                    <select class="field__input" id="per_page" name="per_page">
+                        {% for n in [10, 25, 50, 100] %}
+                            <option value="{{ n }}" {% if visits_stats.per_page == n %}selected{% endif %}>{{ n }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if request.args.get('skip_cleanup') %}
+                    <input type="hidden" name="skip_cleanup" value="1">
+                {% endif %}
+
+                <div style="display:flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-soft" type="submit">Apply</button>
+                    <a class="btn btn-soft" href="{{ url_for('admin.analytics') }}">Reset</a>
+                    <a class="btn btn-soft" href="{{ url_for('admin.analytics_export', **query_args) }}">Export CSV</a>
+                </div>
+            </form>
+
+            <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; margin-top: 14px;">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 160px;">Time (UTC)</th>
+                                <th style="width: 140px;">IP</th>
+                                <th style="width: 120px;">Country</th>
+                                <th>Path</th>
+                                <th style="width: 90px;">Type</th>
+                                <th style="width: 90px;">Device</th>
+                                <th style="width: 90px;">Status</th>
+                                <th style="width: 260px;">User-Agent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if visits and visits|length %}
+                                {% for r in visits %}
+                                <tr>
+                                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">
+                                        {{ r.timestamp.strftime('%Y-%m-%d %H:%M:%S') if r.timestamp else '' }}
+                                    </td>
+                                    <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">
+                                        <span>{{ r.ip_address }}</span>
+                                        <button class="btn btn-soft" type="button" style="padding: 4px 8px; margin-left: 6px;" data-copy="{{ r.ip_address }}">Copy</button>
+                                    </td>
+                                    <td style="font-size: 12px; opacity:.9;">
+                                        {% if r.country_name %}{{ r.country_name }}{% else %}Unknown{% endif %}
+                                        {% if r.country_code %}<span style="opacity:.6;"> ({{ r.country_code }})</span>{% endif %}
+                                    </td>
+                                    <td style="font-size: 13px;">
+                                        <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{{ r.request_path }}</span>
+                                        {% if r.referrer %}
+                                            <div style="font-size: 12px; opacity:.75; margin-top: 4px;">Ref: {{ r.referrer }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-size: 12px; opacity:.9;">
+                                        {% if r.traffic_type == 'bot' and r.is_search_bot %}crawler{% else %}{{ r.traffic_type }}{% endif %}
+                                    </td>
+                                    <td style="font-size: 12px; opacity:.9;">{{ r.device or '—' }}</td>
+                                    <td style="font-size: 12px; opacity:.9;">{{ r.status_code or '—' }}</td>
+                                    <td style="font-size: 12px; opacity:.85;" title="{{ r.user_agent or '' }}">{{ (r.user_agent or '—') | truncate(120, True) }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" style="opacity:.8;">No traffic found for these filters.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+
+                    {% if visits_pagination and visits_pagination.pages > 1 %}
+                    <nav class="admin-pagination" aria-label="Visitor explorer pagination" style="margin-top: 10px;">
+                        {% if visits_pagination.has_prev %}
+                        <a class="btn btn-soft" href="{{ url_for('admin.analytics', page=visits_pagination.prev_num, **query_args) }}">&larr; Newer</a>
+                        {% else %}
+                        <span class="btn btn-soft" style="opacity:.5; pointer-events:none;">&larr; Newer</span>
+                        {% endif %}
+                        <span class="admin-pagination__status">Page {{ visits_pagination.page }} of {{ visits_pagination.pages }}</span>
+                        {% if visits_pagination.has_next %}
+                        <a class="btn btn-soft" href="{{ url_for('admin.analytics', page=visits_pagination.next_num, **query_args) }}">Older &rarr;</a>
+                        {% else %}
+                        <span class="btn btn-soft" style="opacity:.5; pointer-events:none;">Older &rarr;</span>
+                        {% endif %}
+                    </nav>
+                    {% endif %}
+                </div>
+
+                <div style="display:flex; flex-direction: column; gap: 12px;">
+                    {% if visits_top_pages and visits_top_pages|length %}
+                    <div class="admin-panel__body">
+                        <p class="admin-panel__eyebrow" style="margin-bottom: 6px;">Top pages</p>
+                        <ol style="margin:0; padding-left: 18px;">
+                            {% for path, count in visits_top_pages %}
+                                <li style="margin: 6px 0;">
+                                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">{{ path }}</span>
+                                    <span class="badge badge--outline" style="margin-left: 6px;">{{ count }}</span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
+
+                    {% if visits_top_countries and visits_top_countries|length %}
+                    <div class="admin-panel__body">
+                        <p class="admin-panel__eyebrow" style="margin-bottom: 6px;">Top countries</p>
+                        <ol style="margin:0; padding-left: 18px;">
+                            {% for name, code, count in visits_top_countries %}
+                                <li style="margin: 6px 0;">
+                                    <span>{{ name or 'Unknown' }}</span>
+                                    {% if code %}<span style="opacity:.6;"> ({{ code }})</span>{% endif %}
+                                    <span class="badge badge--outline" style="margin-left: 6px;">{{ count }}</span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </section>
@@ -323,5 +483,24 @@
     // First load + interval
     fetchLiveVisits();
     setInterval(fetchLiveVisits, 60000);
+
+    // Copy helpers (IP address)
+    function copyText(text) {
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () {
+                window.prompt('Copy to clipboard:', text);
+            });
+            return;
+        }
+        window.prompt('Copy to clipboard:', text);
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-copy]');
+        if (!btn) return;
+        e.preventDefault();
+        copyText(btn.getAttribute('data-copy'));
+    });
 </script>
 {% endblock %}

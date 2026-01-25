@@ -459,134 +459,13 @@ def delete_staff(user_id):
 @login_required
 @admin_required
 def visitors():
-    """Visitor analytics dashboard."""
+    """Legacy visitors dashboard (deprecated).
 
-    from sqlalchemy import or_
+    Consolidated into the smart analytics dashboard.
+    """
 
-    def _parse_date(value: str | None):
-        if not value:
-            return None
-        try:
-            return datetime.strptime(value, '%Y-%m-%d').date()
-        except (TypeError, ValueError):
-            return None
-
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    per_page = max(10, min(per_page, 100))
-
-    # Filters
-    quick_range = (request.args.get('range') or '').strip().lower()
-    search = (request.args.get('q') or '').strip()
-    contact_only = request.args.get('contact') in {'1', 'true', 'yes', 'on'}
-
-    today = date.today()
-    start_date = _parse_date(request.args.get('start'))
-    end_date = _parse_date(request.args.get('end'))
-    if not start_date and not end_date and quick_range in {'today', '24h'}:
-        start_date = today
-        end_date = today
-    elif not start_date and not end_date and quick_range in {'7d', 'week'}:
-        start_date = today - timedelta(days=6)
-        end_date = today
-    elif not start_date and not end_date and quick_range in {'30d', 'month'}:
-        start_date = today - timedelta(days=29)
-        end_date = today
-
-    sort = (request.args.get('sort') or 'newest').strip().lower()
-
-    query = Visitor.query
-    if start_date:
-        query = query.filter(Visitor.visit_date >= start_date)
-    if end_date:
-        query = query.filter(Visitor.visit_date <= end_date)
-    if contact_only:
-        query = query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
-    if search:
-        like_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                Visitor.visitor_name.ilike(like_pattern),
-                Visitor.email.ilike(like_pattern),
-                Visitor.ip_address.ilike(like_pattern),
-                Visitor.page_visited.ilike(like_pattern),
-                Visitor.user_agent.ilike(like_pattern),
-            )
-        )
-
-    filtered_query = query.order_by(None)
-
-    if sort == 'oldest':
-        query = query.order_by(Visitor.visit_date.asc(), Visitor.created_at.asc())
-    else:
-        query = query.order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    # Global stats (unfiltered quick overview)
-    week_start = today - timedelta(days=6)
-    global_stats = {
-        'today': Visitor.query.filter(Visitor.visit_date == today).count(),
-        'week': Visitor.query.filter(Visitor.visit_date >= week_start).count(),
-        'total': Visitor.query.count(),
-    }
-
-    # Filtered stats (match current view)
-    filtered_total = filtered_query.with_entities(func.count(Visitor.id)).scalar() or 0
-    unique_ips = (
-        filtered_query.with_entities(func.count(func.distinct(Visitor.ip_address))).scalar()
-        or 0
-    )
-    contacts = (
-        filtered_query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
-        .with_entities(func.count(Visitor.id))
-        .scalar()
-        or 0
-    )
-
-    top_pages = (
-        filtered_query.with_entities(Visitor.page_visited, func.count(Visitor.id))
-        .group_by(Visitor.page_visited)
-        .order_by(func.count(Visitor.id).desc())
-        .limit(8)
-        .all()
-    )
-
-    page_dates = {visit.visit_date for visit in pagination.items}
-    date_counts: dict[date, int] = {}
-    if page_dates:
-        rows = (
-            db.session.query(Visitor.visit_date, func.count(Visitor.id))
-            .filter(Visitor.visit_date.in_(page_dates))
-            .group_by(Visitor.visit_date)
-            .all()
-        )
-        date_counts = {visit_date: count for visit_date, count in rows}
-
-    query_args = request.args.to_dict(flat=True)
-    query_args.pop('page', None)
-
-    return render_template(
-        'admin/visitors.html',
-        visitors=pagination.items,
-        pagination=pagination,
-        stats=global_stats,
-        filtered_stats={
-            'total': filtered_total,
-            'unique_ips': unique_ips,
-            'contacts': contacts,
-            'start': start_date,
-            'end': end_date,
-            'q': search,
-            'contact_only': contact_only,
-            'range': quick_range,
-            'sort': sort,
-            'per_page': per_page,
-        },
-        top_pages=top_pages,
-        date_counts=date_counts,
-        query_args=query_args,
-    )
+    flash('Visitor tracking is now available in Smart Analytics.', 'info')
+    return redirect(url_for('admin.analytics'))
 
 
 @admin_bp.route('/analytics')
@@ -615,8 +494,11 @@ def analytics():
             cleanup_error = str(exc)
             current_app.logger.warning('Smart analytics cleanup failed: %s', exc)
 
+    retention_days = int(current_app.config.get('ANALYTICS_RETENTION_DAYS', 7) or 7)
+    retention_days = max(1, min(retention_days, 60))
+
     try:
-        payload = build_dashboard_payload(days=7)
+        payload = build_dashboard_payload(days=min(7, retention_days))
     except Exception as exc:
         try:
             db.session.rollback()
@@ -624,13 +506,109 @@ def analytics():
             pass
         current_app.logger.exception('Failed to build smart analytics dashboard: %s', exc)
         flash('Unable to load smart analytics right now. Please try again.', 'warning')
-        payload = {'window_days': 7, 'series': [], 'totals': {}, 'top_countries': []}
+        payload = {'window_days': min(7, retention_days), 'series': [], 'totals': {}, 'top_countries': []}
+
+    # Visitor explorer (RecentLog): filterable table for the last N days (bounded).
+    from app.models import RecentLog
+
+    explore_page = request.args.get('page', 1, type=int)
+    explore_per_page = request.args.get('per_page', 50, type=int)
+    explore_per_page = max(10, min(explore_per_page, 100))
+
+    explore_days = request.args.get('days', min(7, retention_days), type=int)
+    explore_days = max(1, min(explore_days, retention_days))
+
+    explore_type = (request.args.get('type') or 'human').strip().lower()
+    if explore_type not in {'human', 'bot', 'crawler', 'all'}:
+        explore_type = 'human'
+
+    explore_q = (request.args.get('q') or '').strip()
+    explore_country = (request.args.get('country') or '').strip()
+
+    now = datetime.utcnow()
+    since = now - timedelta(days=explore_days)
+
+    explore_query = RecentLog.query.filter(RecentLog.timestamp >= since)
+    if explore_type == 'crawler':
+        explore_query = explore_query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+    elif explore_type != 'all':
+        explore_query = explore_query.filter(RecentLog.traffic_type == explore_type)
+
+    if explore_country:
+        like_country = f"%{explore_country}%"
+        explore_query = explore_query.filter(
+            or_(
+                RecentLog.country_code.ilike(like_country),
+                RecentLog.country_name.ilike(like_country),
+            )
+        )
+
+    if explore_q:
+        like_pattern = f"%{explore_q}%"
+        explore_query = explore_query.filter(
+            or_(
+                RecentLog.ip_address.ilike(like_pattern),
+                RecentLog.request_path.ilike(like_pattern),
+                RecentLog.user_agent.ilike(like_pattern),
+                RecentLog.referrer.ilike(like_pattern),
+                RecentLog.country_name.ilike(like_pattern),
+                RecentLog.country_code.ilike(like_pattern),
+                RecentLog.session_id.ilike(like_pattern),
+            )
+        )
+
+    explore_query_unordered = explore_query.order_by(None)
+    explore_pagination = (
+        explore_query
+        .order_by(RecentLog.timestamp.desc())
+        .paginate(page=explore_page, per_page=explore_per_page, error_out=False)
+    )
+
+    explore_total = explore_query_unordered.with_entities(func.count(RecentLog.id)).scalar() or 0
+    explore_unique_ips = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.ip_address))).scalar() or 0
+    explore_sessions = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.session_id))).scalar() or 0
+
+    explore_top_pages = (
+        explore_query_unordered
+        .with_entities(RecentLog.request_path, func.count(RecentLog.id))
+        .group_by(RecentLog.request_path)
+        .order_by(func.count(RecentLog.id).desc())
+        .limit(8)
+        .all()
+    )
+
+    explore_top_countries = (
+        explore_query_unordered
+        .with_entities(RecentLog.country_name, RecentLog.country_code, func.count(RecentLog.id))
+        .group_by(RecentLog.country_name, RecentLog.country_code)
+        .order_by(func.count(RecentLog.id).desc())
+        .limit(8)
+        .all()
+    )
+
+    query_args = request.args.to_dict(flat=True)
+    query_args.pop('page', None)
 
     return render_template(
         'admin/analytics.html',
         payload=payload,
         cleanup_ran=cleanup_ran,
         cleanup_error=cleanup_error,
+        visits=explore_pagination.items,
+        visits_pagination=explore_pagination,
+        visits_stats={
+            'days': explore_days,
+            'type': explore_type,
+            'q': explore_q,
+            'country': explore_country,
+            'total': int(explore_total),
+            'unique_ips': int(explore_unique_ips),
+            'sessions': int(explore_sessions),
+            'per_page': explore_per_page,
+        },
+        visits_top_pages=explore_top_pages,
+        visits_top_countries=explore_top_countries,
+        query_args=query_args,
     )
 
 
@@ -649,7 +627,9 @@ def analytics_live():
     limit = max(10, min(limit, 200))
 
     minutes = request.args.get('minutes', 60, type=int)
-    minutes = max(1, min(minutes, 24 * 60))
+    retention_days = int(current_app.config.get('ANALYTICS_RETENTION_DAYS', 7) or 7)
+    retention_minutes = max(60, min(int(retention_days) * 24 * 60, 60 * 24 * 60))
+    minutes = max(1, min(minutes, retention_minutes))
 
     traffic_type = (request.args.get('type') or 'human').strip().lower()
     if traffic_type not in {'human', 'bot', 'attack', 'all', 'crawler'}:
@@ -721,58 +701,52 @@ def analytics_live():
     )
 
 
-@admin_bp.route('/visitors/export')
+@admin_bp.route('/analytics/export')
 @login_required
 @admin_required
-def visitors_export():
-    """Export visitor list as CSV (respects current filters)."""
+def analytics_export():
+    """Export recent traffic logs as CSV (respects current explorer filters)."""
 
     import csv
     import io
-    from sqlalchemy import or_
     from flask import Response
-    from app.utils.geoip import get_country_for_ip
+    from app.models import RecentLog
 
-    def _parse_date(value: str | None):
-        if not value:
-            return None
-        try:
-            return datetime.strptime(value, '%Y-%m-%d').date()
-        except (TypeError, ValueError):
-            return None
+    retention_days = int(current_app.config.get('ANALYTICS_RETENTION_DAYS', 7) or 7)
+    retention_days = max(1, min(retention_days, 60))
 
-    today = date.today()
-    quick_range = (request.args.get('range') or '').strip().lower()
-    search = (request.args.get('q') or '').strip()
-    contact_only = request.args.get('contact') in {'1', 'true', 'yes', 'on'}
-    start_date = _parse_date(request.args.get('start'))
-    end_date = _parse_date(request.args.get('end'))
-    if not start_date and not end_date and quick_range in {'today', '24h'}:
-        start_date = today
-        end_date = today
-    elif not start_date and not end_date and quick_range in {'7d', 'week'}:
-        start_date = today - timedelta(days=6)
-        end_date = today
-    elif not start_date and not end_date and quick_range in {'30d', 'month'}:
-        start_date = today - timedelta(days=29)
-        end_date = today
+    explore_days = request.args.get('days', min(7, retention_days), type=int)
+    explore_days = max(1, min(explore_days, retention_days))
 
-    query = Visitor.query
-    if start_date:
-        query = query.filter(Visitor.visit_date >= start_date)
-    if end_date:
-        query = query.filter(Visitor.visit_date <= end_date)
-    if contact_only:
-        query = query.filter(or_(Visitor.email.isnot(None), Visitor.visitor_name.isnot(None)))
-    if search:
-        like_pattern = f"%{search}%"
+    explore_type = (request.args.get('type') or 'human').strip().lower()
+    if explore_type not in {'human', 'bot', 'crawler', 'all'}:
+        explore_type = 'human'
+
+    explore_q = (request.args.get('q') or '').strip()
+    explore_country = (request.args.get('country') or '').strip()
+
+    since = datetime.utcnow() - timedelta(days=explore_days)
+    query = RecentLog.query.filter(RecentLog.timestamp >= since)
+    if explore_type == 'crawler':
+        query = query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+    elif explore_type != 'all':
+        query = query.filter(RecentLog.traffic_type == explore_type)
+
+    if explore_country:
+        like_country = f"%{explore_country}%"
+        query = query.filter(or_(RecentLog.country_code.ilike(like_country), RecentLog.country_name.ilike(like_country)))
+
+    if explore_q:
+        like_pattern = f"%{explore_q}%"
         query = query.filter(
             or_(
-                Visitor.visitor_name.ilike(like_pattern),
-                Visitor.email.ilike(like_pattern),
-                Visitor.ip_address.ilike(like_pattern),
-                Visitor.page_visited.ilike(like_pattern),
-                Visitor.user_agent.ilike(like_pattern),
+                RecentLog.ip_address.ilike(like_pattern),
+                RecentLog.request_path.ilike(like_pattern),
+                RecentLog.user_agent.ilike(like_pattern),
+                RecentLog.referrer.ilike(like_pattern),
+                RecentLog.country_name.ilike(like_pattern),
+                RecentLog.country_code.ilike(like_pattern),
+                RecentLog.session_id.ilike(like_pattern),
             )
         )
 
@@ -780,36 +754,70 @@ def visitors_export():
     limit = max(100, min(limit, 20000))
 
     rows = (
-        query.order_by(Visitor.visit_date.desc(), Visitor.created_at.desc())
+        query
+        .order_by(RecentLog.timestamp.desc())
         .limit(limit)
         .all()
     )
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(['visit_date', 'created_at', 'visitor_name', 'email', 'ip_address', 'page_visited', 'country', 'user_agent'])
-    for visit in rows:
+    writer.writerow(
+        [
+            'timestamp_utc',
+            'traffic_type',
+            'is_search_bot',
+            'ip_address',
+            'country_code',
+            'country_name',
+            'request_path',
+            'method',
+            'status_code',
+            'response_time_ms',
+            'device',
+            'referrer',
+            'session_id',
+            'user_agent',
+        ]
+    )
+    for r in rows:
         writer.writerow(
             [
-                visit.visit_date.isoformat() if visit.visit_date else '',
-                visit.created_at.isoformat() if visit.created_at else '',
-                visit.visitor_name or '',
-                visit.email or '',
-                visit.ip_address or '',
-                visit.page_visited or '',
-                (get_country_for_ip(visit.ip_address) if visit.ip_address else ''),
-                (visit.user_agent or ''),
+                r.timestamp.isoformat() if r.timestamp else '',
+                r.traffic_type or '',
+                '1' if getattr(r, 'is_search_bot', False) else '0',
+                r.ip_address or '',
+                r.country_code or '',
+                r.country_name or '',
+                r.request_path or '',
+                r.method or '',
+                str(r.status_code) if r.status_code is not None else '',
+                str(r.response_time_ms) if r.response_time_ms is not None else '',
+                r.device or '',
+                r.referrer or '',
+                r.session_id or '',
+                r.user_agent or '',
             ]
         )
 
-    filename = f"visitors_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"traffic_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
     return Response(
         buffer.getvalue(),
         mimetype='text/csv; charset=utf-8',
-        headers={
-            'Content-Disposition': f'attachment; filename={filename}',
-        },
+        headers={'Content-Disposition': f'attachment; filename={filename}'},
     )
+
+
+@admin_bp.route('/visitors/export')
+@login_required
+@admin_required
+def visitors_export():
+    """Legacy export endpoint (deprecated).
+
+    Redirects to the unified analytics export.
+    """
+
+    return redirect(url_for('admin.analytics_export', **request.args.to_dict(flat=True)))
 
 
 @admin_bp.route('/')
