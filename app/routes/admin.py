@@ -18,7 +18,8 @@ from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm,
 from app.forms import PlanFAQForm
 from app.extensions import db
 from datetime import datetime, date, timedelta
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, inspect
+from sqlalchemy.exc import SQLAlchemyError
 from slugify import slugify
 from urllib.parse import urlparse
 from app.utils.uploads import save_uploaded_file, resolve_protected_upload
@@ -528,63 +529,101 @@ def analytics():
     now = datetime.utcnow()
     since = now - timedelta(days=explore_days)
 
-    explore_query = RecentLog.query.filter(RecentLog.timestamp >= since)
-    if explore_type == 'crawler':
-        explore_query = explore_query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
-    elif explore_type != 'all':
-        explore_query = explore_query.filter(RecentLog.traffic_type == explore_type)
+    explore_total = 0
+    explore_unique_ips = 0
+    explore_sessions = 0
+    explore_top_pages = []
+    explore_top_countries = []
+    explore_pagination = None
 
-    if explore_country:
-        like_country = f"%{explore_country}%"
-        explore_query = explore_query.filter(
-            or_(
-                RecentLog.country_code.ilike(like_country),
-                RecentLog.country_name.ilike(like_country),
+    try:
+        inspector = inspect(db.engine)
+        has_recent_logs = inspector.has_table('recent_logs')
+    except Exception as exc:
+        has_recent_logs = False
+        current_app.logger.warning('RecentLog table check failed: %s', exc)
+
+    if has_recent_logs:
+        try:
+            explore_query = RecentLog.query.filter(RecentLog.timestamp >= since)
+            if explore_type == 'crawler':
+                explore_query = explore_query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+            elif explore_type != 'all':
+                explore_query = explore_query.filter(RecentLog.traffic_type == explore_type)
+
+            if explore_country:
+                like_country = f"%{explore_country}%"
+                explore_query = explore_query.filter(
+                    or_(
+                        RecentLog.country_code.ilike(like_country),
+                        RecentLog.country_name.ilike(like_country),
+                    )
+                )
+
+            if explore_q:
+                like_pattern = f"%{explore_q}%"
+                explore_query = explore_query.filter(
+                    or_(
+                        RecentLog.ip_address.ilike(like_pattern),
+                        RecentLog.request_path.ilike(like_pattern),
+                        RecentLog.user_agent.ilike(like_pattern),
+                        RecentLog.referrer.ilike(like_pattern),
+                        RecentLog.country_name.ilike(like_pattern),
+                        RecentLog.country_code.ilike(like_pattern),
+                        RecentLog.session_id.ilike(like_pattern),
+                    )
+                )
+
+            explore_query_unordered = explore_query.order_by(None)
+            explore_pagination = (
+                explore_query
+                .order_by(RecentLog.timestamp.desc())
+                .paginate(page=explore_page, per_page=explore_per_page, error_out=False)
             )
-        )
 
-    if explore_q:
-        like_pattern = f"%{explore_q}%"
-        explore_query = explore_query.filter(
-            or_(
-                RecentLog.ip_address.ilike(like_pattern),
-                RecentLog.request_path.ilike(like_pattern),
-                RecentLog.user_agent.ilike(like_pattern),
-                RecentLog.referrer.ilike(like_pattern),
-                RecentLog.country_name.ilike(like_pattern),
-                RecentLog.country_code.ilike(like_pattern),
-                RecentLog.session_id.ilike(like_pattern),
+            explore_total = explore_query_unordered.with_entities(func.count(RecentLog.id)).scalar() or 0
+            explore_unique_ips = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.ip_address))).scalar() or 0
+            explore_sessions = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.session_id))).scalar() or 0
+
+            explore_top_pages = (
+                explore_query_unordered
+                .with_entities(RecentLog.request_path, func.count(RecentLog.id))
+                .group_by(RecentLog.request_path)
+                .order_by(func.count(RecentLog.id).desc())
+                .limit(8)
+                .all()
             )
+
+            explore_top_countries = (
+                explore_query_unordered
+                .with_entities(RecentLog.country_name, RecentLog.country_code, func.count(RecentLog.id))
+                .group_by(RecentLog.country_name, RecentLog.country_code)
+                .order_by(func.count(RecentLog.id).desc())
+                .limit(8)
+                .all()
+            )
+        except SQLAlchemyError as exc:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            current_app.logger.exception('RecentLog explorer query failed: %s', exc)
+            explore_pagination = None
+
+    if explore_pagination is None:
+        from types import SimpleNamespace
+
+        explore_pagination = SimpleNamespace(
+            items=[],
+            page=1,
+            pages=0,
+            per_page=explore_per_page,
+            total=0,
+            has_prev=False,
+            has_next=False,
+            prev_num=None,
+            next_num=None,
         )
-
-    explore_query_unordered = explore_query.order_by(None)
-    explore_pagination = (
-        explore_query
-        .order_by(RecentLog.timestamp.desc())
-        .paginate(page=explore_page, per_page=explore_per_page, error_out=False)
-    )
-
-    explore_total = explore_query_unordered.with_entities(func.count(RecentLog.id)).scalar() or 0
-    explore_unique_ips = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.ip_address))).scalar() or 0
-    explore_sessions = explore_query_unordered.with_entities(func.count(func.distinct(RecentLog.session_id))).scalar() or 0
-
-    explore_top_pages = (
-        explore_query_unordered
-        .with_entities(RecentLog.request_path, func.count(RecentLog.id))
-        .group_by(RecentLog.request_path)
-        .order_by(func.count(RecentLog.id).desc())
-        .limit(8)
-        .all()
-    )
-
-    explore_top_countries = (
-        explore_query_unordered
-        .with_entities(RecentLog.country_name, RecentLog.country_code, func.count(RecentLog.id))
-        .group_by(RecentLog.country_name, RecentLog.country_code)
-        .order_by(func.count(RecentLog.id).desc())
-        .limit(8)
-        .all()
-    )
 
     query_args = request.args.to_dict(flat=True)
     query_args.pop('page', None)
