@@ -352,34 +352,37 @@ def detect_wasted_space(rooms: List[Dict]) -> Dict:
     Analyze all rooms to detect total wasted space.
     Returns comprehensive waste analysis.
     """
-    total_area = sum(r['area_m2'] for r in rooms)
+    total_area = sum(r.get('area_m2', 0) for r in rooms)
     total_waste = 0.0
     circulation_area = 0.0
     oversized_rooms = []
     undersized_rooms = []
     
     for room in rooms:
-        validation = room['validation']
-        area = room['area_m2']
+        validation = room.get('validation', {})
+        area = room.get('area_m2', 0)
+        room_type = room.get('room_type', room.get('type', 'Unknown'))
         
         # Track circulation spaces
-        if room['room_type'] in ['Corridor', 'Hallway', 'Entrance', 'Lobby']:
+        if room_type in ['Corridor', 'Hallway', 'Entrance', 'Lobby']:
             circulation_area += area
         
         # Calculate waste from oversized rooms
-        if validation['waste_level'] > 0:
-            waste = area * validation['waste_level']
+        waste_level = validation.get('waste_level', 0)
+        if waste_level > 0:
+            waste = area * waste_level
             total_waste += waste
             oversized_rooms.append({
-                'type': room['room_type'],
+                'type': room_type,
                 'area': area,
                 'waste': waste
             })
         
         # Track undersized rooms
-        if validation['area_status'] == 'critical' and validation['waste_level'] == 0:
+        area_status = validation.get('area_status', 'optimal')
+        if area_status == 'critical' and waste_level == 0:
             undersized_rooms.append({
-                'type': room['room_type'],
+                'type': room_type,
                 'area': area
             })
     
@@ -395,6 +398,7 @@ def detect_wasted_space(rooms: List[Dict]) -> Dict:
     return {
         'total_area_m2': total_area,
         'wasted_area_m2': total_waste,
+        'total_waste_m2': total_waste,  # Add alternate key for template compatibility
         'waste_percentage': waste_pct,
         'circulation_area_m2': circulation_area,
         'circulation_percentage': circulation_pct,
@@ -417,9 +421,9 @@ def calculate_efficiency_scores(rooms: List[Dict], waste_analysis: Dict) -> Dict
     financial_score = max(0, 100 - (waste_pct * 2))  # Heavy penalty for waste
     
     # Daily Comfort (based on room sizing)
-    optimal_count = sum(1 for r in rooms if r['validation']['status'] == 'green')
-    warning_count = sum(1 for r in rooms if r['validation']['status'] == 'orange')
-    critical_count = sum(1 for r in rooms if r['validation']['status'] == 'red')
+    optimal_count = sum(1 for r in rooms if r.get('validation', {}).get('status') == 'green')
+    warning_count = sum(1 for r in rooms if r.get('validation', {}).get('status') == 'orange')
+    critical_count = sum(1 for r in rooms if r.get('validation', {}).get('status') == 'red')
     
     total_rooms = len(rooms)
     comfort_score = (optimal_count * 100 + warning_count * 60 + critical_count * 20) / total_rooms if total_rooms > 0 else 50
@@ -440,9 +444,9 @@ def calculate_efficiency_scores(rooms: List[Dict], waste_analysis: Dict) -> Dict
     circulation_score = max(0, circulation_score - corridor_penalty)
     
     return {
-        'financial': int(financial_score),
-        'comfort': int(comfort_score),
-        'circulation': int(circulation_score),
+        'financial_efficiency': int(financial_score),
+        'comfort_efficiency': int(comfort_score),
+        'circulation_efficiency': int(circulation_score),
         'overall': int((financial_score + comfort_score + circulation_score) / 3)
     }
 
@@ -497,6 +501,7 @@ def estimate_construction_cost(
         'total_area_m2': total_area_m2,
         'wasted_area_m2': wasted_area_m2,
         'wasted_money': wasted_money,
+        'wasted_budget': wasted_money,  # Add alternate key for template compatibility
         'current_total_cost': current_total_cost,
         'optimized_total_cost': optimized_total_cost,
         'potential_savings': potential_savings,
