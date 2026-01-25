@@ -14,11 +14,23 @@ from datetime import datetime, timedelta, date
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import DailyTrafficStat, RecentLog, Order
+from app.models import (
+    DailyTrafficStat,
+    RecentLog,
+    Order,
+    VisitorLog,
+    CrawlerLog,
+    BotLog,
+    ApiLog,
+    PerformanceLog,
+    AnalyzerLog,
+    ErrorLog,
+)
 from app.services.analytics.counters import snapshot_and_reset_attacks, snapshot_and_reset_counts
 
 
 RECENT_LOG_RETENTION_DAYS = 7
+DETAILED_LOG_RETENTION_DAYS = 14
 
 
 def _utc_today() -> date:
@@ -141,6 +153,14 @@ def clean_old_logs(*, now: datetime | None = None) -> dict[str, int]:
         .filter(RecentLog.timestamp < cutoff)
         .delete(synchronize_session=False)
     )
+
+    # 4) Delete older detailed logs (longer retention).
+    detailed_cutoff = now - timedelta(days=DETAILED_LOG_RETENTION_DAYS)
+    for model in (VisitorLog, CrawlerLog, BotLog, ApiLog, PerformanceLog, AnalyzerLog, ErrorLog):
+        try:
+            db.session.query(model).filter(model.timestamp < detailed_cutoff).delete(synchronize_session=False)
+        except Exception:
+            pass
 
     db.session.commit()
 

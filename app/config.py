@@ -102,7 +102,7 @@ class Config:
 
     # Smart analytics (signal-over-noise)
     ANALYTICS_ENABLED = os.environ.get('ANALYTICS_ENABLED', 'true').lower() == 'true'
-    ANALYTICS_LOG_GENERIC_BOTS = os.environ.get('ANALYTICS_LOG_GENERIC_BOTS', 'false').lower() == 'true'
+    ANALYTICS_LOG_GENERIC_BOTS = os.environ.get('ANALYTICS_LOG_GENERIC_BOTS', 'true').lower() == 'true'
     ANALYTICS_BOT_DEDUPE_SECONDS = int(os.environ.get('ANALYTICS_BOT_DEDUPE_SECONDS', 3600))
     ANALYTICS_RETENTION_DAYS = int(os.environ.get('ANALYTICS_RETENTION_DAYS', 7))
 
@@ -110,9 +110,12 @@ class Config:
     ENABLE_LEGACY_VISITOR_LOGGING = os.environ.get('ENABLE_LEGACY_VISITOR_LOGGING', 'false').lower() == 'true'
 
     # Visit tracking and API reporting (30-minute batched analytics)
-    VISIT_TRACKING_ENABLED = os.environ.get('VISIT_TRACKING_ENABLED', 'false').lower() == 'true'
+    VISIT_TRACKING_ENABLED = os.environ.get('VISIT_TRACKING_ENABLED', 'true').lower() == 'true'
     VISIT_TRACKING_API = os.environ.get('VISIT_TRACKING_API')
     VISIT_TRACKING_INTERVAL = int(os.environ.get('VISIT_TRACKING_INTERVAL', '1800'))  # 30 minutes
+
+    # Performance logging (ms)
+    PERFORMANCE_LOG_THRESHOLD_MS = int(os.environ.get('PERFORMANCE_LOG_THRESHOLD_MS', '1500'))
 
     # Cloudinary (Render): provide CLOUDINARY_URL in environment.
     CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')

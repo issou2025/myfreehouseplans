@@ -14,7 +14,7 @@ from app.extensions import db
 from app.models import RecentLog
 
 
-@dataclass(frozen=True)
+@dataclass
 class AnalyticsEvent:
     timestamp: datetime
     ip_address: str
@@ -24,6 +24,12 @@ class AnalyticsEvent:
     user_agent: str
     traffic_type: str  # human|bot|attack
     is_search_bot: bool = False
+    device: str = ''
+    method: str = ''
+    status_code: int | None = None
+    response_time_ms: float | None = None
+    referrer: str | None = None
+    session_id: str | None = None
 
 
 # Dedupe cache to reduce bot log writes.
@@ -74,7 +80,14 @@ def record_event(event: AnalyticsEvent) -> None:
         'country_name': event.country_name or None,
         'request_path': (event.request_path or '/')[:255],
         'user_agent': (event.user_agent or '')[:500],
+        'device': (event.device or '')[:32] or None,
+        'method': (event.method or '')[:12] or None,
+        'status_code': event.status_code,
+        'response_time_ms': event.response_time_ms,
+        'referrer': (event.referrer or '')[:500] or None,
+        'session_id': (event.session_id or '')[:120] or None,
         'traffic_type': traffic,
+        'is_search_bot': bool(event.is_search_bot),
         'timestamp': now,
     }
 

@@ -122,6 +122,7 @@
                     Type
                     <select id="liveType" class="btn btn-soft" style="padding: 6px 10px;">
                         <option value="human" selected>Human</option>
+                        <option value="crawler">Crawler</option>
                         <option value="bot">Bot</option>
                         <option value="all">All</option>
                     </select>
@@ -148,12 +149,17 @@
                             <th style="width: 140px;">IP</th>
                             <th style="width: 100px;">Country</th>
                             <th>Path</th>
+                            <th style="width: 70px;">Method</th>
+                            <th style="width: 80px;">Status</th>
+                            <th style="width: 90px;">Resp (ms)</th>
+                            <th style="width: 90px;">Device</th>
                             <th style="width: 110px;">Type</th>
+                            <th style="width: 280px;">User-Agent</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="5" style="opacity:.8;">Loading…</td>
+                            <td colspan="10" style="opacity:.8;">Loading…</td>
                         </tr>
                     </tbody>
                 </table>
@@ -237,7 +243,7 @@
 
         const rows = (data && data.rows) ? data.rows : [];
         if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="opacity:.8;">No recent visits yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="opacity:.8;">No recent visits yet.</td></tr>';
             return;
         }
 
@@ -249,13 +255,25 @@
             const country = cn ? `${cn}${cc ? ` (${cc})` : ''}` : (cc || '');
             const path = _escapeHtml(r.path);
             const type = _escapeHtml(r.type);
+            const method = _escapeHtml(r.method || '-');
+            const status = _escapeHtml(r.status_code || '-');
+            const resp = (r.response_time_ms !== null && r.response_time_ms !== undefined)
+                ? _escapeHtml(Math.round(r.response_time_ms))
+                : '-';
+            const device = _escapeHtml(r.device || '-');
+            const ua = _escapeHtml(r.user_agent || '-');
             return `
                 <tr>
                     <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ts}</td>
                     <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px;">${ip}</td>
                     <td style="font-size: 12px; opacity:.9;">${country || '-'}</td>
                     <td style="font-size: 13px;">${path}</td>
+                    <td style="font-size: 12px; opacity:.9;">${method}</td>
+                    <td style="font-size: 12px; opacity:.9;">${status}</td>
+                    <td style="font-size: 12px; opacity:.9;">${resp}</td>
+                    <td style="font-size: 12px; opacity:.9;">${device}</td>
                     <td style="font-size: 12px; opacity:.9;">${type}</td>
+                    <td style="font-size: 12px; opacity:.85;">${ua}</td>
                 </tr>
             `;
         }).join('');
@@ -279,6 +297,7 @@
                     <span><strong>Updated:</strong> ${_escapeHtml(nowUtc)}</span>
                     <span><strong>Events last minute:</strong> ${_escapeHtml(stats.events_last_minute || 0)}</span>
                     <span><strong>Unique IPs last minute:</strong> ${_escapeHtml(stats.unique_ips_last_minute || 0)}</span>
+                    <span><strong>Active sessions last minute:</strong> ${_escapeHtml(stats.active_sessions_last_minute || 0)}</span>
                 `;
             }
 
@@ -286,7 +305,7 @@
         } catch (e) {
             const tbody = liveTable.querySelector('tbody');
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="5" style="color:#b91c1c;">Failed to load live visits: ${_escapeHtml(e.message || e)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="color:#b91c1c;">Failed to load live visits: ${_escapeHtml(e.message || e)}</td></tr>`;
             }
         }
     }

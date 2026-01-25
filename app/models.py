@@ -844,7 +844,14 @@ class RecentLog(db.Model):
     country_name = db.Column(db.String(80))
     request_path = db.Column(db.String(255), nullable=False, index=True)
     user_agent = db.Column(db.String(500))
+    device = db.Column(db.String(32))
+    method = db.Column(db.String(12))
+    status_code = db.Column(db.Integer)
+    response_time_ms = db.Column(db.Float)
+    referrer = db.Column(db.String(500))
+    session_id = db.Column(db.String(120))
     traffic_type = db.Column(db.String(16), nullable=False, index=True)  # human | bot | attack
+    is_search_bot = db.Column(db.Boolean, nullable=False, default=False)
 
     timestamp = db.Column(
         db.DateTime,
@@ -857,3 +864,63 @@ class RecentLog(db.Model):
     __table_args__ = (
         db.Index('ix_recent_logs_type_time', 'traffic_type', 'timestamp'),
     )
+
+
+class _RequestLogBase(db.Model):
+    """Base fields for detailed request logs."""
+
+    __abstract__ = True
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=db.func.now(),
+        index=True,
+    )
+    ip_address = db.Column(db.String(64), nullable=False, index=True)
+    route = db.Column(db.String(255), nullable=False, index=True)
+    method = db.Column(db.String(12))
+    status_code = db.Column(db.Integer)
+    response_time_ms = db.Column(db.Float)
+    user_agent = db.Column(db.String(500))
+    device = db.Column(db.String(32))
+    country = db.Column(db.String(80))
+    referrer = db.Column(db.String(500))
+    session_id = db.Column(db.String(120))
+
+
+class VisitorLog(_RequestLogBase):
+    __tablename__ = 'visitor_logs'
+
+
+class CrawlerLog(_RequestLogBase):
+    __tablename__ = 'crawler_logs'
+
+
+class BotLog(_RequestLogBase):
+    __tablename__ = 'bot_logs'
+
+
+class ApiLog(_RequestLogBase):
+    __tablename__ = 'api_logs'
+
+
+class PerformanceLog(_RequestLogBase):
+    __tablename__ = 'performance_logs'
+
+
+class AnalyzerLog(_RequestLogBase):
+    __tablename__ = 'analyzer_logs'
+
+    event_type = db.Column(db.String(40))
+    detail = db.Column(db.String(800))
+
+
+class ErrorLog(_RequestLogBase):
+    __tablename__ = 'error_logs'
+
+    error_type = db.Column(db.String(120))
+    error_message = db.Column(db.String(1000))
+    stacktrace = db.Column(db.Text)

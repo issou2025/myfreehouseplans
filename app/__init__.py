@@ -401,6 +401,21 @@ def create_app(config_name='default'):
     # Initialize extensions
     limiter.init_app(app)
 
+    # Never rate-limit known crawlers/bots (SEO-friendly).
+    try:
+        @limiter.request_filter
+        def _skip_rate_limit_for_bots():
+            from flask import request
+            from app.services.analytics.traffic import classify_traffic
+
+            ua = (request.headers.get('User-Agent') or '').lower()
+            if not ua:
+                return False
+            classification = classify_traffic(path=(request.path or '/'), user_agent=ua)
+            return classification.traffic_type == 'bot'
+    except Exception:
+        pass
+
     # GeoIP (read-only) initialization
     project_root = os.path.abspath(os.path.join(app.root_path, os.pardir))
     app.config.setdefault('GEOIP_DB_PATH', os.path.join(project_root, 'GeoLite2-Country.mmdb'))
@@ -555,6 +570,13 @@ def register_error_handlers(app):
     def internal_error(error):
         """Handle 500 errors"""
         app.logger.exception('Unhandled exception (500): %s', error)
+        try:
+            from flask import g
+            from app.services.analytics.request_logging import log_error
+
+            log_error(event=getattr(g, 'analytics_event', None), error=error, status_code=500)
+        except Exception:
+            pass
         db.session.rollback()
         return render_template('errors/500.html'), 500
     
@@ -773,11 +795,22 @@ def register_request_hooks(app):
 
         g.analytics_event = None
         g.visit_track = None
+        g.request_start = None
+        g.request_ts = None
 
         if not app.config.get('ANALYTICS_ENABLED', True):
             return
 
         path = (request.path or '/').strip() or '/'
+
+        try:
+            import time as _time
+
+            g.request_start = _time.perf_counter()
+            g.request_ts = datetime.utcnow()
+        except Exception:
+            g.request_start = None
+            g.request_ts = datetime.utcnow()
 
         # Skip noisy/low-value endpoints.
         if path == '/favicon.ico':
@@ -788,12 +821,22 @@ def register_request_hooks(app):
             return
         if path.startswith('/health'):
             return
-        if request.method not in ('GET', 'POST'):
+        if request.method not in ('GET', 'POST', 'HEAD'):
             return
         if current_user.is_authenticated and getattr(current_user, 'role', None) == 'superadmin':
             return
 
         ua = (request.headers.get('User-Agent') or '')[:500]
+        referrer = (request.referrer or '')[:500] or None
+        method = (request.method or '')[:12]
+
+        device = 'unknown'
+        try:
+            from app.utils.device_detection import detect_device_type
+
+            device = detect_device_type(ua)
+        except Exception:
+            device = 'unknown'
 
         try:
             from app.services.analytics.traffic import classify_traffic
@@ -826,6 +869,23 @@ def register_request_hooks(app):
                 except Exception:
                     country_code, country_name = 'UN', 'Unknown'
 
+            try:
+                g.visitor_country = country_name or 'Unknown'
+            except Exception:
+                pass
+
+            session_id = None
+            if classification.traffic_type == 'human':
+                try:
+                    from flask import session
+                    import uuid
+
+                    if not session.get('visitor_session_id'):
+                        session['visitor_session_id'] = uuid.uuid4().hex
+                    session_id = session.get('visitor_session_id')
+                except Exception:
+                    session_id = None
+
             g.analytics_event = AnalyticsEvent(
                 timestamp=now,
                 ip_address=_client_ip(),
@@ -835,6 +895,10 @@ def register_request_hooks(app):
                 user_agent=ua,
                 traffic_type=classification.traffic_type,
                 is_search_bot=classification.is_search_bot,
+                device=device,
+                method=method,
+                referrer=referrer,
+                session_id=session_id,
             )
         except Exception:
             # Never break requests due to analytics.
@@ -856,9 +920,38 @@ def register_request_hooks(app):
         event = getattr(g, 'analytics_event', None)
         if event is not None:
             try:
+                import time as _time
                 from app.services.analytics.tracking import record_event
+                from app.services.analytics.request_logging import log_request, log_analyzer_event
+
+                if event.status_code is None:
+                    event.status_code = getattr(response, 'status_code', None)
+
+                if event.response_time_ms is None and g.request_start is not None:
+                    event.response_time_ms = (_time.perf_counter() - g.request_start) * 1000
 
                 record_event(event)
+
+                if event.traffic_type == 'human':
+                    log_request(event=event, log_type='visitor')
+                elif event.traffic_type == 'bot':
+                    if getattr(event, 'is_search_bot', False):
+                        log_request(event=event, log_type='crawler')
+                    else:
+                        log_request(event=event, log_type='bot')
+
+                if (request.path or '').startswith('/tools/floor-plan-analyzer'):
+                    log_analyzer_event(event=event, event_type='request')
+
+                if (request.path or '').startswith('/api'):
+                    log_request(event=event, log_type='api')
+
+                try:
+                    threshold = int(app.config.get('PERFORMANCE_LOG_THRESHOLD_MS', 1500))
+                    if event.response_time_ms and event.response_time_ms >= threshold:
+                        log_request(event=event, log_type='performance')
+                except Exception:
+                    pass
             except Exception:
                 pass
 

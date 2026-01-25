@@ -141,78 +141,90 @@ def room_input():
 @floor_plan_bp.route('/results')
 def results():
     """Final dashboard with efficiency scores."""
-    if 'fp_unit_system' not in session or 'fp_rooms' not in session:
-        return redirect(url_for('floor_plan.start'))
-    
-    rooms = session.get('fp_rooms', [])
-    if len(rooms) < 3:
-        flash('Please add at least 3 rooms for analysis.', 'warning')
+    try:
+        if 'fp_unit_system' not in session or 'fp_rooms' not in session:
+            return redirect(url_for('floor_plan.start'))
+
+        rooms = session.get('fp_rooms', [])
+        if len(rooms) < 3:
+            flash('Please add at least 3 rooms for analysis.', 'warning')
+            return redirect(url_for('floor_plan.room_input'))
+
+        unit_system = session.get('fp_unit_system', 'metric')
+        budget = session.get('fp_budget')
+        country = session.get('fp_country', 'International')
+
+        # Calculate total areas (internal = m²)
+        total_built_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
+
+        # Detect wasted space
+        waste_analysis = detect_wasted_space(rooms)
+
+        # Calculate efficiency scores
+        scores = calculate_efficiency_scores(rooms, waste_analysis)
+
+        # Estimate costs
+        cost_analysis = estimate_construction_cost(
+            total_built_area_m2,
+            waste_analysis['wasted_area_m2'],
+            budget,
+            country
+        )
+
+        # Enrich room-level waste entries for template safety (production: never assume keys exist)
+        cost_per_m2 = float(cost_analysis.get('cost_per_m2') or 0)
+        area_factor = 1.0 if unit_system == 'metric' else 10.7639
+
+        for item in waste_analysis.get('oversized_rooms', []) or []:
+            waste_m2 = float(item.get('waste_m2') or item.get('waste') or 0)
+            area_m2 = float(item.get('area_m2') or item.get('area') or 0)
+            item['cost_waste'] = waste_m2 * cost_per_m2
+            item['feedback'] = item.get('feedback', '')
+            item['area'] = area_m2 * area_factor
+
+        for item in waste_analysis.get('undersized_rooms', []) or []:
+            area_m2 = float(item.get('area_m2') or item.get('area') or 0)
+            item['feedback'] = item.get('feedback', '')
+            item['area'] = area_m2 * area_factor
+            optimal_min_m2 = float(item.get('optimal_min_m2') or 0)
+            optimal_max_m2 = float(item.get('optimal_max_m2') or 0)
+            item['optimal_min'] = optimal_min_m2 * area_factor
+            item['optimal_max'] = optimal_max_m2 * area_factor
+
+        # Convert summary numbers to the user's unit system for display (keep m² internally above)
+        waste_view = dict(waste_analysis)
+        waste_view['total_area_m2'] = float(waste_view.get('total_area_m2') or 0) * area_factor
+        waste_view['wasted_area_m2'] = float(waste_view.get('wasted_area_m2') or 0) * area_factor
+        waste_view['total_waste_m2'] = float(waste_view.get('total_waste_m2') or 0) * area_factor
+        waste_view['circulation_area_m2'] = float(waste_view.get('circulation_area_m2') or 0) * area_factor
+
+        # Build analysis object for template
+        analysis = {
+            'total_rooms': len(rooms),
+            'total_area': total_built_area_m2 * area_factor,
+            'scores': scores,
+            'waste_data': waste_view,
+            'cost_impact': cost_analysis
+        }
+
+        return render_template(
+            'floor_plan/results.html',
+            unit_system=unit_system,
+            rooms=rooms,
+            analysis=analysis,
+            budget=budget
+        )
+    except Exception as exc:
+        try:
+            current_app.logger.exception('Floor plan analyzer results failed: %s', exc)
+            from app.services.analytics.request_logging import log_analyzer_event
+            from flask import g
+
+            log_analyzer_event(event=getattr(g, 'analytics_event', None), event_type='error', detail=str(exc))
+        except Exception:
+            pass
+        flash('We hit a temporary error while building your results. Please try again.', 'warning')
         return redirect(url_for('floor_plan.room_input'))
-    
-    unit_system = session.get('fp_unit_system', 'metric')
-    budget = session.get('fp_budget')
-    country = session.get('fp_country', 'International')
-    
-    # Calculate total areas (internal = m²)
-    total_built_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
-    
-    # Detect wasted space
-    waste_analysis = detect_wasted_space(rooms)
-    
-    # Calculate efficiency scores
-    scores = calculate_efficiency_scores(rooms, waste_analysis)
-    
-    # Estimate costs
-    cost_analysis = estimate_construction_cost(
-        total_built_area_m2,
-        waste_analysis['wasted_area_m2'],
-        budget,
-        country
-    )
-
-    # Enrich room-level waste entries for template safety (production: never assume keys exist)
-    cost_per_m2 = float(cost_analysis.get('cost_per_m2') or 0)
-    area_factor = 1.0 if unit_system == 'metric' else 10.7639
-
-    for item in waste_analysis.get('oversized_rooms', []) or []:
-        waste_m2 = float(item.get('waste_m2') or item.get('waste') or 0)
-        area_m2 = float(item.get('area_m2') or item.get('area') or 0)
-        item['cost_waste'] = waste_m2 * cost_per_m2
-        item['feedback'] = item.get('feedback', '')
-        item['area'] = area_m2 * area_factor
-
-    for item in waste_analysis.get('undersized_rooms', []) or []:
-        area_m2 = float(item.get('area_m2') or item.get('area') or 0)
-        item['feedback'] = item.get('feedback', '')
-        item['area'] = area_m2 * area_factor
-        optimal_min_m2 = float(item.get('optimal_min_m2') or 0)
-        optimal_max_m2 = float(item.get('optimal_max_m2') or 0)
-        item['optimal_min'] = optimal_min_m2 * area_factor
-        item['optimal_max'] = optimal_max_m2 * area_factor
-
-    # Convert summary numbers to the user's unit system for display (keep m² internally above)
-    waste_view = dict(waste_analysis)
-    waste_view['total_area_m2'] = float(waste_view.get('total_area_m2') or 0) * area_factor
-    waste_view['wasted_area_m2'] = float(waste_view.get('wasted_area_m2') or 0) * area_factor
-    waste_view['total_waste_m2'] = float(waste_view.get('total_waste_m2') or 0) * area_factor
-    waste_view['circulation_area_m2'] = float(waste_view.get('circulation_area_m2') or 0) * area_factor
-    
-    # Build analysis object for template
-    analysis = {
-        'total_rooms': len(rooms),
-        'total_area': total_built_area_m2 * area_factor,
-        'scores': scores,
-        'waste_data': waste_view,
-        'cost_impact': cost_analysis
-    }
-    
-    return render_template(
-        'floor_plan/results.html',
-        unit_system=unit_system,
-        rooms=rooms,
-        analysis=analysis,
-        budget=budget
-    )
 
 
 @floor_plan_bp.route('/report/generate', methods=['POST'])

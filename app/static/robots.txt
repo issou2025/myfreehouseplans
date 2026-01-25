@@ -2,8 +2,5 @@
 User-agent: *
 Allow: /
 
-# Sitemap location (update with your actual domain)
-Sitemap: https://myfreehouseplan.com/sitemap.xml
-
-# Crawl-delay for polite bots (optional)
-Crawl-delay: 1
+# Sitemap location
+Sitemap: https://www.myfreehouseplans.com/sitemap.xml

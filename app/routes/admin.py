@@ -652,14 +652,16 @@ def analytics_live():
     minutes = max(1, min(minutes, 24 * 60))
 
     traffic_type = (request.args.get('type') or 'human').strip().lower()
-    if traffic_type not in {'human', 'bot', 'attack', 'all'}:
+    if traffic_type not in {'human', 'bot', 'attack', 'all', 'crawler'}:
         traffic_type = 'human'
 
     now = datetime.utcnow()
     since = now - timedelta(minutes=minutes)
 
     query = RecentLog.query.filter(RecentLog.timestamp >= since)
-    if traffic_type != 'all':
+    if traffic_type == 'crawler':
+        query = query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+    elif traffic_type != 'all':
         query = query.filter(RecentLog.traffic_type == traffic_type)
 
     rows = (
@@ -671,12 +673,18 @@ def analytics_live():
 
     last_minute_since = now - timedelta(minutes=1)
     last_minute_query = RecentLog.query.filter(RecentLog.timestamp >= last_minute_since)
-    if traffic_type != 'all':
+    if traffic_type == 'crawler':
+        last_minute_query = last_minute_query.filter(RecentLog.traffic_type == 'bot').filter(RecentLog.is_search_bot.is_(True))
+    elif traffic_type != 'all':
         last_minute_query = last_minute_query.filter(RecentLog.traffic_type == traffic_type)
 
     last_minute_count = last_minute_query.with_entities(func.count(RecentLog.id)).scalar() or 0
     last_minute_unique_ips = (
         last_minute_query.with_entities(func.count(func.distinct(RecentLog.ip_address))).scalar()
+        or 0
+    )
+    last_minute_sessions = (
+        last_minute_query.with_entities(func.count(func.distinct(RecentLog.session_id))).scalar()
         or 0
     )
 
@@ -689,6 +697,7 @@ def analytics_live():
             'stats': {
                 'events_last_minute': int(last_minute_count),
                 'unique_ips_last_minute': int(last_minute_unique_ips),
+                'active_sessions_last_minute': int(last_minute_sessions),
             },
             'rows': [
                 {
@@ -697,8 +706,14 @@ def analytics_live():
                     'country_code': r.country_code,
                     'country_name': r.country_name,
                     'path': r.request_path,
-                    'type': r.traffic_type,
-                    'ua': (r.user_agent or ''),
+                    'type': ('crawler' if (r.traffic_type == 'bot' and getattr(r, 'is_search_bot', False)) else r.traffic_type),
+                    'method': r.method,
+                    'status_code': r.status_code,
+                    'response_time_ms': r.response_time_ms,
+                    'user_agent': r.user_agent,
+                    'device': r.device,
+                    'referrer': r.referrer,
+                    'session_id': r.session_id,
                 }
                 for r in rows
             ],
