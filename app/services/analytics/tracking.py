@@ -8,7 +8,7 @@ from threading import Lock
 
 from flask import current_app
 
-from sqlalchemy import insert
+from sqlalchemy import insert, inspect
 
 from app.extensions import db
 from app.models import RecentLog
@@ -35,6 +35,32 @@ class AnalyticsEvent:
 # Dedupe cache to reduce bot log writes.
 _lock = Lock()
 _bot_last_logged: dict[str, datetime] = {}
+
+_recent_log_columns: set[str] | None = None
+_recent_log_columns_checked_at: datetime | None = None
+_recent_log_columns_ttl_seconds = 60
+
+
+def _get_recent_log_columns() -> set[str] | None:
+    global _recent_log_columns, _recent_log_columns_checked_at
+
+    now = datetime.utcnow()
+    if _recent_log_columns_checked_at is not None:
+        age = (now - _recent_log_columns_checked_at).total_seconds()
+        if age < _recent_log_columns_ttl_seconds:
+            return _recent_log_columns
+
+    try:
+        inspector = inspect(db.engine)
+        if not inspector.has_table('recent_logs'):
+            _recent_log_columns = None
+        else:
+            _recent_log_columns = {col['name'] for col in inspector.get_columns('recent_logs')}
+    except Exception:
+        _recent_log_columns = None
+
+    _recent_log_columns_checked_at = now
+    return _recent_log_columns
 
 
 def _should_log_bot(*, ip: str, ua: str, is_search_bot: bool, now: datetime) -> bool:
@@ -90,6 +116,15 @@ def record_event(event: AnalyticsEvent) -> None:
         'is_search_bot': bool(event.is_search_bot),
         'timestamp': now,
     }
+
+    # Only insert columns that actually exist in the DB (handles partial migrations).
+    columns = _get_recent_log_columns()
+    if not columns:
+        return
+
+    payload = {key: value for key, value in payload.items() if key in columns}
+    if not payload:
+        return
 
     # Use an engine-level transaction to avoid committing unrelated ORM work.
     try:

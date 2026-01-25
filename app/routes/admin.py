@@ -675,6 +675,26 @@ def analytics_live():
         traffic_type = 'human'
 
     now = datetime.utcnow()
+
+    try:
+        inspector = inspect(db.engine)
+        if not inspector.has_table('recent_logs'):
+            return jsonify(
+                {
+                    'now_utc': now.isoformat(),
+                    'since_minutes': minutes,
+                    'limit': limit,
+                    'traffic_type': traffic_type,
+                    'stats': {
+                        'events_last_minute': 0,
+                        'unique_ips_last_minute': 0,
+                        'active_sessions_last_minute': 0,
+                    },
+                    'rows': [],
+                }
+            )
+    except Exception as exc:
+        current_app.logger.warning('RecentLog table check failed (live): %s', exc)
     since = now - timedelta(minutes=minutes)
 
     query = RecentLog.query.filter(RecentLog.timestamp >= since)
@@ -792,12 +812,28 @@ def analytics_export():
     limit = request.args.get('limit', 5000, type=int)
     limit = max(100, min(limit, 20000))
 
-    rows = (
-        query
-        .order_by(RecentLog.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+    try:
+        inspector = inspect(db.engine)
+        has_recent_logs = inspector.has_table('recent_logs')
+    except Exception as exc:
+        has_recent_logs = False
+        current_app.logger.warning('RecentLog table check failed (export): %s', exc)
+
+    rows = []
+    if has_recent_logs:
+        try:
+            rows = (
+                query
+                .order_by(RecentLog.timestamp.desc())
+                .limit(limit)
+                .all()
+            )
+        except SQLAlchemyError as exc:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            current_app.logger.exception('RecentLog export query failed: %s', exc)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
