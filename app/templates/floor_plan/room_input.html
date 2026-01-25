@@ -355,6 +355,53 @@
 .btn-success:hover {
     background: #059669;
 }
+
+/* Mobile Responsive */
+@media (max-width: 767px) {
+    .fp-wizard__title {
+        font-size: 1.75rem;
+    }
+    
+    .fp-card {
+        padding: 20px;
+    }
+    
+    .room-input-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .room-card {
+        padding: 16px;
+    }
+    
+    .room-card__type {
+        font-size: 1rem;
+    }
+    
+    .room-card__area {
+        font-size: 1.25rem;
+    }
+    
+    .form-actions--bottom {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .form-actions--bottom .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .fp-wizard__subtitle {
+        font-size: 0.875rem;
+    }
+    
+    .fp-card__hint {
+        font-size: 0.875rem;
+    }
+}
 </style>
 
 <script>

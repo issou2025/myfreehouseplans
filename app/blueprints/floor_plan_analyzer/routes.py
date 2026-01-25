@@ -33,109 +33,137 @@ def landing():
 @floor_plan_bp.route('/start', methods=['GET', 'POST'])
 def start():
     """Step 0: Unit system selection."""
-    if request.method == 'POST':
-        unit_system = request.form.get('unit_system', 'metric')
-        session['fp_unit_system'] = unit_system
-        return redirect(url_for('floor_plan.budget_input'))
-    
-    return render_template('floor_plan/unit_selection.html')
+    try:
+        if request.method == 'POST':
+            unit_system = request.form.get('unit_system', 'metric')
+            if unit_system not in ['metric', 'imperial']:
+                unit_system = 'metric'
+            session['fp_unit_system'] = unit_system
+            return redirect(url_for('floor_plan.budget_input'))
+        
+        return render_template('floor_plan/unit_selection.html')
+    except Exception as exc:
+        current_app.logger.exception('Unit selection failed: %s', exc)
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('floor_plan.landing'))
 
 
 @floor_plan_bp.route('/budget', methods=['GET', 'POST'])
 def budget_input():
     """Step 1: Budget input (optional)."""
-    if 'fp_unit_system' not in session:
+    try:
+        if 'fp_unit_system' not in session:
+            return redirect(url_for('floor_plan.start'))
+        
+        if request.method == 'POST':
+            # Budget is optional - store if provided
+            budget = request.form.get('budget', '').strip()
+            mortgage_duration = request.form.get('mortgage_duration', '').strip()
+            country = request.form.get('country', 'International').strip()
+            
+            session['fp_budget'] = float(budget) if budget else None
+            session['fp_mortgage_duration'] = int(mortgage_duration) if mortgage_duration else None
+            session['fp_country'] = country if country else 'International'
+            session['fp_rooms'] = []
+            
+            return redirect(url_for('floor_plan.room_input'))
+        
+        unit_system = session.get('fp_unit_system', 'metric')
+        return render_template('floor_plan/budget_input.html', unit_system=unit_system)
+    except Exception as exc:
+        current_app.logger.exception('Budget input failed: %s', exc)
+        flash('An error occurred. Please try again.', 'error')
         return redirect(url_for('floor_plan.start'))
-    
-    if request.method == 'POST':
-        # Budget is optional - store if provided
-        budget = request.form.get('budget', '').strip()
-        mortgage_duration = request.form.get('mortgage_duration', '').strip()
-        country = request.form.get('country', 'International').strip()
-        
-        session['fp_budget'] = float(budget) if budget else None
-        session['fp_mortgage_duration'] = int(mortgage_duration) if mortgage_duration else None
-        session['fp_country'] = country
-        session['fp_rooms'] = []
-        
-        return redirect(url_for('floor_plan.room_input'))
-    
-    unit_system = session.get('fp_unit_system', 'metric')
-    return render_template('floor_plan/budget_input.html', unit_system=unit_system)
 
 
 @floor_plan_bp.route('/rooms', methods=['GET', 'POST'])
 def room_input():
     """Step 2: Room-by-room input."""
-    if 'fp_unit_system' not in session:
-        return redirect(url_for('floor_plan.start'))
-    
-    unit_system = session.get('fp_unit_system', 'metric')
-    rooms = session.get('fp_rooms', [])
-    
-    if request.method == 'POST':
-        action = request.form.get('action')
+    try:
+        if 'fp_unit_system' not in session:
+            return redirect(url_for('floor_plan.start'))
         
-        if action == 'add_room':
-            room_type = request.form.get('room_type')
-            length = request.form.get('length')
-            width = request.form.get('width')
+        unit_system = session.get('fp_unit_system', 'metric')
+        rooms = session.get('fp_rooms', [])
+        
+        if request.method == 'POST':
+            action = request.form.get('action')
             
-            if room_type and length and width:
+            if action == 'add_room':
+                room_type = request.form.get('room_type')
+                length = request.form.get('length')
+                width = request.form.get('width')
+                
+                if room_type and length and width:
+                    try:
+                        length_val = float(length)
+                        width_val = float(width)
+                        
+                        if length_val <= 0 or width_val <= 0:
+                            flash('Dimensions must be greater than zero.', 'error')
+                            raise ValueError('Invalid dimensions')
+                        
+                        # Convert to metric for internal storage
+                        length_m, width_m = convert_to_metric(length_val, width_val, unit_system)
+                        area_m2 = length_m * width_m
+                        
+                        # Validate against standards
+                        validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
+                        
+                        # Calculate display area based on user's unit system
+                        display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                        
+                        room_data = {
+                            'type': room_type,  # Use 'type' for template compatibility
+                            'room_type': room_type,  # Keep for backward compatibility
+                            'length': length_val,
+                            'width': width_val,
+                            'length_m': length_m,
+                            'width_m': width_m,
+                            'area': display_area,  # Add 'area' for template
+                            'area_m2': area_m2,
+                            'validation': validation
+                        }
+                        
+                        rooms.append(room_data)
+                        session['fp_rooms'] = rooms
+                        flash(f'{room_type} added successfully!', 'success')
+                        
+                    except (ValueError, TypeError) as e:
+                        flash('Please enter valid numbers for dimensions.', 'error')
+                else:
+                    flash('Please fill in all fields.', 'error')
+            
+            elif action == 'remove_room':
                 try:
-                    length_val = float(length)
-                    width_val = float(width)
-                    
-                    # Convert to metric for internal storage
-                    length_m, width_m = convert_to_metric(length_val, width_val, unit_system)
-                    area_m2 = length_m * width_m
-                    
-                    # Validate against standards
-                    validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
-                    
-                    # Calculate display area based on user's unit system
-                    display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
-                    
-                    room_data = {
-                        'type': room_type,  # Use 'type' for template compatibility
-                        'room_type': room_type,  # Keep for backward compatibility
-                        'length': length_val,
-                        'width': width_val,
-                        'length_m': length_m,
-                        'width_m': width_m,
-                        'area': display_area,  # Add 'area' for template
-                        'area_m2': area_m2,
-                        'validation': validation
-                    }
-                    
-                    rooms.append(room_data)
-                    session['fp_rooms'] = rooms
-                    flash(f'{room_type} added successfully!', 'success')
-                    
-                except ValueError:
-                    flash('Please enter valid numbers for dimensions.', 'error')
+                    room_index = int(request.form.get('room_index', -1))
+                    if 0 <= room_index < len(rooms):
+                        removed = rooms.pop(room_index)
+                        session['fp_rooms'] = rooms
+                        flash(f'{removed.get("room_type", "Room")} removed.', 'info')
+                    else:
+                        flash('Invalid room selection.', 'error')
+                except (ValueError, TypeError):
+                    flash('Failed to remove room.', 'error')
+            
+            elif action == 'analyze':
+                if len(rooms) >= 3:
+                    return redirect(url_for('floor_plan.results'))
+                else:
+                    flash('Please add at least 3 rooms for accurate analysis.', 'warning')
         
-        elif action == 'remove_room':
-            room_index = int(request.form.get('room_index', -1))
-            if 0 <= room_index < len(rooms):
-                removed = rooms.pop(room_index)
-                session['fp_rooms'] = rooms
-                flash(f'{removed["room_type"]} removed.', 'info')
+        room_options = get_room_type_options()
         
-        elif action == 'analyze':
-            if len(rooms) >= 3:
-                return redirect(url_for('floor_plan.results'))
-            else:
-                flash('Please add at least 3 rooms for accurate analysis.', 'warning')
-    
-    room_options = get_room_type_options()
-    
-    return render_template(
-        'floor_plan/room_input.html',
-        unit_system=unit_system,
-        rooms=rooms,
-        room_options=room_options
-    )
+        return render_template(
+            'floor_plan/room_input.html',
+            unit_system=unit_system,
+            rooms=rooms,
+            room_options=room_options
+        )
+    except Exception as exc:
+        current_app.logger.exception('Room input failed: %s', exc)
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('floor_plan.start'))
 
 
 @floor_plan_bp.route('/results')
@@ -229,27 +257,95 @@ def results():
 
 @floor_plan_bp.route('/report/generate', methods=['POST'])
 def generate_report():
-    """Generate premium PDF optimization report."""
+    """Generate professional PDF optimization report - FREE."""
     if 'fp_rooms' not in session:
         return jsonify({'error': 'No analysis data found'}), 400
     
-    rooms = session.get('fp_rooms', [])
-    unit_system = session.get('fp_unit_system', 'metric')
-    budget = session.get('fp_budget')
-    country = session.get('fp_country', 'International')
-    
-    # Generate report (free for now)
-    output_dir = Path(current_app.instance_path) / 'floor_plan_reports'
-    pdf_path = generate_optimization_report(rooms, unit_system, budget, country, output_dir=output_dir)
+    try:
+        rooms = session.get('fp_rooms', [])
+        unit_system = session.get('fp_unit_system', 'metric')
+        budget = session.get('fp_budget')
+        country = session.get('fp_country', 'International')
+        
+        # Log PDF generation event
+        try:
+            from app.services.analytics.request_logging import log_analyzer_event
+            from flask import g
+            log_analyzer_event(
+                event=getattr(g, 'analytics_event', None),
+                event_type='pdf_generated',
+                detail=f"Generated PDF for {len(rooms)} rooms, {unit_system} units"
+            )
+        except Exception:
+            pass
+        
+        # Generate professional architectural report
+        output_dir = Path(current_app.instance_path) / 'floor_plan_reports'
+        pdf_path = generate_optimization_report(rooms, unit_system, budget, country, output_dir=output_dir)
 
-    # For now: return a direct download so the button "just works".
-    return send_file(
-        pdf_path,
-        as_attachment=True,
-        download_name=pdf_path.name,
-        mimetype='application/pdf',
-        max_age=0,
-    )
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=pdf_path.name,
+            mimetype='application/pdf',
+            max_age=0,
+        )
+    except Exception as exc:
+        current_app.logger.exception('PDF generation failed: %s', exc)
+        flash('Failed to generate PDF report. Please try again.', 'error')
+        return redirect(url_for('floor_plan.results'))
+
+
+@floor_plan_bp.route('/update-rooms', methods=['POST'])
+def update_rooms():
+    """Update rooms from editable results table and recalculate analysis."""
+    try:
+        data = request.get_json()
+        rooms_data = data.get('rooms', [])
+        
+        if len(rooms_data) < 3:
+            return jsonify({'success': False, 'error': 'At least 3 rooms required'}), 400
+        
+        unit_system = session.get('fp_unit_system', 'metric')
+        updated_rooms = []
+        
+        for room_data in rooms_data:
+            room_type = room_data.get('type', '').strip()
+            length = float(room_data.get('length', 0))
+            width = float(room_data.get('width', 0))
+            
+            if not room_type or length <= 0 or width <= 0:
+                continue
+            
+            # Convert to metric for internal storage
+            length_m, width_m = convert_to_metric(length, width, unit_system)
+            area_m2 = length_m * width_m
+            
+            # Validate against standards
+            validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
+            
+            # Calculate display area based on user's unit system
+            display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+            
+            room_obj = {
+                'type': room_type,
+                'room_type': room_type,
+                'length': length,
+                'width': width,
+                'length_m': length_m,
+                'width_m': width_m,
+                'area': display_area,
+                'area_m2': area_m2,
+                'validation': validation
+            }
+            updated_rooms.append(room_obj)
+        
+        session['fp_rooms'] = updated_rooms
+        return jsonify({'success': True, 'message': 'Rooms updated successfully'})
+    
+    except Exception as exc:
+        current_app.logger.exception('Failed to update rooms: %s', exc)
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 @floor_plan_bp.route('/reset')

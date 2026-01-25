@@ -11,6 +11,60 @@
             </p>
         </div>
 
+        <!-- Editable Rooms Table -->
+        <div class="analysis-section editable-rooms-section">
+            <div class="section-header">
+                <h2 class="section-title">Your Rooms</h2>
+                <button type="button" class="btn btn-secondary btn-sm" id="addRoomBtn">
+                    ➕ Add Room
+                </button>
+            </div>
+            <div class="rooms-table-wrapper">
+                <table class="rooms-table" id="roomsTable">
+                    <thead>
+                        <tr>
+                            <th>Room Type</th>
+                            <th>Length ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})</th>
+                            <th>Width ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})</th>
+                            <th>Area ({{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }})</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomsTableBody">
+                        {% for room in rooms %}
+                        <tr data-room-index="{{ loop.index0 }}" class="room-row">
+                            <td>
+                                <input type="text" class="room-input" data-field="type" value="{{ room.type }}" />
+                            </td>
+                            <td>
+                                <input type="number" step="0.1" class="room-input" data-field="length" value="{{ "%.2f"|format(room.length) }}" />
+                            </td>
+                            <td>
+                                <input type="number" step="0.1" class="room-input" data-field="width" value="{{ "%.2f"|format(room.width) }}" />
+                            </td>
+                            <td class="room-area">{{ "%.1f"|format(room.area) }}</td>
+                            <td>
+                                <span class="room-status-icon">{{ room.validation.status_icon if room.validation else '✓' }}</span>
+                            </td>
+                            <td>
+                                <button type="button" class="btn-icon delete-room-btn" title="Delete room">🗑️</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="rooms-total">
+                <strong>Total Area:</strong> <span id="totalAreaDisplay">{{ "%.1f"|format(analysis.total_area) }}</span> {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
+            </div>
+            <div class="rooms-actions">
+                <button type="button" class="btn btn-primary" id="recalculateBtn">
+                    🔄 Recalculate Analysis
+                </button>
+            </div>
+        </div>
+
         <!-- Efficiency Scores -->
         <div class="efficiency-grid">
             <div class="efficiency-card">
@@ -191,13 +245,13 @@
         </div>
         {% endif %}
 
-        <!-- Call to Action -->
+        <!-- Free PDF Download -->
         <div class="cta-section">
             <div class="cta-card">
                 <div class="cta-icon">📄</div>
-                <h2 class="cta-title">Get Your Detailed PDF Report</h2>
+                <h2 class="cta-title">Download Your Free PDF Report</h2>
                 <p class="cta-description">
-                    Download a professional 8-page analysis report with:
+                    Get a professional architectural analysis report with:
                 </p>
                 <ul class="cta-features">
                     <li>✅ Room-by-room optimization recommendations</li>
@@ -206,17 +260,13 @@
                     <li>✅ International standards compliance checklist</li>
                     <li>✅ Shareable with architects & contractors</li>
                 </ul>
-                <div class="cta-price">
-                    <span class="cta-price__amount">$4.99</span>
-                    <span class="cta-price__period">one-time payment</span>
-                </div>
                 <form method="POST" action="{{ url_for('floor_plan.generate_report') }}" target="_blank">
                     <button type="submit" class="btn btn-primary btn-lg btn-block cta-button">
-                        🔓 Unlock Full PDF Report (Free)
+                        📥 Download Free PDF Report
                     </button>
                 </form>
                 <p class="cta-guarantee">
-                    💯 30-day money-back guarantee • Instant PDF delivery
+                    100% Free • No signup required • Instant download
                 </p>
             </div>
         </div>
@@ -521,22 +571,6 @@
     opacity: 0.95;
 }
 
-.cta-price {
-    margin-bottom: 24px;
-}
-
-.cta-price__amount {
-    display: block;
-    font-size: 3.5rem;
-    font-weight: 800;
-    line-height: 1;
-}
-
-.cta-price__period {
-    font-size: 1rem;
-    opacity: 0.9;
-}
-
 .cta-button {
     background: white;
     color: var(--admin-blue);
@@ -559,6 +593,109 @@
     opacity: 0.9;
 }
 
+/* Editable Rooms Section */
+.editable-rooms-section {
+    margin-bottom: 32px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.rooms-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.rooms-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.rooms-table thead {
+    background: #F9FAFB;
+    border-bottom: 2px solid var(--admin-border);
+}
+
+.rooms-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--admin-text-dark);
+    white-space: nowrap;
+}
+
+.rooms-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.room-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--admin-border);
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    transition: border-color 0.2s;
+}
+
+.room-input:focus {
+    outline: none;
+    border-color: var(--admin-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.room-area {
+    font-weight: 600;
+    color: var(--admin-text-dark);
+}
+
+.room-status-icon {
+    font-size: 1.25rem;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+}
+
+.rooms-total {
+    margin-top: 16px;
+    text-align: right;
+    font-size: 1.125rem;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border-radius: 8px;
+}
+
+.rooms-total strong {
+    color: var(--admin-text-dark);
+}
+
+#totalAreaDisplay {
+    color: var(--admin-blue);
+    font-weight: 700;
+}
+
+.rooms-actions {
+    margin-top: 16px;
+    text-align: center;
+}
+
 .results-actions {
     display: flex;
     gap: 16px;
@@ -577,6 +714,50 @@
 }
 
 @media (max-width: 767px) {
+    .fp-results__title {
+        font-size: 1.75rem;
+    }
+    
+    .fp-results__subtitle {
+        font-size: 1rem;
+    }
+    
+    .efficiency-card {
+        padding: 24px;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .waste-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .waste-stat {
+        padding: 16px;
+    }
+    
+    .waste-stat__icon {
+        font-size: 2rem;
+    }
+    
+    .waste-stat__value {
+        font-size: 1.5rem;
+    }
+    
+    .cta-title {
+        font-size: 1.5rem;
+    }
+    
+    .cta-description {
+        font-size: 1rem;
+    }
+    
+    .cta-card {
+        padding: 32px 24px;
+    }
+    
     .results-actions {
         flex-direction: column;
     }
@@ -584,10 +765,193 @@
     .results-actions .btn {
         width: 100%;
     }
+    
+    /* Mobile-friendly table */
+    .rooms-table-wrapper {
+        margin: 0 -16px;
+    }
+    
+    .rooms-table {
+        font-size: 0.875rem;
+    }
+    
+    .rooms-table th,
+    .rooms-table td {
+        padding: 8px 6px;
+        font-size: 0.8125rem;
+    }
+    
+    .room-input {
+        font-size: 0.875rem;
+        padding: 6px 8px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    #addRoomBtn {
+        width: 100%;
+    }
+    
+    .problem-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .problem-card__name {
+        font-size: 1rem;
+    }
+    
+    .problem-card__area {
+        font-size: 1.125rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .rooms-table th:nth-child(2),
+    .rooms-table td:nth-child(2),
+    .rooms-table th:nth-child(3),
+    .rooms-table td:nth-child(3) {
+        display: none;
+    }
+    
+    .rooms-table th:first-child,
+    .rooms-table td:first-child {
+        width: 40%;
+    }
 }
 </style>
 
 <script>
+// Editable rooms functionality
+const unitSystem = '{{ session.get("fp_unit_system", "metric") }}';
+const areaUnit = unitSystem === 'metric' ? 'm²' : 'ft²';
+const areaFactor = unitSystem === 'metric' ? 1.0 : 10.7639;
+
+// Calculate area from length and width
+function calculateArea(length, width) {
+    return length * width;
+}
+
+// Update room area when dimensions change
+document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.getElementById('roomsTableBody');
+    
+    // Handle input changes
+    tableBody.addEventListener('input', function(e) {
+        if (e.target.classList.contains('room-input') && (e.target.dataset.field === 'length' || e.target.dataset.field === 'width')) {
+            const row = e.target.closest('tr');
+            const lengthInput = row.querySelector('[data-field="length"]');
+            const widthInput = row.querySelector('[data-field="width"]');
+            const areaCell = row.querySelector('.room-area');
+            
+            const length = parseFloat(lengthInput.value) || 0;
+            const width = parseFloat(widthInput.value) || 0;
+            const area = calculateArea(length, width);
+            
+            areaCell.textContent = area.toFixed(1);
+            updateTotalArea();
+        }
+    });
+    
+    // Handle delete button
+    tableBody.addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-room-btn') || e.target.closest('.delete-room-btn')) {
+            const row = e.target.closest('tr');
+            if (tableBody.querySelectorAll('tr').length > 3) {
+                if (confirm('Delete this room?')) {
+                    row.remove();
+                    updateRoomIndices();
+                    updateTotalArea();
+                }
+            } else {
+                alert('You need at least 3 rooms for analysis.');
+            }
+        }
+    });
+    
+    // Add room button
+    document.getElementById('addRoomBtn').addEventListener('click', function() {
+        const newIndex = tableBody.querySelectorAll('tr').length;
+        const newRow = document.createElement('tr');
+        newRow.className = 'room-row';
+        newRow.dataset.roomIndex = newIndex;
+        newRow.innerHTML = `
+            <td><input type="text" class="room-input" data-field="type" value="Bedroom" /></td>
+            <td><input type="number" step="0.1" class="room-input" data-field="length" value="4.0" /></td>
+            <td><input type="number" step="0.1" class="room-input" data-field="width" value="3.5" /></td>
+            <td class="room-area">14.0</td>
+            <td><span class="room-status-icon">✓</span></td>
+            <td><button type="button" class="btn-icon delete-room-btn" title="Delete room">🗑️</button></td>
+        `;
+        tableBody.appendChild(newRow);
+        updateTotalArea();
+    });
+    
+    // Recalculate button - POST updated rooms to backend
+    document.getElementById('recalculateBtn').addEventListener('click', function() {
+        const rows = tableBody.querySelectorAll('tr');
+        const rooms = [];
+        
+        rows.forEach(row => {
+            const type = row.querySelector('[data-field="type"]').value;
+            const length = parseFloat(row.querySelector('[data-field="length"]').value) || 0;
+            const width = parseFloat(row.querySelector('[data-field="width"]').value) || 0;
+            
+            if (type && length > 0 && width > 0) {
+                rooms.push({ type, length, width });
+            }
+        });
+        
+        if (rooms.length < 3) {
+            alert('Please add at least 3 rooms for analysis.');
+            return;
+        }
+        
+        // Send to backend for reanalysis
+        fetch('{{ url_for("floor_plan.update_rooms") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ rooms: rooms })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error updating rooms: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Network error. Please try again.');
+            console.error('Error:', error);
+        });
+    });
+});
+
+function updateTotalArea() {
+    const rows = document.querySelectorAll('#roomsTableBody tr');
+    let total = 0;
+    rows.forEach(row => {
+        const area = parseFloat(row.querySelector('.room-area').textContent) || 0;
+        total += area;
+    });
+    document.getElementById('totalAreaDisplay').textContent = total.toFixed(1);
+}
+
+function updateRoomIndices() {
+    const rows = document.querySelectorAll('#roomsTableBody tr');
+    rows.forEach((row, index) => {
+        row.dataset.roomIndex = index;
+    });
+}
+
 // Animate gauges on page load
 window.addEventListener('load', function() {
     const gauges = document.querySelectorAll('.gauge-progress');
