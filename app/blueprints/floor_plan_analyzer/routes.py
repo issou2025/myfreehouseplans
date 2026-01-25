@@ -91,10 +91,60 @@ def room_input():
             
             if action == 'add_room':
                 room_type = request.form.get('room_type')
-                length = request.form.get('length')
-                width = request.form.get('width')
+                input_method = request.form.get('input_method', 'dimensions')
                 
-                if room_type and length and width:
+                # Get inputs based on method
+                length = request.form.get('length', '').strip()
+                width = request.form.get('width', '').strip()
+                surface = request.form.get('surface', '').strip()
+                
+                if not room_type:
+                    flash('Please select a room type.', 'error')
+                elif input_method == 'surface' and surface:
+                    # Direct surface input
+                    try:
+                        surface_val = float(surface)
+                        
+                        if surface_val <= 0:
+                            flash('Surface area must be greater than zero.', 'error')
+                            raise ValueError('Invalid surface')
+                        
+                        # Convert surface to metric if needed
+                        area_m2 = surface_val if unit_system == 'metric' else surface_val / 10.7639
+                        
+                        # For surface input, we don't have specific dimensions
+                        # Use sqrt to estimate dimensions for validation
+                        import math
+                        estimated_side = math.sqrt(area_m2)
+                        
+                        # Validate against standards using estimated dimensions
+                        validation = validate_room_dimensions(room_type, estimated_side, estimated_side, area_m2)
+                        
+                        # Calculate display area
+                        display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                        
+                        room_data = {
+                            'type': room_type,
+                            'room_type': room_type,
+                            'length': None,  # No specific dimensions
+                            'width': None,
+                            'length_m': None,
+                            'width_m': None,
+                            'area': display_area,
+                            'area_m2': area_m2,
+                            'input_method': 'surface',
+                            'validation': validation
+                        }
+                        
+                        rooms.append(room_data)
+                        session['fp_rooms'] = rooms
+                        flash(f'{room_type} added successfully!', 'success')
+                        
+                    except (ValueError, TypeError) as e:
+                        flash('Please enter a valid surface area.', 'error')
+                        
+                elif input_method == 'dimensions' and length and width:
+                    # Existing dimension-based logic (unchanged)
                     try:
                         length_val = float(length)
                         width_val = float(width)
@@ -122,6 +172,7 @@ def room_input():
                             'width_m': width_m,
                             'area': display_area,  # Add 'area' for template
                             'area_m2': area_m2,
+                            'input_method': 'dimensions',
                             'validation': validation
                         }
                         
@@ -132,7 +183,7 @@ def room_input():
                     except (ValueError, TypeError) as e:
                         flash('Please enter valid numbers for dimensions.', 'error')
                 else:
-                    flash('Please fill in all fields.', 'error')
+                    flash('Please fill in all required fields.', 'error')
             
             elif action == 'remove_room':
                 try:

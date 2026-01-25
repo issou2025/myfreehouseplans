@@ -15,8 +15,23 @@
                 and detect wasted space in real-time.
             </p>
 
-            <form method="POST" class="fp-form">
+            <form method="POST" class="fp-form" id="addRoomForm">
                 <input type="hidden" name="action" value="add_room">
+                
+                <!-- Input Method Selection -->
+                <div class="input-method-selector">
+                    <p class="form-label" style="margin-bottom: 12px;">How would you like to enter room data?</p>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="input_method" value="dimensions" id="input_dimensions" checked>
+                            <span class="radio-label">📐 By Dimensions (Length × Width)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="input_method" value="surface" id="input_surface">
+                            <span class="radio-label">📏 By Surface Area (Direct)</span>
+                        </label>
+                    </div>
+                </div>
                 
                 <div class="room-input-grid">
                     <div class="form-group">
@@ -41,7 +56,8 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <!-- Dimensions Inputs (visible by default) -->
+                    <div class="form-group dimensions-input">
                         <label for="length" class="form-label">
                             Length ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})
                         </label>
@@ -53,11 +69,10 @@
                             placeholder="e.g., 4.5"
                             min="0.1"
                             step="0.1"
-                            required
                         >
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group dimensions-input">
                         <label for="width" class="form-label">
                             Width ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})
                         </label>
@@ -69,12 +84,27 @@
                             placeholder="e.g., 3.5"
                             min="0.1"
                             step="0.1"
-                            required
+                        >
+                    </div>
+
+                    <!-- Surface Input (hidden by default) -->
+                    <div class="form-group surface-input" style="display: none;">
+                        <label for="surface" class="form-label">
+                            Surface Area ({{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }})
+                        </label>
+                        <input 
+                            type="number" 
+                            name="surface" 
+                            id="surface" 
+                            class="form-control" 
+                            placeholder="e.g., 15.75"
+                            min="0.1"
+                            step="0.1"
                         >
                     </div>
 
                     <div class="form-group area-display">
-                        <label class="form-label">Calculated Area</label>
+                        <label class="form-label">Area Preview</label>
                         <div class="area-value" id="calculated_area">
                             {{ '-- m²' if session.get('fp_unit_system') == 'metric' else '-- ft²' }}
                         </div>
@@ -91,7 +121,7 @@
                 <h3 class="rooms-list__title">Your Rooms ({{ session.get('fp_rooms')|length }})</h3>
                 
                 {% for room in session.get('fp_rooms', []) %}
-                <div class="room-card room-card--{{ room.validation.status }}">
+                <div class="room-card room-card--{{ room.validation.status }}" data-room-index="{{ loop.index0 }}">
                     <div class="room-card__header">
                         <div class="room-card__title">
                             <span class="room-card__type">{{ room.type|default(room.room_type)|default('Unknown') }}</span>
@@ -100,13 +130,18 @@
                                 {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
                             </span>
                         </div>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="action" value="remove_room">
-                            <input type="hidden" name="room_index" value="{{ loop.index0 }}">
-                            <button type="submit" class="room-card__remove" title="Remove room">
-                                ✕
+                        <div class="room-card__actions">
+                            <button type="button" class="room-card__edit" onclick="editRoom({{ loop.index0 }})" title="Edit room">
+                                ✏️
                             </button>
-                        </form>
+                            <form method="POST" style="display: inline;">
+                                <input type="hidden" name="action" value="remove_room">
+                                <input type="hidden" name="room_index" value="{{ loop.index0 }}">
+                                <button type="submit" class="room-card__remove" title="Remove room" onclick="return confirm('Delete this room?')">
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="room-card__dimensions">
@@ -163,6 +198,52 @@
 <style>
 .shell--medium {
     max-width: 900px;
+}
+
+/* Input Method Selector */
+.input-method-selector {
+    background: #F9FAFB;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    border: 1px solid var(--admin-border);
+}
+
+.radio-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.radio-option {
+    flex: 1;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.radio-option .radio-label {
+    display: block;
+    padding: 12px 16px;
+    background: white;
+    border: 2px solid var(--admin-border);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.radio-option input[type="radio"]:checked + .radio-label {
+    background: var(--admin-blue-bg);
+    border-color: var(--admin-blue);
+    color: var(--admin-blue);
+}
+
+.radio-option:hover .radio-label {
+    border-color: var(--admin-blue);
 }
 
 .room-input-grid {
@@ -256,6 +337,34 @@
     font-size: 1.5rem;
     font-weight: 800;
     color: var(--admin-blue);
+}
+
+.room-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.room-card__actions {
+    display: flex;
+    gap: 8px;
+}
+
+.room-card__edit {
+    background: #3B82F6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+}
+
+.room-card__edit:hover {
+    background: #2563EB;
 }
 
 .room-card__remove {
@@ -405,28 +514,109 @@
 </style>
 
 <script>
-// Auto-calculate area when dimensions change
+// Input method toggle
+const dimensionsRadio = document.getElementById('input_dimensions');
+const surfaceRadio = document.getElementById('input_surface');
+const dimensionsInputs = document.querySelectorAll('.dimensions-input');
+const surfaceInputs = document.querySelectorAll('.surface-input');
 const lengthInput = document.getElementById('length');
 const widthInput = document.getElementById('width');
+const surfaceInput = document.getElementById('surface');
 const areaDisplay = document.getElementById('calculated_area');
 const unitSystem = '{{ session.get("fp_unit_system", "metric") }}';
 const unit = unitSystem === 'metric' ? 'm²' : 'ft²';
 
-function updateArea() {
-    const length = parseFloat(lengthInput.value) || 0;
-    const width = parseFloat(widthInput.value) || 0;
-    
-    if (length > 0 && width > 0) {
-        const area = length * width;
-        areaDisplay.textContent = area.toFixed(1) + ' ' + unit;
-        areaDisplay.style.background = 'var(--admin-blue-bg)';
+function toggleInputMethod() {
+    if (dimensionsRadio.checked) {
+        // Show dimensions, hide surface
+        dimensionsInputs.forEach(el => el.style.display = 'block');
+        surfaceInputs.forEach(el => el.style.display = 'none');
+        lengthInput.required = true;
+        widthInput.required = true;
+        surfaceInput.required = false;
+        surfaceInput.value = '';
     } else {
-        areaDisplay.textContent = '-- ' + unit;
-        areaDisplay.style.background = '#F9FAFB';
+        // Show surface, hide dimensions
+        dimensionsInputs.forEach(el => el.style.display = 'none');
+        surfaceInputs.forEach(el => el.style.display = 'block');
+        lengthInput.required = false;
+        widthInput.required = false;
+        surfaceInput.required = true;
+        lengthInput.value = '';
+        widthInput.value = '';
+        updateArea();
+    }
+}
+
+dimensionsRadio.addEventListener('change', toggleInputMethod);
+surfaceRadio.addEventListener('change', toggleInputMethod);
+
+// Auto-calculate area when dimensions change
+function updateArea() {
+    if (dimensionsRadio.checked) {
+        const length = parseFloat(lengthInput.value) || 0;
+        const width = parseFloat(widthInput.value) || 0;
+        
+        if (length > 0 && width > 0) {
+            const area = length * width;
+            areaDisplay.textContent = area.toFixed(1) + ' ' + unit;
+            areaDisplay.style.background = 'var(--admin-blue-bg)';
+        } else {
+            areaDisplay.textContent = '-- ' + unit;
+            areaDisplay.style.background = '#F9FAFB';
+        }
+    } else {
+        const surface = parseFloat(surfaceInput.value) || 0;
+        if (surface > 0) {
+            areaDisplay.textContent = surface.toFixed(1) + ' ' + unit;
+            areaDisplay.style.background = 'var(--admin-blue-bg)';
+        } else {
+            areaDisplay.textContent = '-- ' + unit;
+            areaDisplay.style.background = '#F9FAFB';
+        }
     }
 }
 
 lengthInput.addEventListener('input', updateArea);
 widthInput.addEventListener('input', updateArea);
+surfaceInput.addEventListener('input', updateArea);
+
+// Edit room functionality
+function editRoom(index) {
+    const roomCard = document.querySelector(`[data-room-index="${index}"]`);
+    if (!roomCard) return;
+    
+    const roomType = roomCard.querySelector('.room-card__type').textContent.trim();
+    const areaText = roomCard.querySelector('.room-card__area').textContent.trim();
+    const dimensions = roomCard.querySelector('.room-card__dimensions')?.textContent.trim();
+    
+    // Populate form with room data
+    document.getElementById('room_type').value = roomType;
+    
+    if (dimensions && dimensions.includes('×')) {
+        // Has dimensions
+        const [length, width] = dimensions.split('×').map(s => parseFloat(s.trim()));
+        dimensionsRadio.checked = true;
+        lengthInput.value = length.toFixed(1);
+        widthInput.value = width.toFixed(1);
+    } else {
+        // Direct surface input
+        surfaceRadio.checked = true;
+        const area = parseFloat(areaText);
+        surfaceInput.value = area.toFixed(1);
+    }
+    
+    toggleInputMethod();
+    updateArea();
+    
+    // Remove the room so user can re-add with edits
+    const removeForm = roomCard.querySelector('form');
+    if (removeForm && confirm('Edit this room? (It will be removed and you can re-add with changes)')) {
+        removeForm.submit();
+    }
+    
+    // Scroll to form
+    document.getElementById('addRoomForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 </script>
 {% endblock %}

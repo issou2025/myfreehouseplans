@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from datetime import datetime
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 
@@ -583,10 +583,10 @@ def generate_optimization_report(
     scores = calculate_efficiency_scores(rooms, waste_analysis)
     cost_analysis = estimate_construction_cost(total_area_m2, waste_analysis['wasted_area_m2'], budget, country)
 
-    # Create PDF with custom page template
+    # Create PDF with custom page template (A4 format)
     doc = SimpleDocTemplate(
         str(output_path),
-        pagesize=letter,
+        pagesize=A4,
         rightMargin=54,
         leftMargin=54,
         topMargin=72,
@@ -846,9 +846,9 @@ def generate_optimization_report(
         canvas.setFillColor(colors.HexColor('#9CA3AF'))
         canvas.drawString(54, 30, footer_text)
         
-        # Page number
+        # Page number (A4 width = 595 points)
         page_num = canvas.getPageNumber()
-        canvas.drawRightString(letter[0] - 54, 30, f"Page {page_num}")
+        canvas.drawRightString(A4[0] - 54, 30, f"Page {page_num}")
         canvas.restoreState()
 
     # Build PDF
