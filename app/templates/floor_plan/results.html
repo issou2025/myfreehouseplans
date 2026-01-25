@@ -33,15 +33,23 @@
                     </thead>
                     <tbody id="roomsTableBody">
                         {% for room in rooms %}
-                        <tr data-room-index="{{ loop.index0 }}" class="room-row">
+                        <tr data-room-index="{{ loop.index0 }}" class="room-row" data-input-method="{{ room.get('input_method', 'dimensions') }}">
                             <td>
                                 <input type="text" class="room-input" data-field="type" value="{{ room.type }}" />
                             </td>
                             <td>
+                                {% if room.length is not none %}
                                 <input type="number" step="0.1" class="room-input" data-field="length" value="{{ "%.2f"|format(room.length) }}" />
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
                             </td>
                             <td>
+                                {% if room.width is not none %}
                                 <input type="number" step="0.1" class="room-input" data-field="width" value="{{ "%.2f"|format(room.width) }}" />
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
                             </td>
                             <td class="room-area">{{ "%.1f"|format(room.area) }}</td>
                             <td>
@@ -841,20 +849,27 @@ function calculateArea(length, width) {
 document.addEventListener('DOMContentLoaded', function() {
     const tableBody = document.getElementById('roomsTableBody');
     
-    // Handle input changes
+    // Handle input changes (only for dimension-based rooms)
     tableBody.addEventListener('input', function(e) {
         if (e.target.classList.contains('room-input') && (e.target.dataset.field === 'length' || e.target.dataset.field === 'width')) {
             const row = e.target.closest('tr');
-            const lengthInput = row.querySelector('[data-field="length"]');
-            const widthInput = row.querySelector('[data-field="width"]');
-            const areaCell = row.querySelector('.room-area');
+            const inputMethod = row.dataset.inputMethod || 'dimensions';
             
-            const length = parseFloat(lengthInput.value) || 0;
-            const width = parseFloat(widthInput.value) || 0;
-            const area = calculateArea(length, width);
-            
-            areaCell.textContent = area.toFixed(1);
-            updateTotalArea();
+            // Only recalculate area for dimension-based rooms
+            if (inputMethod === 'dimensions') {
+                const lengthInput = row.querySelector('[data-field="length"]');
+                const widthInput = row.querySelector('[data-field="width"]');
+                const areaCell = row.querySelector('.room-area');
+                
+                if (lengthInput && widthInput) {
+                    const length = parseFloat(lengthInput.value) || 0;
+                    const width = parseFloat(widthInput.value) || 0;
+                    const area = calculateArea(length, width);
+                    
+                    areaCell.textContent = area.toFixed(1);
+                    updateTotalArea();
+                }
+            }
         }
     });
     
@@ -899,11 +914,39 @@ document.addEventListener('DOMContentLoaded', function() {
         
         rows.forEach(row => {
             const type = row.querySelector('[data-field="type"]').value;
-            const length = parseFloat(row.querySelector('[data-field="length"]').value) || 0;
-            const width = parseFloat(row.querySelector('[data-field="width"]').value) || 0;
+            const inputMethod = row.dataset.inputMethod || 'dimensions';
             
-            if (type && length > 0 && width > 0) {
-                rooms.push({ type, length, width });
+            // Get length and width inputs (may not exist for surface-based rooms)
+            const lengthInput = row.querySelector('[data-field="length"]');
+            const widthInput = row.querySelector('[data-field="width"]');
+            
+            if (inputMethod === 'surface') {
+                // Surface-based room - preserve original data
+                const area = parseFloat(row.querySelector('.room-area').textContent) || 0;
+                const areaM2 = {{ 'area' if session.get('fp_unit_system') == 'metric' else 'area / 10.7639' }};
+                
+                if (type && area > 0) {
+                    rooms.push({ 
+                        type, 
+                        input_method: 'surface',
+                        area_m2: areaM2,
+                        length: null,
+                        width: null
+                    });
+                }
+            } else {
+                // Dimension-based room - editable
+                const length = lengthInput ? (parseFloat(lengthInput.value) || 0) : 0;
+                const width = widthInput ? (parseFloat(widthInput.value) || 0) : 0;
+                
+                if (type && length > 0 && width > 0) {
+                    rooms.push({ 
+                        type, 
+                        length, 
+                        width,
+                        input_method: 'dimensions'
+                    });
+                }
             }
         });
         

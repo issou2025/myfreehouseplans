@@ -727,8 +727,21 @@ def generate_optimization_report(
     for idx, room in enumerate(rooms, start=1):
         room_type = room.get('room_type', room.get('type', 'Unknown'))
         area_display = float(room.get('area_m2') or 0) * area_factor
-        length_display = float(room.get('length') or 0)
-        width_display = float(room.get('width') or 0)
+        
+        # Handle both dimension-based and surface-based input
+        length_val = room.get('length')
+        width_val = room.get('width')
+        input_method = room.get('input_method', 'dimensions')
+        
+        if input_method == 'surface' or length_val is None or width_val is None:
+            # Surface-only input - no specific dimensions
+            dimensions_display = 'Surface input'
+        else:
+            # Dimension-based input
+            length_display = float(length_val) if length_val else 0
+            width_display = float(width_val) if width_val else 0
+            dimensions_display = f"{length_display:.1f} × {width_display:.1f}"
+        
         validation = room.get('validation') or {}
         status_icon = validation.get('status_icon', '✓')
         feedback = (validation.get('feedback') or 'Meets standards')[:80]
@@ -736,7 +749,7 @@ def generate_optimization_report(
         room_details.append([
             str(idx),
             room_type,
-            f"{length_display:.1f} × {width_display:.1f}",
+            dimensions_display,
             f"{area_display:.1f}",
             status_icon,
             feedback

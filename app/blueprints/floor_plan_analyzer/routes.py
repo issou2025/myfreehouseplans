@@ -107,41 +107,43 @@ def room_input():
                         
                         if surface_val <= 0:
                             flash('Surface area must be greater than zero.', 'error')
-                            raise ValueError('Invalid surface')
-                        
-                        # Convert surface to metric if needed
-                        area_m2 = surface_val if unit_system == 'metric' else surface_val / 10.7639
-                        
-                        # For surface input, we don't have specific dimensions
-                        # Use sqrt to estimate dimensions for validation
-                        import math
-                        estimated_side = math.sqrt(area_m2)
-                        
-                        # Validate against standards using estimated dimensions
-                        validation = validate_room_dimensions(room_type, estimated_side, estimated_side, area_m2)
-                        
-                        # Calculate display area
-                        display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
-                        
-                        room_data = {
-                            'type': room_type,
-                            'room_type': room_type,
-                            'length': None,  # No specific dimensions
-                            'width': None,
-                            'length_m': None,
-                            'width_m': None,
-                            'area': display_area,
-                            'area_m2': area_m2,
-                            'input_method': 'surface',
-                            'validation': validation
-                        }
-                        
-                        rooms.append(room_data)
-                        session['fp_rooms'] = rooms
-                        flash(f'{room_type} added successfully!', 'success')
+                        else:
+                            # Convert surface to metric if needed
+                            area_m2 = surface_val if unit_system == 'metric' else surface_val / 10.7639
+                            
+                            # For surface input, we don't have specific dimensions
+                            # Use sqrt to estimate dimensions for validation
+                            import math
+                            estimated_side = math.sqrt(area_m2)
+                            
+                            # Validate against standards using estimated dimensions
+                            validation = validate_room_dimensions(room_type, estimated_side, estimated_side, area_m2)
+                            
+                            # Calculate display area
+                            display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                            
+                            room_data = {
+                                'type': room_type,
+                                'room_type': room_type,
+                                'length': None,  # No specific dimensions
+                                'width': None,
+                                'length_m': None,
+                                'width_m': None,
+                                'area': display_area,
+                                'area_m2': area_m2,
+                                'input_method': 'surface',
+                                'validation': validation
+                            }
+                            
+                            rooms.append(room_data)
+                            session['fp_rooms'] = rooms
+                            flash(f'{room_type} added successfully!', 'success')
                         
                     except (ValueError, TypeError) as e:
                         flash('Please enter a valid surface area.', 'error')
+                    except Exception as e:
+                        current_app.logger.exception('Error adding room with surface: %s', e)
+                        flash('An error occurred. Please try again.', 'error')
                         
                 elif input_method == 'dimensions' and length and width:
                     # Existing dimension-based logic (unchanged)
@@ -362,41 +364,90 @@ def update_rooms():
         
         for room_data in rooms_data:
             room_type = room_data.get('type', '').strip()
-            length = float(room_data.get('length', 0))
-            width = float(room_data.get('width', 0))
             
-            if not room_type or length <= 0 or width <= 0:
+            # Get input method from original room or assume dimensions
+            input_method = room_data.get('input_method', 'dimensions')
+            
+            # Get length and width, handling None values safely
+            length_val = room_data.get('length')
+            width_val = room_data.get('width')
+            
+            # Skip invalid entries
+            if not room_type:
                 continue
             
-            # Convert to metric for internal storage
-            length_m, width_m = convert_to_metric(length, width, unit_system)
-            area_m2 = length_m * width_m
+            # Handle dimension-based rooms (editable)
+            if input_method == 'dimensions' and length_val is not None and width_val is not None:
+                try:
+                    length = float(length_val)
+                    width = float(width_val)
+                    
+                    if length <= 0 or width <= 0:
+                        continue
+                    
+                    # Convert to metric for internal storage
+                    length_m, width_m = convert_to_metric(length, width, unit_system)
+                    area_m2 = length_m * width_m
+                    
+                    # Validate against standards
+                    validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
+                    
+                    # Calculate display area based on user's unit system
+                    display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                    
+                    room_obj = {
+                        'type': room_type,
+                        'room_type': room_type,
+                        'length': length,
+                        'width': width,
+                        'length_m': length_m,
+                        'width_m': width_m,
+                        'area': display_area,
+                        'area_m2': area_m2,
+                        'input_method': 'dimensions',
+                        'validation': validation
+                    }
+                    updated_rooms.append(room_obj)
+                except (ValueError, TypeError):
+                    # Skip invalid numeric values
+                    continue
             
-            # Validate against standards
-            validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
-            
-            # Calculate display area based on user's unit system
-            display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
-            
-            room_obj = {
-                'type': room_type,
-                'room_type': room_type,
-                'length': length,
-                'width': width,
-                'length_m': length_m,
-                'width_m': width_m,
-                'area': display_area,
-                'area_m2': area_m2,
-                'validation': validation
-            }
-            updated_rooms.append(room_obj)
+            # Handle surface-based rooms (read-only, preserve original data)
+            elif input_method == 'surface':
+                # Preserve the original surface-based room
+                area_m2 = float(room_data.get('area_m2', 0))
+                if area_m2 <= 0:
+                    continue
+                
+                import math
+                estimated_side = math.sqrt(area_m2)
+                validation = validate_room_dimensions(room_type, estimated_side, estimated_side, area_m2)
+                
+                display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                
+                room_obj = {
+                    'type': room_type,
+                    'room_type': room_type,
+                    'length': None,
+                    'width': None,
+                    'length_m': None,
+                    'width_m': None,
+                    'area': display_area,
+                    'area_m2': area_m2,
+                    'input_method': 'surface',
+                    'validation': validation
+                }
+                updated_rooms.append(room_obj)
+        
+        if len(updated_rooms) < 3:
+            return jsonify({'success': False, 'error': 'At least 3 valid rooms required'}), 400
         
         session['fp_rooms'] = updated_rooms
         return jsonify({'success': True, 'message': 'Rooms updated successfully'})
     
     except Exception as exc:
         current_app.logger.exception('Failed to update rooms: %s', exc)
-        return jsonify({'success': False, 'error': str(exc)}), 500
+        return jsonify({'success': False, 'error': 'Failed to update rooms. Please try again.'}), 500
 
 
 @floor_plan_bp.route('/reset')
