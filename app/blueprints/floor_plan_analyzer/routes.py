@@ -91,12 +91,17 @@ def room_input():
                     # Validate against standards
                     validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
                     
+                    # Calculate display area based on user's unit system
+                    display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+                    
                     room_data = {
-                        'room_type': room_type,
+                        'type': room_type,  # Use 'type' for template compatibility
+                        'room_type': room_type,  # Keep for backward compatibility
                         'length': length_val,
                         'width': width_val,
                         'length_m': length_m,
                         'width_m': width_m,
+                        'area': display_area,  # Add 'area' for template
                         'area_m2': area_m2,
                         'validation': validation
                     }

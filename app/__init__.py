@@ -460,6 +460,13 @@ def create_app(config_name='default'):
     # Register request lifecycle hooks
     register_request_hooks(app)
 
+    # Initialize visit tracking (reports to API every 30 minutes)
+    try:
+        from app.services.visit_tracker import init_visit_tracking
+        init_visit_tracking(app)
+    except Exception as tracker_exc:
+        app.logger.warning(f'Visit tracking initialization failed: {tracker_exc}')
+
     @app.after_request
     def _apply_security_headers(response):
         """Apply safe security headers without affecting app logic."""
@@ -498,6 +505,12 @@ def create_app(config_name='default'):
     @app.route('/favicon.ico')
     def favicon_placeholder():  # pragma: no cover - trivial route
         return ('', 204)
+    
+    @app.route('/robots.txt')
+    def robots_txt():  # pragma: no cover - SEO route
+        """Serve robots.txt for search engine crawlers."""
+        from flask import send_from_directory
+        return send_from_directory(app.static_folder, 'robots.txt', mimetype='text/plain')
     
     return app
 

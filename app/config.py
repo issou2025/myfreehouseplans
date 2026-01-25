@@ -109,6 +109,11 @@ class Config:
     # Legacy visitor table logging (unbounded growth). Keep disabled by default.
     ENABLE_LEGACY_VISITOR_LOGGING = os.environ.get('ENABLE_LEGACY_VISITOR_LOGGING', 'false').lower() == 'true'
 
+    # Visit tracking and API reporting (30-minute batched analytics)
+    VISIT_TRACKING_ENABLED = os.environ.get('VISIT_TRACKING_ENABLED', 'false').lower() == 'true'
+    VISIT_TRACKING_API = os.environ.get('VISIT_TRACKING_API')
+    VISIT_TRACKING_INTERVAL = int(os.environ.get('VISIT_TRACKING_INTERVAL', '1800'))  # 30 minutes
+
     # Cloudinary (Render): provide CLOUDINARY_URL in environment.
     CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
 

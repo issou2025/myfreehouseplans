@@ -1,0 +1,9 @@
+# robots.txt - Allow all search engines to index the entire site
+User-agent: *
+Allow: /
+
+# Sitemap location (update with your actual domain)
+Sitemap: https://myfreehouseplan.com/sitemap.xml
+
+# Crawl-delay for polite bots (optional)
+Crawl-delay: 1

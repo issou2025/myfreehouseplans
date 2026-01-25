@@ -94,9 +94,9 @@
                 <div class="room-card room-card--{{ room.validation.status }}">
                     <div class="room-card__header">
                         <div class="room-card__title">
-                            <span class="room-card__type">{{ room.type }}</span>
+                            <span class="room-card__type">{{ room.type|default(room.room_type)|default('Unknown') }}</span>
                             <span class="room-card__area">
-                                {{ "%.1f"|format(room.area) }} 
+                                {{ "%.1f"|format(room.area|default(room.area_m2)|default(0)) }} 
                                 {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
                             </span>
                         </div>
@@ -110,26 +110,29 @@
                     </div>
 
                     <div class="room-card__dimensions">
-                        {{ "%.1f"|format(room.length) }} × {{ "%.1f"|format(room.width) }} 
+                        {{ "%.1f"|format(room.length|default(0)) }} × {{ "%.1f"|format(room.width|default(0)) }} 
                         {{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }}
                     </div>
 
                     <div class="room-card__status">
-                        {% if room.validation.status == 'green' %}
+                        {% if room.validation and room.validation.status == 'green' %}
                             <span class="status-icon status-icon--green">✓</span>
                             <span class="status-text">Optimal dimensions</span>
-                        {% elif room.validation.status == 'orange' %}
+                        {% elif room.validation and room.validation.status == 'orange' %}
                             <span class="status-icon status-icon--orange">⚠</span>
-                            <span class="status-text">{{ room.validation.feedback }}</span>
-                        {% else %}
+                            <span class="status-text">{{ room.validation.feedback|default('Minor optimization possible') }}</span>
+                        {% elif room.validation %}
                             <span class="status-icon status-icon--red">✕</span>
-                            <span class="status-text">{{ room.validation.feedback }}</span>
+                            <span class="status-text">{{ room.validation.feedback|default('Needs review') }}</span>
+                        {% else %}
+                            <span class="status-icon status-icon--orange">⚠</span>
+                            <span class="status-text">Validation pending</span>
                         {% endif %}
                     </div>
 
-                    {% if room.validation.waste_level > 0 %}
+                    {% if room.validation and room.validation.waste_level and room.validation.waste_level > 0 %}
                     <div class="room-card__waste">
-                        <small>Estimated waste: <strong>{{ "%.1f"|format(room.validation.waste_level) }}%</strong></small>
+                        <small>Estimated waste: <strong>{{ "%.1f"|format(room.validation.waste_level|default(0)) }}%</strong></small>
                     </div>
                     {% endif %}
                 </div>
