@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fp-results">
+    <div class="shell shell--wide">
+        <div class="fp-results__header">
+            <h1 class="fp-results__title">Your Floor Plan Analysis</h1>
+            <p class="fp-results__subtitle">
+                We analyzed {{ analysis.total_rooms }} rooms 
+                ({{ "%.1f"|format(analysis.total_area) }} {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }})
+            </p>
+        </div>
+
+        <!-- Efficiency Scores -->
+        <div class="efficiency-grid">
+            <div class="efficiency-card">
+                <h3 class="efficiency-card__title">Financial Efficiency</h3>
+                <div class="gauge-container">
+                    <svg class="circular-gauge" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="85"></circle>
+                        <circle 
+                            class="gauge-progress gauge-progress--financial" 
+                            cx="100" 
+                            cy="100" 
+                            r="85"
+                            style="stroke-dashoffset: calc(534 - (534 * {{ analysis.scores.financial_efficiency }} / 100));"
+                        ></circle>
+                        <text class="gauge-text" x="100" y="100" text-anchor="middle">
+                            <tspan class="gauge-value" dy="10">{{ analysis.scores.financial_efficiency }}</tspan>
+                            <tspan class="gauge-unit" dy="20" x="100">/100</tspan>
+                        </text>
+                    </svg>
+                </div>
+                <p class="efficiency-card__description">
+                    {% if analysis.scores.financial_efficiency >= 80 %}
+                        Excellent! Minimal construction waste.
+                    {% elif analysis.scores.financial_efficiency >= 60 %}
+                        Good, but {{ "%.0f"|format(100 - analysis.scores.financial_efficiency) }}% potential savings exist.
+                    {% else %}
+                        ⚠️ Significant cost inefficiencies detected.
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="efficiency-card">
+                <h3 class="efficiency-card__title">Comfort Efficiency</h3>
+                <div class="gauge-container">
+                    <svg class="circular-gauge" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="85"></circle>
+                        <circle 
+                            class="gauge-progress gauge-progress--comfort" 
+                            cx="100" 
+                            cy="100" 
+                            r="85"
+                            style="stroke-dashoffset: calc(534 - (534 * {{ analysis.scores.comfort_efficiency }} / 100));"
+                        ></circle>
+                        <text class="gauge-text" x="100" y="100" text-anchor="middle">
+                            <tspan class="gauge-value" dy="10">{{ analysis.scores.comfort_efficiency }}</tspan>
+                            <tspan class="gauge-unit" dy="20" x="100">/100</tspan>
+                        </text>
+                    </svg>
+                </div>
+                <p class="efficiency-card__description">
+                    {% if analysis.scores.comfort_efficiency >= 80 %}
+                        Perfect! Rooms are well-proportioned.
+                    {% elif analysis.scores.comfort_efficiency >= 60 %}
+                        Decent comfort, with some undersized spaces.
+                    {% else %}
+                        ⚠️ Many rooms below recommended standards.
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="efficiency-card">
+                <h3 class="efficiency-card__title">Circulation Efficiency</h3>
+                <div class="gauge-container">
+                    <svg class="circular-gauge" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="85"></circle>
+                        <circle 
+                            class="gauge-progress gauge-progress--circulation" 
+                            cx="100" 
+                            cy="100" 
+                            r="85"
+                            style="stroke-dashoffset: calc(534 - (534 * {{ analysis.scores.circulation_efficiency }} / 100));"
+                        ></circle>
+                        <text class="gauge-text" x="100" y="100" text-anchor="middle">
+                            <tspan class="gauge-value" dy="10">{{ analysis.scores.circulation_efficiency }}</tspan>
+                            <tspan class="gauge-unit" dy="20" x="100">/100</tspan>
+                        </text>
+                    </svg>
+                </div>
+                <p class="efficiency-card__description">
+                    {% if analysis.scores.circulation_efficiency >= 80 %}
+                        Great! Hallways are space-efficient.
+                    {% elif analysis.scores.circulation_efficiency >= 60 %}
+                        Acceptable, but {{ "%.1f"|format(analysis.waste_data.circulation_percentage) }}% is circulation.
+                    {% else %}
+                        ⚠️ Too much space wasted on corridors.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Waste Analysis -->
+        <div class="analysis-section">
+            <h2 class="section-title">Waste Analysis</h2>
+            <div class="waste-grid">
+                <div class="waste-stat">
+                    <div class="waste-stat__icon">🗑️</div>
+                    <div class="waste-stat__content">
+                        <div class="waste-stat__value">
+                            {{ "%.1f"|format(analysis.waste_data.total_waste_m2) }} 
+                            {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
+                        </div>
+                        <div class="waste-stat__label">Total Wasted Space</div>
+                    </div>
+                </div>
+
+                <div class="waste-stat">
+                    <div class="waste-stat__icon">💰</div>
+                    <div class="waste-stat__content">
+                        <div class="waste-stat__value">
+                            ${{ "{:,}".format(analysis.cost_impact.wasted_budget|int) }}
+                        </div>
+                        <div class="waste-stat__label">Money Wasted on Extra Construction</div>
+                    </div>
+                </div>
+
+                <div class="waste-stat">
+                    <div class="waste-stat__icon">📊</div>
+                    <div class="waste-stat__content">
+                        <div class="waste-stat__value">
+                            {{ "%.1f"|format(analysis.waste_data.circulation_percentage) }}%
+                        </div>
+                        <div class="waste-stat__label">Circulation Space (Target: <15%)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Problem Rooms -->
+        {% if analysis.waste_data.oversized_rooms or analysis.waste_data.undersized_rooms %}
+        <div class="analysis-section">
+            <h2 class="section-title">Rooms Needing Attention</h2>
+            
+            {% if analysis.waste_data.oversized_rooms %}
+            <div class="problem-group">
+                <h3 class="problem-group__title">⚠️ Oversized Rooms (Wasting Money)</h3>
+                <div class="problem-list">
+                    {% for room in analysis.waste_data.oversized_rooms %}
+                    <div class="problem-card problem-card--oversized">
+                        <div class="problem-card__header">
+                            <span class="problem-card__name">{{ room.type }}</span>
+                            <span class="problem-card__area">
+                                {{ "%.1f"|format(room.area) }} 
+                                {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
+                            </span>
+                        </div>
+                        <p class="problem-card__feedback">{{ room.feedback }}</p>
+                        <div class="problem-card__savings">
+                            Potential savings: <strong>${{ "{:,}".format(room.cost_waste|int) }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if analysis.waste_data.undersized_rooms %}
+            <div class="problem-group">
+                <h3 class="problem-group__title">🔍 Undersized Rooms (Comfort Issues)</h3>
+                <div class="problem-list">
+                    {% for room in analysis.waste_data.undersized_rooms %}
+                    <div class="problem-card problem-card--undersized">
+                        <div class="problem-card__header">
+                            <span class="problem-card__name">{{ room.type }}</span>
+                            <span class="problem-card__area">
+                                {{ "%.1f"|format(room.area) }} 
+                                {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
+                            </span>
+                        </div>
+                        <p class="problem-card__feedback">{{ room.feedback }}</p>
+                        <div class="problem-card__recommendation">
+                            Recommended: <strong>{{ "%.0f"|format(room.optimal_min) }}-{{ "%.0f"|format(room.optimal_max) }} {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Call to Action -->
+        <div class="cta-section">
+            <div class="cta-card">
+                <div class="cta-icon">📄</div>
+                <h2 class="cta-title">Get Your Detailed PDF Report</h2>
+                <p class="cta-description">
+                    Download a professional 8-page analysis report with:
+                </p>
+                <ul class="cta-features">
+                    <li>✅ Room-by-room optimization recommendations</li>
+                    <li>✅ Cost breakdown with savings opportunities</li>
+                    <li>✅ Before/after comparisons</li>
+                    <li>✅ International standards compliance checklist</li>
+                    <li>✅ Shareable with architects & contractors</li>
+                </ul>
+                <div class="cta-price">
+                    <span class="cta-price__amount">$4.99</span>
+                    <span class="cta-price__period">one-time payment</span>
+                </div>
+                <form method="POST" action="{{ url_for('floor_plan.generate_report') }}">
+                    <button type="submit" class="btn btn-primary btn-lg btn-block cta-button">
+                        🔓 Unlock Full PDF Report
+                    </button>
+                </form>
+                <p class="cta-guarantee">
+                    💯 30-day money-back guarantee • Instant PDF delivery
+                </p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="results-actions">
+            <a href="{{ url_for('floor_plan.room_input') }}" class="btn btn-secondary">
+                ← Edit Rooms
+            </a>
+            <a href="{{ url_for('floor_plan.reset') }}" class="btn btn-outline">
+                Start New Analysis
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.shell--wide {
+    max-width: 1200px;
+}
+
+.fp-results {
+    padding: 48px 0 80px;
+    background: linear-gradient(180deg, #F8F9FB 0%, #FFFFFF 300px);
+}
+
+.fp-results__header {
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+.fp-results__title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 12px;
+    color: var(--admin-text-dark);
+}
+
+.fp-results__subtitle {
+    font-size: 1.125rem;
+    color: var(--admin-text-body);
+    margin: 0;
+}
+
+.efficiency-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 48px;
+}
+
+@media (min-width: 768px) {
+    .efficiency-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.efficiency-card {
+    background: white;
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.efficiency-card__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 24px;
+    color: var(--admin-text-dark);
+}
+
+.gauge-container {
+    margin-bottom: 20px;
+}
+
+.circular-gauge {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    margin: 0 auto;
+    transform: rotate(-90deg);
+}
+
+.gauge-bg {
+    fill: none;
+    stroke: #E5E7EB;
+    stroke-width: 18;
+}
+
+.gauge-progress {
+    fill: none;
+    stroke-width: 18;
+    stroke-linecap: round;
+    stroke-dasharray: 534;
+    transition: stroke-dashoffset 1.5s ease;
+}
+
+.gauge-progress--financial {
+    stroke: #3B82F6;
+}
+
+.gauge-progress--comfort {
+    stroke: #10B981;
+}
+
+.gauge-progress--circulation {
+    stroke: #F59E0B;
+}
+
+.gauge-text {
+    transform: rotate(90deg);
+    transform-origin: center;
+}
+
+.gauge-value {
+    font-size: 48px;
+    font-weight: 800;
+    fill: var(--admin-text-dark);
+}
+
+.gauge-unit {
+    font-size: 20px;
+    font-weight: 600;
+    fill: var(--admin-text-muted);
+}
+
+.efficiency-card__description {
+    font-size: 0.9375rem;
+    color: var(--admin-text-body);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.analysis-section {
+    background: white;
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 24px;
+    color: var(--admin-text-dark);
+}
+
+.waste-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .waste-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.waste-stat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: #F9FAFB;
+    border-radius: 12px;
+}
+
+.waste-stat__icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.waste-stat__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--admin-text-dark);
+    line-height: 1.2;
+}
+
+.waste-stat__label {
+    font-size: 0.875rem;
+    color: var(--admin-text-muted);
+    margin-top: 4px;
+}
+
+.problem-group {
+    margin-bottom: 32px;
+}
+
+.problem-group:last-child {
+    margin-bottom: 0;
+}
+
+.problem-group__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--admin-text-dark);
+}
+
+.problem-list {
+    display: grid;
+    gap: 16px;
+}
+
+.problem-card {
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid;
+}
+
+.problem-card--oversized {
+    background: #FEF2F2;
+    border-color: #FCA5A5;
+}
+
+.problem-card--undersized {
+    background: #FFF7ED;
+    border-color: #FDBA74;
+}
+
+.problem-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.problem-card__name {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--admin-text-dark);
+}
+
+.problem-card__area {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--admin-blue);
+}
+
+.problem-card__feedback {
+    color: var(--admin-text-body);
+    font-size: 0.9375rem;
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
+.problem-card__savings,
+.problem-card__recommendation {
+    padding: 10px 14px;
+    background: white;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--admin-text-body);
+}
+
+.cta-section {
+    margin: 48px 0;
+}
+
+.cta-card {
+    background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 48px 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+}
+
+.cta-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.cta-title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 12px;
+}
+
+.cta-description {
+    font-size: 1.125rem;
+    margin: 0 0 20px;
+    opacity: 0.95;
+}
+
+.cta-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto 32px;
+    max-width: 500px;
+    text-align: left;
+}
+
+.cta-features li {
+    padding: 10px 0;
+    font-size: 1rem;
+    opacity: 0.95;
+}
+
+.cta-price {
+    margin-bottom: 24px;
+}
+
+.cta-price__amount {
+    display: block;
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.cta-price__period {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.cta-button {
+    background: white;
+    color: var(--admin-blue);
+    font-size: 1.25rem;
+    padding: 18px 40px;
+    font-weight: 700;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.cta-button:hover {
+    background: #F8F9FB;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.cta-guarantee {
+    margin: 16px 0 0;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.results-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--admin-text-body);
+    border: 2px solid var(--admin-border);
+}
+
+.btn-outline:hover {
+    border-color: var(--admin-blue);
+    color: var(--admin-blue);
+}
+
+@media (max-width: 767px) {
+    .results-actions {
+        flex-direction: column;
+    }
+    
+    .results-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+// Animate gauges on page load
+window.addEventListener('load', function() {
+    const gauges = document.querySelectorAll('.gauge-progress');
+    gauges.forEach(gauge => {
+        gauge.style.strokeDashoffset = '534'; // Start from 0
+        setTimeout(() => {
+            const targetOffset = gauge.style.strokeDashoffset;
+            gauge.style.transition = 'stroke-dashoffset 1.5s ease';
+            // The inline style already has the target value, browser will animate to it
+        }, 100);
+    });
+});
+</script>
+{% endblock %}

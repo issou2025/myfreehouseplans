@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fp-wizard">
+    <div class="shell shell--narrow">
+        <div class="fp-wizard__header">
+            <h1 class="fp-wizard__title">Floor Plan Analyzer</h1>
+            <p class="fp-wizard__subtitle">Step 1 of 3</p>
+        </div>
+
+        <div class="fp-card">
+            <h2 class="fp-card__title">What's your construction budget? <span class="optional-badge">Optional</span></h2>
+            <p class="fp-card__hint">
+                Adding your budget allows us to calculate precise cost inefficiencies. 
+                <strong>But don't worry</strong> — you can skip this and we'll use international cost standards for your region.
+            </p>
+
+            <form method="POST" class="fp-form">
+                <div class="form-group">
+                    <label for="country" class="form-label">Your Country/Region</label>
+                    <select name="country" id="country" class="form-control" required>
+                        <option value="">-- Select your region --</option>
+                        <option value="north_america">North America (USA, Canada)</option>
+                        <option value="western_europe">Western Europe (France, Germany, UK)</option>
+                        <option value="southern_europe">Southern Europe (Spain, Italy, Portugal)</option>
+                        <option value="eastern_europe">Eastern Europe (Poland, Romania)</option>
+                        <option value="middle_east">Middle East & North Africa</option>
+                        <option value="sub_saharan_africa">Sub-Saharan Africa</option>
+                        <option value="south_asia">South Asia (India, Pakistan)</option>
+                        <option value="southeast_asia">Southeast Asia (Thailand, Vietnam)</option>
+                        <option value="east_asia">East Asia (China, Japan, Korea)</option>
+                        <option value="oceania">Oceania (Australia, New Zealand)</option>
+                        <option value="latin_america">Latin America</option>
+                    </select>
+                    <small class="form-text">We use this to apply regional construction cost standards if you skip the budget.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="total_budget" class="form-label">
+                        Total Construction Budget 
+                        <span class="optional-text">(Leave blank to use standards)</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-addon">{{ session.get('fp_currency_symbol', '$') }}</span>
+                        <input 
+                            type="number" 
+                            name="total_budget" 
+                            id="total_budget" 
+                            class="form-control" 
+                            placeholder="e.g., 250000"
+                            min="0"
+                            step="1000"
+                        >
+                    </div>
+                    <small class="form-text">Enter the total amount you plan to spend on construction (excluding land).</small>
+                </div>
+
+                <div class="budget-info-box">
+                    <div class="info-icon">💡</div>
+                    <div class="info-content">
+                        <strong>Why is budget optional?</strong>
+                        <p>
+                            We believe everyone deserves smart floor plan analysis, regardless of budget transparency. 
+                            Our tool works perfectly without it by using international construction cost databases.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="{{ url_for('floor_plan.start') }}" class="btn btn-secondary">
+                        ← Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        Continue to Room Input
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="fp-wizard__footer">
+            <p class="privacy-note">
+                🔒 Your budget information is never stored or shared. All calculations happen in your session.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+.optional-badge {
+    display: inline-block;
+    background: #10B981;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.optional-text {
+    color: var(--admin-text-muted);
+    font-weight: 400;
+    font-size: 0.875rem;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--admin-text-dark);
+    margin-bottom: 8px;
+    font-size: 0.9375rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--admin-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--admin-text-muted);
+    line-height: 1.4;
+}
+
+.input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.input-addon {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: #F3F4F6;
+    border: 1px solid var(--admin-border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    font-weight: 600;
+    color: var(--admin-text-body);
+}
+
+.input-group .form-control {
+    border-radius: 0 8px 8px 0;
+}
+
+.budget-info-box {
+    display: flex;
+    gap: 16px;
+    background: #FEF3C7;
+    border: 1px solid #FCD34D;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 32px;
+}
+
+.info-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.info-content strong {
+    display: block;
+    color: #92400E;
+    margin-bottom: 6px;
+    font-size: 0.9375rem;
+}
+
+.info-content p {
+    margin: 0;
+    color: #78350F;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.form-actions .btn {
+    flex: 1;
+}
+
+@media (max-width: 639px) {
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+
+.privacy-note {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--admin-text-body);
+    border: 1px solid var(--admin-border);
+}
+
+.btn-secondary:hover {
+    background: #F9FAFB;
+}
+</style>
+
+<script>
+// Auto-select currency symbol based on region
+document.getElementById('country').addEventListener('change', function(e) {
+    const region = e.target.value;
+    const currencyMap = {
+        'north_america': '$',
+        'western_europe': '€',
+        'southern_europe': '€',
+        'eastern_europe': 'zł',
+        'middle_east': 'د.إ',
+        'sub_saharan_africa': 'CFA',
+        'south_asia': '₹',
+        'southeast_asia': '฿',
+        'east_asia': '¥',
+        'oceania': 'A$',
+        'latin_america': '$'
+    };
+    
+    const symbol = currencyMap[region] || '$';
+    document.querySelector('.input-addon').textContent = symbol;
+});
+</script>
+{% endblock %}

@@ -126,6 +126,7 @@
                                 <option value="{{ url_for('space_planner.index') }}" {% if tools_value == 'space_planner' %}selected{% endif %}>Space Planner</option>
                                 <option value="{{ url_for('space_planner.furniture_fit') }}" {% if tools_value == 'furniture_fit' %}selected{% endif %}>Furniture Fit</option>
                                 <option value="{{ url_for('area_calculator.index') }}" {% if tools_value == 'house_area' %}selected{% endif %}>House Area Calculator</option>
+                                <option value="{{ url_for('floor_plan.landing') }}" {% if tools_value == 'floor_plan' %}selected{% endif %}>Floor Plan Analyzer</option>
                             </select>
                         </div>
 
@@ -153,6 +154,10 @@
                             <a class="nav-link {% if tools_value == 'house_area' %}is-active{% endif %}" href="{{ url_for('area_calculator.index') }}" {% if tools_value == 'house_area' %}aria-current="page"{% endif %}>
                                 <i class="fa-solid fa-house" aria-hidden="true"></i>
                                 <span>House Area Calculator</span>
+                            </a>
+                            <a class="nav-link {% if tools_value == 'floor_plan' %}is-active{% endif %}" href="{{ url_for('floor_plan.landing') }}" {% if tools_value == 'floor_plan' %}aria-current="page"{% endif %}>
+                                <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
+                                <span>Floor Plan Analyzer</span>
                             </a>
                         </div>
                     </div>

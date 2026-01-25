@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fp-wizard">
+    <div class="shell shell--medium">
+        <div class="fp-wizard__header">
+            <h1 class="fp-wizard__title">Floor Plan Analyzer</h1>
+            <p class="fp-wizard__subtitle">Step 2 of 3 — Room Input</p>
+        </div>
+
+        <div class="fp-card">
+            <h2 class="fp-card__title">Add Your Rooms</h2>
+            <p class="fp-card__hint">
+                Enter each room in your floor plan. We'll validate dimensions against international standards 
+                and detect wasted space in real-time.
+            </p>
+
+            <form method="POST" class="fp-form">
+                <input type="hidden" name="action" value="add_room">
+                
+                <div class="room-input-grid">
+                    <div class="form-group">
+                        <label for="room_type" class="form-label">Room Type</label>
+                        <select name="room_type" id="room_type" class="form-control" required>
+                            <option value="">-- Select room type --</option>
+                            <option value="Bedroom">🛏️ Bedroom</option>
+                            <option value="Master Bedroom">🛏️ Master Bedroom</option>
+                            <option value="Living Room">🛋️ Living Room</option>
+                            <option value="Dining Room">🍽️ Dining Room</option>
+                            <option value="Kitchen">🍳 Kitchen</option>
+                            <option value="Bathroom">🚿 Bathroom</option>
+                            <option value="Master Bathroom">🛁 Master Bathroom</option>
+                            <option value="Corridor">🚪 Corridor/Hallway</option>
+                            <option value="Entrance">🚪 Entrance Hall</option>
+                            <option value="Storage">📦 Storage/Utility</option>
+                            <option value="Garage">🚗 Garage</option>
+                            <option value="Office">💼 Home Office</option>
+                            <option value="Laundry">🧺 Laundry Room</option>
+                            <option value="Balcony">🌿 Balcony/Terrace</option>
+                            <option value="Other">🔧 Other Space</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="length" class="form-label">
+                            Length ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})
+                        </label>
+                        <input 
+                            type="number" 
+                            name="length" 
+                            id="length" 
+                            class="form-control" 
+                            placeholder="e.g., 4.5"
+                            min="0.1"
+                            step="0.1"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="width" class="form-label">
+                            Width ({{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }})
+                        </label>
+                        <input 
+                            type="number" 
+                            name="width" 
+                            id="width" 
+                            class="form-control" 
+                            placeholder="e.g., 3.5"
+                            min="0.1"
+                            step="0.1"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group area-display">
+                        <label class="form-label">Calculated Area</label>
+                        <div class="area-value" id="calculated_area">
+                            {{ '-- m²' if session.get('fp_unit_system') == 'metric' else '-- ft²' }}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    ➕ Add Room
+                </button>
+            </form>
+
+            {% if session.get('fp_rooms') %}
+            <div class="rooms-list">
+                <h3 class="rooms-list__title">Your Rooms ({{ session.get('fp_rooms')|length }})</h3>
+                
+                {% for room in session.get('fp_rooms', []) %}
+                <div class="room-card room-card--{{ room.validation.status }}">
+                    <div class="room-card__header">
+                        <div class="room-card__title">
+                            <span class="room-card__type">{{ room.type }}</span>
+                            <span class="room-card__area">
+                                {{ "%.1f"|format(room.area) }} 
+                                {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
+                            </span>
+                        </div>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="remove_room">
+                            <input type="hidden" name="room_index" value="{{ loop.index0 }}">
+                            <button type="submit" class="room-card__remove" title="Remove room">
+                                ✕
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="room-card__dimensions">
+                        {{ "%.1f"|format(room.length) }} × {{ "%.1f"|format(room.width) }} 
+                        {{ 'm' if session.get('fp_unit_system') == 'metric' else 'ft' }}
+                    </div>
+
+                    <div class="room-card__status">
+                        {% if room.validation.status == 'green' %}
+                            <span class="status-icon status-icon--green">✓</span>
+                            <span class="status-text">Optimal dimensions</span>
+                        {% elif room.validation.status == 'orange' %}
+                            <span class="status-icon status-icon--orange">⚠</span>
+                            <span class="status-text">{{ room.validation.feedback }}</span>
+                        {% else %}
+                            <span class="status-icon status-icon--red">✕</span>
+                            <span class="status-text">{{ room.validation.feedback }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if room.validation.waste_level > 0 %}
+                    <div class="room-card__waste">
+                        <small>Estimated waste: <strong>{{ "%.1f"|format(room.validation.waste_level) }}%</strong></small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions form-actions--bottom">
+                <a href="{{ url_for('floor_plan.budget_input') }}" class="btn btn-secondary">
+                    ← Back
+                </a>
+                <form method="POST" style="flex: 1;">
+                    <input type="hidden" name="action" value="analyze">
+                    <button type="submit" class="btn btn-success btn-lg btn-block">
+                        Analyze Floor Plan →
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state__icon">📐</div>
+                <p class="empty-state__text">No rooms added yet. Start by adding your first room above.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.shell--medium {
+    max-width: 900px;
+}
+
+.room-input-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 768px) {
+    .room-input-grid {
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+}
+
+.area-display {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.area-value {
+    padding: 12px 16px;
+    background: var(--admin-blue-bg);
+    border: 1px solid var(--admin-blue);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--admin-blue);
+    text-align: center;
+}
+
+.rooms-list {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 2px solid var(--admin-border);
+}
+
+.rooms-list__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 20px;
+    color: var(--admin-text-dark);
+}
+
+.room-card {
+    background: white;
+    border: 2px solid var(--admin-border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+}
+
+.room-card--green {
+    border-color: #10B981;
+    background: #F0FDF4;
+}
+
+.room-card--orange {
+    border-color: #F59E0B;
+    background: #FFFBEB;
+}
+
+.room-card--red {
+    border-color: #EF4444;
+    background: #FEF2F2;
+}
+
+.room-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.room-card__title {
+    flex: 1;
+}
+
+.room-card__type {
+    display: block;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--admin-text-dark);
+    margin-bottom: 4px;
+}
+
+.room-card__area {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--admin-blue);
+}
+
+.room-card__remove {
+    background: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1.125rem;
+    transition: background 0.2s ease;
+}
+
+.room-card__remove:hover {
+    background: #DC2626;
+}
+
+.room-card__dimensions {
+    color: var(--admin-text-body);
+    font-size: 0.9375rem;
+    margin-bottom: 12px;
+}
+
+.room-card__status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.status-icon {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.status-icon--green {
+    color: #10B981;
+}
+
+.status-icon--orange {
+    color: #F59E0B;
+}
+
+.status-icon--red {
+    color: #EF4444;
+}
+
+.status-text {
+    font-size: 0.875rem;
+    color: var(--admin-text-body);
+    line-height: 1.4;
+}
+
+.room-card__waste {
+    padding: 8px 14px;
+    background: #FEE2E2;
+    border-radius: 6px;
+}
+
+.room-card__waste small {
+    color: #991B1B;
+    font-size: 0.8125rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state__icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.empty-state__text {
+    color: var(--admin-text-muted);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.form-actions--bottom {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--admin-border);
+}
+
+.btn-success {
+    background: #10B981;
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+</style>
+
+<script>
+// Auto-calculate area when dimensions change
+const lengthInput = document.getElementById('length');
+const widthInput = document.getElementById('width');
+const areaDisplay = document.getElementById('calculated_area');
+const unitSystem = '{{ session.get("fp_unit_system", "metric") }}';
+const unit = unitSystem === 'metric' ? 'm²' : 'ft²';
+
+function updateArea() {
+    const length = parseFloat(lengthInput.value) || 0;
+    const width = parseFloat(widthInput.value) || 0;
+    
+    if (length > 0 && width > 0) {
+        const area = length * width;
+        areaDisplay.textContent = area.toFixed(1) + ' ' + unit;
+        areaDisplay.style.background = 'var(--admin-blue-bg)';
+    } else {
+        areaDisplay.textContent = '-- ' + unit;
+        areaDisplay.style.background = '#F9FAFB';
+    }
+}
+
+lengthInput.addEventListener('input', updateArea);
+widthInput.addEventListener('input', updateArea);
+</script>
+{% endblock %}

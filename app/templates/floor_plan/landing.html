@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="floor-plan-landing">
+    <section class="fp-hero">
+        <div class="shell">
+            <div class="fp-hero__content">
+                <p class="fp-eyebrow">🏠 ImmoCash Smart Floor Plan Analyzer™</p>
+                <h1 class="fp-hero__title">Is Your House Floor Plan Quietly Costing You Thousands?</h1>
+                <p class="fp-hero__subtitle">
+                    Analyze your floor plan, detect wasted square footage, and optimize room dimensions —
+                    <strong>even if you don't know your budget.</strong>
+                </p>
+                
+                <a href="{{ url_for('floor_plan.start') }}" class="btn btn-primary btn-lg fp-cta">
+                    <span class="btn__icon">🔍</span>
+                    <span>Analyze My Floor Plan – Free</span>
+                </a>
+                
+                <div class="fp-hero__badges">
+                    <span class="fp-badge">✓ No login required</span>
+                    <span class="fp-badge">✓ No email needed</span>
+                    <span class="fp-badge">✓ Works without budget</span>
+                    <span class="fp-badge">✓ International standards</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="fp-benefits">
+        <div class="shell">
+            <h2 class="section-title">What You'll Discover in 5 Minutes</h2>
+            <div class="fp-benefits__grid">
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">💰</div>
+                    <h3>Wasted Money Detection</h3>
+                    <p>See exactly how much oversized rooms and inefficient layouts are adding to your construction costs — even without knowing your budget.</p>
+                </div>
+                
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">📐</div>
+                    <h3>Room-by-Room Validation</h3>
+                    <p>Compare every room against international residential standards. Know if spaces are undersized, optimal, or wastefully oversized.</p>
+                </div>
+                
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">🔄</div>
+                    <h3>Circulation Waste Analysis</h3>
+                    <p>Corridors and hallways you build, pay for, heat, and clean — but never actually use. We calculate the hidden cost.</p>
+                </div>
+                
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">📊</div>
+                    <h3>Efficiency Dashboard</h3>
+                    <p>Get instant visual scores for Financial Efficiency, Daily Comfort, and Circulation Flow — color-coded for quick understanding.</p>
+                </div>
+                
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">🌍</div>
+                    <h3>Works Globally</h3>
+                    <p>Choose metric (meters) or imperial (feet). Standards are based on international best practices for residential buildings.</p>
+                </div>
+                
+                <div class="fp-benefit-card">
+                    <div class="fp-benefit-card__icon">📄</div>
+                    <h3>Expert PDF Report</h3>
+                    <p>Unlock a detailed optimization report with savings potential, issue explanations, and practical improvement principles.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="fp-how-it-works">
+        <div class="shell">
+            <h2 class="section-title">How It Works</h2>
+            <div class="fp-steps">
+                <div class="fp-step">
+                    <div class="fp-step__number">1</div>
+                    <h3>Choose Your Units</h3>
+                    <p>Select metric or imperial measurements</p>
+                </div>
+                
+                <div class="fp-step">
+                    <div class="fp-step__number">2</div>
+                    <h3>Budget (Optional)</h3>
+                    <p>Enter your budget if you know it — or skip it entirely</p>
+                </div>
+                
+                <div class="fp-step">
+                    <div class="fp-step__number">3</div>
+                    <h3>Describe Rooms</h3>
+                    <p>Input length and width for each room in your plan</p>
+                </div>
+                
+                <div class="fp-step">
+                    <div class="fp-step__number">4</div>
+                    <h3>Get Results</h3>
+                    <p>See efficiency scores, waste detection, and savings potential</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="fp-cta-section">
+        <div class="shell">
+            <div class="fp-cta-box">
+                <h2>Your Floor Plan is Not Bad — It's Simply Expensive for What It Delivers</h2>
+                <p>Find out in 5 minutes what most homeowners discover only after construction begins.</p>
+                <a href="{{ url_for('floor_plan.start') }}" class="btn btn-primary btn-lg">
+                    Start Free Analysis Now
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+.fp-hero {
+    background: linear-gradient(135deg, var(--admin-blue) 0%, var(--admin-blue-dark) 100%);
+    color: white;
+    padding: 64px 0;
+    border-radius: 16px;
+    margin: 32px 0;
+}
+
+.fp-hero__content {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.fp-eyebrow {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.95;
+    margin-bottom: 16px;
+}
+
+.fp-hero__title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    margin: 0 0 24px;
+    line-height: 1.2;
+}
+
+.fp-hero__subtitle {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    opacity: 0.92;
+    margin: 0 0 32px;
+}
+
+.fp-cta {
+    margin: 0 auto 32px;
+    display: inline-flex;
+}
+
+.fp-hero__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.fp-badge {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+.fp-benefits {
+    padding: 64px 0;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 48px;
+    color: var(--admin-text-dark);
+}
+
+.fp-benefits__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+@media (min-width: 640px) {
+    .fp-benefits__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .fp-benefits__grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.fp-benefit-card {
+    background: white;
+    padding: 32px;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.fp-benefit-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+    border-color: var(--admin-blue);
+}
+
+.fp-benefit-card__icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+.fp-benefit-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: var(--admin-text-dark);
+}
+
+.fp-benefit-card p {
+    margin: 0;
+    color: var(--admin-text-body);
+    line-height: 1.6;
+}
+
+.fp-how-it-works {
+    background: var(--admin-bg-primary);
+    padding: 64px 0;
+    border-radius: 16px;
+}
+
+.fp-steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .fp-steps {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.fp-step {
+    text-align: center;
+}
+
+.fp-step__number {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--admin-blue);
+    color: white;
+    font-size: 1.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+.fp-step h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--admin-text-dark);
+}
+
+.fp-step p {
+    margin: 0;
+    color: var(--admin-text-body);
+    font-size: 0.9375rem;
+}
+
+.fp-cta-section {
+    padding: 64px 0;
+}
+
+.fp-cta-box {
+    background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+    padding: 48px 32px;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.fp-cta-box h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: var(--admin-text-dark);
+}
+
+.fp-cta-box p {
+    font-size: 1.125rem;
+    color: var(--admin-text-body);
+    margin: 0 0 32px;
+}
+</style>
+{% endblock %}

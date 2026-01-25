@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="fp-wizard">
+    <div class="shell shell--narrow">
+        <div class="fp-wizard__header">
+            <h1 class="fp-wizard__title">Floor Plan Analyzer</h1>
+            <p class="fp-wizard__subtitle">Step 0 of 3</p>
+        </div>
+
+        <div class="fp-card">
+            <h2 class="fp-card__title">Which measurement system do you use?</h2>
+            <p class="fp-card__hint">Choose the units you're comfortable with. All analysis uses international standards internally.</p>
+
+            <form method="POST" class="fp-form">
+                <div class="fp-unit-options">
+                    <label class="fp-unit-option">
+                        <input type="radio" name="unit_system" value="metric" checked required>
+                        <div class="fp-unit-option__card">
+                            <div class="fp-unit-option__icon">📏</div>
+                            <h3>Metric</h3>
+                            <p>Meters & square meters (m²)</p>
+                            <small>Used in most countries worldwide</small>
+                        </div>
+                    </label>
+
+                    <label class="fp-unit-option">
+                        <input type="radio" name="unit_system" value="imperial" required>
+                        <div class="fp-unit-option__card">
+                            <div class="fp-unit-option__icon">📐</div>
+                            <h3>Imperial</h3>
+                            <p>Feet & square feet (ft²)</p>
+                            <small>Used in USA, UK, Canada</small>
+                        </div>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg">
+                    Continue to Budget Input
+                </button>
+            </form>
+        </div>
+
+        <div class="fp-wizard__footer">
+            <a href="{{ url_for('floor_plan.landing') }}" class="fp-link">← Back to overview</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.fp-wizard {
+    padding: 48px 0;
+    min-height: 80vh;
+}
+
+.shell--narrow {
+    max-width: 700px;
+}
+
+.fp-wizard__header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.fp-wizard__title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--admin-text-dark);
+}
+
+.fp-wizard__subtitle {
+    color: var(--admin-text-muted);
+    margin: 0;
+}
+
+.fp-card {
+    background: white;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.fp-card__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--admin-text-dark);
+}
+
+.fp-card__hint {
+    color: var(--admin-text-body);
+    margin: 0 0 32px;
+    line-height: 1.6;
+}
+
+.fp-unit-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+@media (min-width: 640px) {
+    .fp-unit-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.fp-unit-option {
+    cursor: pointer;
+}
+
+.fp-unit-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.fp-unit-option__card {
+    background: #F9FAFB;
+    border: 2px solid var(--admin-border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.fp-unit-option input[type="radio"]:checked + .fp-unit-option__card {
+    background: var(--admin-blue-bg);
+    border-color: var(--admin-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.fp-unit-option__card:hover {
+    border-color: var(--admin-blue);
+}
+
+.fp-unit-option__icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+
+.fp-unit-option__card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--admin-text-dark);
+}
+
+.fp-unit-option__card p {
+    margin: 0 0 4px;
+    color: var(--admin-text-body);
+    font-weight: 500;
+}
+
+.fp-unit-option__card small {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.fp-wizard__footer {
+    text-align: center;
+    margin-top: 24px;
+}
+
+.fp-link {
+    color: var(--admin-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.fp-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
