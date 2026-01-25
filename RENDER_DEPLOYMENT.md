@@ -13,8 +13,11 @@
 
 ```yaml
 # render.yaml
-releaseCommand: flask db upgrade && flask reset-admin-password --username ${ADMIN_USERNAME}
+releaseCommand: set -e; flask db upgrade; if [ -n "${ADMIN_USERNAME}" ]; then flask reset-admin-password --username "${ADMIN_USERNAME}"; else echo "ADMIN_USERNAME not set; skipping admin reset"; fi
 ```
+
+**Important:** avoid chaining with `;` *without* `set -e`.
+Otherwise a failed migration can be masked (deploy shows success but tables like `daily_traffic_stats` stay missing).
 
 **Why This is Superior:**
 - ✅ Version-controlled schema changes

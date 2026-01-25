@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import func
+from sqlalchemy import inspect
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.extensions import db
 from app.models import DailyTrafficStat, RecentLog, Order
@@ -15,29 +17,51 @@ def _daterange(start: date, days: int) -> list[date]:
     return [start + timedelta(days=i) for i in range(days)]
 
 
+def _has_table(table_name: str) -> bool:
+    """Best-effort check for table presence.
+
+    Analytics must never take the site down due to missing migrations.
+    """
+
+    try:
+        return bool(inspect(db.engine).has_table(table_name))
+    except Exception:
+        return False
+
+
 def build_dashboard_payload(*, days: int = 7) -> dict:
     today = datetime.utcnow().date()
     start = today - timedelta(days=days - 1)
 
     day_list = _daterange(start, days)
 
-    # Pull aggregated stats.
-    daily_rows = (
-        DailyTrafficStat.query
-        .filter(DailyTrafficStat.date >= start)
-        .filter(DailyTrafficStat.date <= today)
-        .all()
-    )
-    daily_by_date = {row.date: row for row in daily_rows}
+    # Pull aggregated stats (only if table exists).
+    daily_by_date: dict[date, DailyTrafficStat] = {}
+    if _has_table('daily_traffic_stats'):
+        try:
+            daily_rows = (
+                DailyTrafficStat.query
+                .filter(DailyTrafficStat.date >= start)
+                .filter(DailyTrafficStat.date <= today)
+                .all()
+            )
+            daily_by_date = {row.date: row for row in daily_rows}
+        except SQLAlchemyError:
+            daily_by_date = {}
 
     # Pull recent logs aggregation for the window (covers "today" and un-flushed days).
-    date_expr = func.date(RecentLog.timestamp)
-    recent_counts_rows = (
-        db.session.query(date_expr.label('d'), RecentLog.traffic_type, func.count(RecentLog.id))
-        .filter(RecentLog.timestamp >= datetime.combine(start, datetime.min.time()))
-        .group_by('d', RecentLog.traffic_type)
-        .all()
-    )
+    recent_counts_rows = []
+    if _has_table('recent_logs'):
+        try:
+            date_expr = func.date(RecentLog.timestamp)
+            recent_counts_rows = (
+                db.session.query(date_expr.label('d'), RecentLog.traffic_type, func.count(RecentLog.id))
+                .filter(RecentLog.timestamp >= datetime.combine(start, datetime.min.time()))
+                .group_by('d', RecentLog.traffic_type)
+                .all()
+            )
+        except SQLAlchemyError:
+            recent_counts_rows = []
 
     recent_by_day: dict[date, dict[str, int]] = {}
     for dval, ttype, count in recent_counts_rows:
@@ -116,23 +140,29 @@ def build_dashboard_payload(*, days: int = 7) -> dict:
         })
 
     # Top countries (humans, last N days).
-    top_countries_rows = (
-        db.session.query(RecentLog.country_code, RecentLog.country_name, func.count(RecentLog.id))
-        .filter(RecentLog.timestamp >= datetime.combine(start, datetime.min.time()))
-        .filter(RecentLog.traffic_type == 'human')
-        .group_by(RecentLog.country_code, RecentLog.country_name)
-        .order_by(func.count(RecentLog.id).desc())
-        .limit(10)
-        .all()
-    )
+    top_countries_rows = []
+    if _has_table('recent_logs'):
+        try:
+            top_countries_rows = (
+                db.session.query(RecentLog.country_code, RecentLog.country_name, func.count(RecentLog.id))
+                .filter(RecentLog.timestamp >= datetime.combine(start, datetime.min.time()))
+                .filter(RecentLog.traffic_type == 'human')
+                .group_by(RecentLog.country_code, RecentLog.country_name)
+                .order_by(func.count(RecentLog.id).desc())
+                .limit(12)
+                .all()
+            )
+        except SQLAlchemyError:
+            top_countries_rows = []
 
-    top_countries = []
-    for code, name, count in top_countries_rows:
-        top_countries.append({
+    top_countries = [
+        {
             'code': (code or '').upper(),
             'name': name or 'Unknown',
             'count': int(count or 0),
-        })
+        }
+        for code, name, count in top_countries_rows
+    ]
 
     # Conversion rate: completed orders / human visits (window).
     sales_count = (

@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, date
 
 from sqlalchemy import func
+from sqlalchemy import inspect
 
 from app.extensions import db
 from app.models import (
@@ -39,6 +40,23 @@ def _utc_today() -> date:
 
 def clean_old_logs(*, now: datetime | None = None) -> dict[str, int]:
     now = now or datetime.utcnow()
+
+    # If analytics tables are not migrated yet, skip quietly.
+    try:
+        inspector = inspect(db.engine)
+        if not inspector.has_table('daily_traffic_stats') or not inspector.has_table('recent_logs'):
+            return {
+                'flushed_attacks': 0,
+                'flushed_humans': 0,
+                'flushed_bots': 0,
+                'aggregated_days': 0,
+                'aggregated_rows': 0,
+                'deleted_recent_logs': 0,
+            }
+    except Exception:
+        # If we can't inspect, proceed and let higher layers handle failures.
+        pass
+
     cutoff = now - timedelta(days=RECENT_LOG_RETENTION_DAYS)
 
     # 1) Flush in-memory counters into DailyTrafficStat.
