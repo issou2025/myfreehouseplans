@@ -167,6 +167,26 @@ def results():
         budget,
         country
     )
+
+    # Enrich room-level waste entries for template safety (production: never assume keys exist)
+    cost_per_m2 = float(cost_analysis.get('cost_per_m2') or 0)
+    area_factor = 1.0 if unit_system == 'metric' else 10.7639
+
+    for item in waste_analysis.get('oversized_rooms', []) or []:
+        waste_m2 = float(item.get('waste_m2') or item.get('waste') or 0)
+        area_m2 = float(item.get('area_m2') or item.get('area') or 0)
+        item['cost_waste'] = waste_m2 * cost_per_m2
+        item['feedback'] = item.get('feedback', '')
+        item['area'] = area_m2 * area_factor
+
+    for item in waste_analysis.get('undersized_rooms', []) or []:
+        area_m2 = float(item.get('area_m2') or item.get('area') or 0)
+        item['feedback'] = item.get('feedback', '')
+        item['area'] = area_m2 * area_factor
+        optimal_min_m2 = float(item.get('optimal_min_m2') or 0)
+        optimal_max_m2 = float(item.get('optimal_max_m2') or 0)
+        item['optimal_min'] = optimal_min_m2 * area_factor
+        item['optimal_max'] = optimal_max_m2 * area_factor
     
     # Build analysis object for template
     analysis = {

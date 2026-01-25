@@ -156,9 +156,9 @@
                                 {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
                             </span>
                         </div>
-                        <p class="problem-card__feedback">{{ room.feedback }}</p>
+                        <p class="problem-card__feedback">{{ room.get('feedback', '') }}</p>
                         <div class="problem-card__savings">
-                            Potential savings: <strong>${{ "{:,}".format(room.cost_waste|int) }}</strong>
+                            Potential savings: <strong>${{ "{:,}".format(room.get('cost_waste', 0)|int) }}</strong>
                         </div>
                     </div>
                     {% endfor %}
@@ -179,9 +179,9 @@
                                 {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}
                             </span>
                         </div>
-                        <p class="problem-card__feedback">{{ room.feedback }}</p>
+                        <p class="problem-card__feedback">{{ room.get('feedback', '') }}</p>
                         <div class="problem-card__recommendation">
-                            Recommended: <strong>{{ "%.0f"|format(room.optimal_min) }}-{{ "%.0f"|format(room.optimal_max) }} {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}</strong>
+                            Recommended: <strong>{{ "%.0f"|format(room.get('optimal_min', 0)) }}-{{ "%.0f"|format(room.get('optimal_max', 0)) }} {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }}</strong>
                         </div>
                     </div>
                     {% endfor %}

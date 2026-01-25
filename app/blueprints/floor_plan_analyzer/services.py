@@ -343,6 +343,8 @@ def validate_room_dimensions(room_type: str, length_m: float, width_m: float, ar
         'feedback': area_feedback,
         'width_feedback': width_feedback,
         'waste_level': waste_level,
+        'optimal_min_m2': standard.optimal_min_m2,
+        'optimal_max_m2': standard.optimal_max_m2,
         'optimal_range': f"{standard.optimal_min_m2:.0f}-{standard.optimal_max_m2:.0f} m²"
     }
 
@@ -374,8 +376,11 @@ def detect_wasted_space(rooms: List[Dict]) -> Dict:
             total_waste += waste
             oversized_rooms.append({
                 'type': room_type,
+                'area_m2': area,
                 'area': area,
-                'waste': waste
+                'waste_m2': waste,
+                'waste': waste,
+                'feedback': validation.get('feedback', '')
             })
         
         # Track undersized rooms
@@ -383,7 +388,11 @@ def detect_wasted_space(rooms: List[Dict]) -> Dict:
         if area_status == 'critical' and waste_level == 0:
             undersized_rooms.append({
                 'type': room_type,
-                'area': area
+                'area_m2': area,
+                'area': area,
+                'feedback': validation.get('feedback', ''),
+                'optimal_min_m2': validation.get('optimal_min_m2', 0),
+                'optimal_max_m2': validation.get('optimal_max_m2', 0)
             })
     
     # Calculate circulation percentage
