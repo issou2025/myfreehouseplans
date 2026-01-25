@@ -70,26 +70,119 @@
             </div>
         </div>
         <div class="hero__visual reveal" aria-label="Plan highlights">
-            <div class="hero__panel glass">
-                <div class="hero__panel-row">
-                    <i class="fa-solid fa-vector-square" aria-hidden="true"></i>
+            <div class="glass" style="padding: 1.25rem;">
+                <div class="tw-flex tw-items-start tw-justify-between tw-gap-4">
                     <div>
-                        <span>Metric & Imperial</span>
-                        <p>Seamless documentation</p>
+                        <p class="tw-text-xs tw-uppercase tw-tracking-wider tw-text-slate-300">Smart Architectural Analyzer</p>
+                        <h2 class="tw-mt-1 tw-text-lg tw-font-semibold tw-text-white">Validate your layout in 60 seconds</h2>
+                        <p class="tw-mt-1 tw-text-sm tw-text-slate-300">Add 3+ rooms, get waste + efficiency scores, then export an A4 PDF.</p>
                     </div>
+                    <a class="btn btn-outline btn-ghost" href="{{ url_for('floor_plan.landing') }}" style="white-space: nowrap;">
+                        <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> Full tool
+                    </a>
                 </div>
-                <div class="hero__panel-row">
-                    <i class="fa-solid fa-vr-cardboard" aria-hidden="true"></i>
-                    <div>
-                        <span>Immersive visuals</span>
-                        <p>CAD + BIM ready packs</p>
+
+                <div class="tw-mt-4 tw-grid tw-grid-cols-1 tw-gap-3">
+                    <div class="tw-grid tw-grid-cols-2 tw-gap-2">
+                        <label class="tw-text-xs tw-text-slate-300" for="fp-unit">Units</label>
+                        <label class="tw-text-xs tw-text-slate-300" for="fp-room-type">Room type</label>
+
+                        <select id="fp-unit" class="tw-w-full tw-rounded-lg tw-bg-slate-900/70 tw-border tw-border-slate-700 tw-px-3 tw-py-2 tw-text-sm tw-text-white">
+                            <option value="metric" selected>Metric (m, m²)</option>
+                            <option value="imperial">Imperial (ft, ft²)</option>
+                        </select>
+
+                        <select id="fp-room-type" class="tw-w-full tw-rounded-lg tw-bg-slate-900/70 tw-border tw-border-slate-700 tw-px-3 tw-py-2 tw-text-sm tw-text-white">
+                            <option value="" selected disabled>Select a room…</option>
+                            {% for group in analyzer_room_options or [] %}
+                                {% if group.options %}
+                                <optgroup label="{{ group.category }}">
+                                    {% for opt in group.options %}
+                                    <option value="{{ opt.value }}">{{ opt.label }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
                     </div>
-                </div>
-                <div class="hero__panel-row">
-                    <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
-                    <div>
-                        <span>Architect support</span>
-                        <p>Climate + code guidance</p>
+
+                    <div class="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-flex-wrap">
+                        <div class="tw-flex tw-items-center tw-gap-4" role="radiogroup" aria-label="Input method">
+                            <label class="tw-inline-flex tw-items-center tw-gap-2 tw-text-sm tw-text-slate-200">
+                                <input type="radio" name="fp-method" value="dimensions" checked>
+                                <span>Dimensions</span>
+                            </label>
+                            <label class="tw-inline-flex tw-items-center tw-gap-2 tw-text-sm tw-text-slate-200">
+                                <input type="radio" name="fp-method" value="surface">
+                                <span>Surface</span>
+                            </label>
+                        </div>
+                        <p id="fp-error" class="tw-hidden tw-text-sm tw-text-rose-300"></p>
+                    </div>
+
+                    <div id="fp-dims" class="tw-grid tw-grid-cols-2 tw-gap-2">
+                        <div>
+                            <label class="tw-text-xs tw-text-slate-300" for="fp-length">Length</label>
+                            <input id="fp-length" type="number" step="0.01" min="0" class="tw-w-full tw-rounded-lg tw-bg-slate-900/70 tw-border tw-border-slate-700 tw-px-3 tw-py-2 tw-text-sm tw-text-white" placeholder="e.g. 4.2">
+                        </div>
+                        <div>
+                            <label class="tw-text-xs tw-text-slate-300" for="fp-width">Width</label>
+                            <input id="fp-width" type="number" step="0.01" min="0" class="tw-w-full tw-rounded-lg tw-bg-slate-900/70 tw-border tw-border-slate-700 tw-px-3 tw-py-2 tw-text-sm tw-text-white" placeholder="e.g. 3.5">
+                        </div>
+                    </div>
+
+                    <div id="fp-surface" class="tw-hidden">
+                        <label class="tw-text-xs tw-text-slate-300" for="fp-area">Surface area</label>
+                        <input id="fp-area" type="number" step="0.01" min="0" class="tw-w-full tw-rounded-lg tw-bg-slate-900/70 tw-border tw-border-slate-700 tw-px-3 tw-py-2 tw-text-sm tw-text-white" placeholder="e.g. 14.0">
+                    </div>
+
+                    <div class="tw-flex tw-items-center tw-justify-between tw-gap-2 tw-flex-wrap">
+                        <button id="fp-add" type="button" class="btn btn-primary btn--glow">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i> Add room
+                        </button>
+                        <div class="tw-flex tw-items-center tw-gap-2 tw-flex-wrap">
+                            <button id="fp-analyze" type="button" class="btn btn-outline" disabled>
+                                <i class="fa-solid fa-chart-line" aria-hidden="true"></i> Analyze
+                            </button>
+                            <button id="fp-pdf" type="button" class="btn btn-outline" disabled>
+                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> A4 PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="fp-rooms" class="tw-grid tw-grid-cols-1 tw-gap-2" aria-label="Added rooms"></div>
+
+                    <div id="fp-dashboard" class="tw-mt-1 tw-rounded-xl tw-border tw-border-slate-700 tw-bg-slate-950/40 tw-p-3" aria-label="Live efficiency dashboard">
+                        <div class="tw-grid tw-grid-cols-2 tw-gap-3">
+                            <div>
+                                <p class="tw-text-xs tw-text-slate-400">Overall score</p>
+                                <p id="fp-score" class="tw-text-2xl tw-font-semibold tw-text-white">—</p>
+                            </div>
+                            <div>
+                                <p class="tw-text-xs tw-text-slate-400">Waste</p>
+                                <p id="fp-waste" class="tw-text-2xl tw-font-semibold tw-text-white">—</p>
+                            </div>
+                        </div>
+                        <div class="tw-mt-3 tw-grid tw-grid-cols-3 tw-gap-2">
+                            <div class="tw-rounded-lg tw-border tw-border-slate-800 tw-bg-slate-900/40 tw-p-2">
+                                <p class="tw-text-[11px] tw-text-slate-400">Financial</p>
+                                <p id="fp-fin" class="tw-text-sm tw-font-semibold tw-text-white">—</p>
+                            </div>
+                            <div class="tw-rounded-lg tw-border tw-border-slate-800 tw-bg-slate-900/40 tw-p-2">
+                                <p class="tw-text-[11px] tw-text-slate-400">Comfort</p>
+                                <p id="fp-comf" class="tw-text-sm tw-font-semibold tw-text-white">—</p>
+                            </div>
+                            <div class="tw-rounded-lg tw-border tw-border-slate-800 tw-bg-slate-900/40 tw-p-2">
+                                <p class="tw-text-[11px] tw-text-slate-400">Circulation</p>
+                                <p id="fp-circ" class="tw-text-sm tw-font-semibold tw-text-white">—</p>
+                            </div>
+                        </div>
+                        <p id="fp-dashboard-hint" class="tw-mt-2 tw-text-xs tw-text-slate-400">Tip: Add 3+ rooms and click Analyze.</p>
+                        <div class="tw-mt-3 tw-flex tw-justify-end">
+                            <button id="fp-open" type="button" class="btn btn-outline" disabled>
+                                <i class="fa-solid fa-gauge" aria-hidden="true"></i> Open dashboard
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -404,6 +497,298 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    // Tailwind (homepage widget only): no preflight + prefixed classes to avoid collisions.
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+        prefix: 'tw-',
+        corePlugins: { preflight: false },
+    };
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    (function () {
+        const previewUrl = "{{ url_for('floor_plan.api_preview') }}";
+        const sessionizeUrl = "{{ url_for('floor_plan.api_sessionize') }}";
+        const reportUrl = "{{ url_for('floor_plan.generate_report') }}";
+
+        const unitEl = document.getElementById('fp-unit');
+        const typeEl = document.getElementById('fp-room-type');
+        const errorEl = document.getElementById('fp-error');
+        const dimsWrap = document.getElementById('fp-dims');
+        const surfaceWrap = document.getElementById('fp-surface');
+        const lengthEl = document.getElementById('fp-length');
+        const widthEl = document.getElementById('fp-width');
+        const areaEl = document.getElementById('fp-area');
+        const roomsEl = document.getElementById('fp-rooms');
+        const addBtn = document.getElementById('fp-add');
+        const analyzeBtn = document.getElementById('fp-analyze');
+        const pdfBtn = document.getElementById('fp-pdf');
+        const openBtn = document.getElementById('fp-open');
+
+        const scoreEl = document.getElementById('fp-score');
+        const wasteEl = document.getElementById('fp-waste');
+        const finEl = document.getElementById('fp-fin');
+        const comfEl = document.getElementById('fp-comf');
+        const circEl = document.getElementById('fp-circ');
+        const hintEl = document.getElementById('fp-dashboard-hint');
+
+        if (!unitEl || !typeEl || !roomsEl || !addBtn || !analyzeBtn) return;
+
+        const state = {
+            unit_system: 'metric',
+            rooms: [],
+            lastPreview: null,
+        };
+
+        function getMethod() {
+            const checked = document.querySelector('input[name="fp-method"]:checked');
+            return checked ? checked.value : 'dimensions';
+        }
+
+        function setError(msg) {
+            if (!errorEl) return;
+            if (!msg) {
+                errorEl.textContent = '';
+                errorEl.classList.add('tw-hidden');
+                return;
+            }
+            errorEl.textContent = msg;
+            errorEl.classList.remove('tw-hidden');
+        }
+
+        function fmt(num) {
+            if (num === null || num === undefined || Number.isNaN(num)) return '—';
+            try {
+                return Number(num).toFixed(0);
+            } catch {
+                return '—';
+            }
+        }
+
+        function fmtPct(num) {
+            if (num === null || num === undefined || Number.isNaN(num)) return '—';
+            return Number(num).toFixed(1) + '%';
+        }
+
+        function unitLabel() {
+            return state.unit_system === 'metric' ? 'm' : 'ft';
+        }
+
+        function areaUnitLabel() {
+            return state.unit_system === 'metric' ? 'm²' : 'ft²';
+        }
+
+        function renderRooms() {
+            roomsEl.innerHTML = '';
+            state.rooms.forEach((r, idx) => {
+                const card = document.createElement('div');
+                card.className = 'tw-flex tw-items-start tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-border-slate-800 tw-bg-slate-900/40 tw-p-3';
+
+                const left = document.createElement('div');
+                left.className = 'tw-min-w-0';
+
+                const title = document.createElement('p');
+                title.className = 'tw-text-sm tw-font-semibold tw-text-white tw-truncate';
+                title.textContent = r.type;
+                left.appendChild(title);
+
+                const meta = document.createElement('p');
+                meta.className = 'tw-mt-1 tw-text-xs tw-text-slate-300';
+                if (r.input_method === 'surface') {
+                    meta.textContent = `Surface: ${r.surface} ${areaUnitLabel()}`;
+                } else {
+                    meta.textContent = `Dims: ${r.length} × ${r.width} ${unitLabel()}`;
+                }
+                left.appendChild(meta);
+
+                const right = document.createElement('button');
+                right.type = 'button';
+                right.className = 'btn btn-outline btn-ghost';
+                right.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
+                right.addEventListener('click', () => {
+                    state.rooms.splice(idx, 1);
+                    state.lastPreview = null;
+                    renderRooms();
+                    refreshActions();
+                    resetDashboard();
+                });
+
+                card.appendChild(left);
+                card.appendChild(right);
+                roomsEl.appendChild(card);
+            });
+        }
+
+        function refreshActions() {
+            const ok = state.rooms.length >= 3;
+            analyzeBtn.disabled = !ok;
+            pdfBtn.disabled = !ok;
+            openBtn.disabled = !ok;
+        }
+
+        function resetDashboard() {
+            if (!scoreEl || !wasteEl || !finEl || !comfEl || !circEl || !hintEl) return;
+            scoreEl.textContent = '—';
+            wasteEl.textContent = '—';
+            finEl.textContent = '—';
+            comfEl.textContent = '—';
+            circEl.textContent = '—';
+            hintEl.textContent = 'Tip: Add 3+ rooms and click Analyze.';
+        }
+
+        function toggleMethodUI() {
+            const method = getMethod();
+            setError('');
+            if (method === 'surface') {
+                dimsWrap.classList.add('tw-hidden');
+                surfaceWrap.classList.remove('tw-hidden');
+            } else {
+                surfaceWrap.classList.add('tw-hidden');
+                dimsWrap.classList.remove('tw-hidden');
+            }
+        }
+
+        async function preview() {
+            setError('');
+            if (hintEl) hintEl.textContent = 'Analyzing…';
+
+            const resp = await fetch(previewUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unit_system: state.unit_system, rooms: state.rooms }),
+            });
+
+            const data = await resp.json().catch(() => null);
+            if (!resp.ok || !data || !data.success) {
+                throw new Error((data && data.error) || 'Preview failed');
+            }
+
+            state.lastPreview = data;
+            const scores = data.scores || {};
+            const summary = data.summary || {};
+            if (scoreEl) scoreEl.textContent = fmt(scores.overall);
+            if (wasteEl) wasteEl.textContent = fmtPct(summary.waste_percentage);
+            if (finEl) finEl.textContent = fmt(scores.financial_efficiency);
+            if (comfEl) comfEl.textContent = fmt(scores.comfort_efficiency);
+            if (circEl) circEl.textContent = fmt(scores.circulation_efficiency);
+            if (hintEl) {
+                hintEl.textContent = `Rooms: ${summary.total_rooms || state.rooms.length} · Area: ${Number(summary.total_area || 0).toFixed(1)} ${areaUnitLabel()}`;
+            }
+        }
+
+        async function sessionize() {
+            const resp = await fetch(sessionizeUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unit_system: state.unit_system, rooms: state.rooms }),
+            });
+            const data = await resp.json().catch(() => null);
+            if (!resp.ok || !data || !data.success) {
+                throw new Error((data && data.error) || 'Failed to start analysis');
+            }
+            return data;
+        }
+
+        function postTo(url) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            document.body.appendChild(form);
+            form.submit();
+            form.remove();
+        }
+
+        document.querySelectorAll('input[name="fp-method"]').forEach((el) => {
+            el.addEventListener('change', toggleMethodUI);
+        });
+
+        unitEl.addEventListener('change', () => {
+            state.unit_system = unitEl.value;
+            state.lastPreview = null;
+            renderRooms();
+            resetDashboard();
+        });
+
+        addBtn.addEventListener('click', () => {
+            setError('');
+
+            const type = typeEl.value;
+            if (!type) {
+                setError('Pick a room type first.');
+                return;
+            }
+
+            const method = getMethod();
+            if (method === 'surface') {
+                const surface = Number(areaEl.value);
+                if (!surface || surface <= 0) {
+                    setError('Enter a valid surface area.');
+                    return;
+                }
+                state.rooms.push({ type, input_method: 'surface', surface });
+                areaEl.value = '';
+            } else {
+                const length = Number(lengthEl.value);
+                const width = Number(widthEl.value);
+                if (!length || !width || length <= 0 || width <= 0) {
+                    setError('Enter valid length and width.');
+                    return;
+                }
+                state.rooms.push({ type, input_method: 'dimensions', length, width });
+                lengthEl.value = '';
+                widthEl.value = '';
+            }
+
+            typeEl.selectedIndex = 0;
+            state.lastPreview = null;
+            renderRooms();
+            refreshActions();
+            resetDashboard();
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            try {
+                if (state.rooms.length < 3) {
+                    setError('Add at least 3 rooms.');
+                    return;
+                }
+                await preview();
+            } catch (e) {
+                setError((e && e.message) ? e.message : 'Preview failed.');
+                if (hintEl) hintEl.textContent = 'Tip: Add 3+ rooms and click Analyze.';
+            }
+        });
+
+        if (openBtn) {
+            openBtn.addEventListener('click', async () => {
+                try {
+                    const data = await sessionize();
+                    window.location.href = data.redirect_url;
+                } catch (e) {
+                    setError((e && e.message) ? e.message : 'Failed to open dashboard.');
+                }
+            });
+        }
+
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', async () => {
+                try {
+                    await sessionize();
+                    postTo(reportUrl);
+                } catch (e) {
+                    setError((e && e.message) ? e.message : 'Failed to generate PDF.');
+                }
+            });
+        }
+
+        // Initial state
+        state.unit_system = unitEl.value;
+        toggleMethodUI();
+        refreshActions();
+        resetDashboard();
+    })();
+</script>
 <script>
     (function(){
         const input = document.getElementById('globalSearchInput');

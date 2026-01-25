@@ -16,6 +16,105 @@ from .services import (
 )
 
 
+def _normalize_rooms_payload(rooms_data, unit_system: str):
+    """Normalize client rooms payload into the canonical session schema.
+
+    Never assumes dimensions exist (surface-mode safe).
+    """
+
+    unit_system = (unit_system or 'metric').strip().lower()
+    if unit_system not in {'metric', 'imperial'}:
+        unit_system = 'metric'
+
+    normalized = []
+    if not isinstance(rooms_data, list):
+        return normalized
+
+    import math
+
+    for room_data in rooms_data:
+        if not isinstance(room_data, dict):
+            continue
+
+        room_type = (room_data.get('type') or room_data.get('room_type') or '').strip()
+        if not room_type:
+            continue
+
+        input_method = (room_data.get('input_method') or 'dimensions').strip().lower()
+        if input_method not in {'dimensions', 'surface'}:
+            input_method = 'dimensions'
+
+        if input_method == 'surface':
+            # Accept either explicit area_m2 (preferred) or user-entered surface in the current unit system.
+            area_m2_raw = room_data.get('area_m2', None)
+            surface_raw = room_data.get('surface', None)
+            try:
+                if area_m2_raw is not None:
+                    area_m2 = float(area_m2_raw)
+                else:
+                    surface_val = float(surface_raw)
+                    area_m2 = surface_val if unit_system == 'metric' else surface_val / 10.7639
+            except (ValueError, TypeError):
+                continue
+
+            if area_m2 <= 0:
+                continue
+
+            estimated_side = math.sqrt(area_m2)
+            validation = validate_room_dimensions(room_type, estimated_side, estimated_side, area_m2)
+            display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+
+            normalized.append(
+                {
+                    'type': room_type,
+                    'room_type': room_type,
+                    'length': None,
+                    'width': None,
+                    'length_m': None,
+                    'width_m': None,
+                    'area': display_area,
+                    'area_m2': area_m2,
+                    'input_method': 'surface',
+                    'validation': validation,
+                }
+            )
+            continue
+
+        # Dimension rooms
+        length_raw = room_data.get('length', None)
+        width_raw = room_data.get('width', None)
+        try:
+            length_val = float(length_raw)
+            width_val = float(width_raw)
+        except (ValueError, TypeError):
+            continue
+
+        if length_val <= 0 or width_val <= 0:
+            continue
+
+        length_m, width_m = convert_to_metric(length_val, width_val, unit_system)
+        area_m2 = length_m * width_m
+        validation = validate_room_dimensions(room_type, length_m, width_m, area_m2)
+        display_area = area_m2 if unit_system == 'metric' else area_m2 * 10.7639
+
+        normalized.append(
+            {
+                'type': room_type,
+                'room_type': room_type,
+                'length': length_val,
+                'width': width_val,
+                'length_m': length_m,
+                'width_m': width_m,
+                'area': display_area,
+                'area_m2': area_m2,
+                'input_method': 'dimensions',
+                'validation': validation,
+            }
+        )
+
+    return normalized
+
+
 @floor_plan_bp.route('/')
 def landing():
     """SEO-optimized landing page."""
@@ -465,6 +564,110 @@ def update_rooms():
     except Exception as exc:
         current_app.logger.exception('Failed to update rooms: %s', exc)
         return jsonify({'success': False, 'error': 'Failed to update rooms. Please try again.'}), 500
+
+
+@floor_plan_bp.route('/api/preview', methods=['POST'])
+def api_preview():
+    """Preview analysis without mutating the session.
+
+    Intended for the homepage embedded widget.
+    """
+
+    try:
+        data = request.get_json(silent=True) or {}
+        unit_system = (data.get('unit_system') or 'metric').strip().lower()
+        budget = data.get('budget', None)
+        country = (data.get('country') or 'International').strip() or 'International'
+
+        rooms = _normalize_rooms_payload(data.get('rooms', []), unit_system)
+        if len(rooms) < 3:
+            return jsonify({'success': False, 'error': 'At least 3 valid rooms required'}), 400
+
+        total_built_area_m2 = sum(float(r.get('area_m2') or 0) for r in rooms)
+        waste_analysis = detect_wasted_space(rooms)
+        scores = calculate_efficiency_scores(rooms, waste_analysis)
+
+        try:
+            budget_val = float(budget) if budget not in (None, '') else None
+        except (ValueError, TypeError):
+            budget_val = None
+
+        cost_analysis = estimate_construction_cost(
+            total_built_area_m2,
+            float(waste_analysis.get('wasted_area_m2') or 0),
+            budget_val,
+            country,
+        )
+
+        area_factor = 1.0 if unit_system == 'metric' else 10.7639
+        total_area_display = total_built_area_m2 * area_factor
+        wasted_area_display = float(waste_analysis.get('wasted_area_m2') or 0) * area_factor
+        waste_pct = float(waste_analysis.get('waste_percentage') or 0)
+
+        payload = {
+            'success': True,
+            'summary': {
+                'unit_system': unit_system,
+                'total_rooms': len(rooms),
+                'total_area': total_area_display,
+                'wasted_area': wasted_area_display,
+                'waste_percentage': waste_pct,
+                'circulation_percentage': float(waste_analysis.get('circulation_percentage') or 0),
+                'issues': {
+                    'oversized_rooms': len(waste_analysis.get('oversized_rooms') or []),
+                    'undersized_rooms': len(waste_analysis.get('undersized_rooms') or []),
+                    'circulation_warning': bool(waste_analysis.get('circulation_warning')),
+                },
+            },
+            'scores': scores,
+            'cost_impact': {
+                'mode': cost_analysis.get('mode'),
+                'cost_per_m2': cost_analysis.get('cost_per_m2'),
+                'estimated_total_cost': cost_analysis.get('estimated_total_cost'),
+                'wasted_money': cost_analysis.get('wasted_money'),
+            },
+        }
+
+        return jsonify(payload)
+    except Exception as exc:
+        current_app.logger.exception('Preview API failed: %s', exc)
+        return jsonify({'success': False, 'error': 'Preview failed. Please try again.'}), 500
+
+
+@floor_plan_bp.route('/api/sessionize', methods=['POST'])
+def api_sessionize():
+    """Persist a client-provided analysis into the session.
+
+    This enables redirecting to the full dashboard or generating the PDF.
+    """
+
+    try:
+        data = request.get_json(silent=True) or {}
+        unit_system = (data.get('unit_system') or 'metric').strip().lower()
+        if unit_system not in {'metric', 'imperial'}:
+            unit_system = 'metric'
+
+        rooms = _normalize_rooms_payload(data.get('rooms', []), unit_system)
+        if len(rooms) < 3:
+            return jsonify({'success': False, 'error': 'At least 3 valid rooms required'}), 400
+
+        session['fp_unit_system'] = unit_system
+        session['fp_rooms'] = rooms
+
+        # Optional fields (keep existing analyzer defaults)
+        budget = data.get('budget', None)
+        try:
+            session['fp_budget'] = float(budget) if budget not in (None, '') else None
+        except (ValueError, TypeError):
+            session['fp_budget'] = None
+
+        country = (data.get('country') or session.get('fp_country') or 'International').strip() or 'International'
+        session['fp_country'] = country
+
+        return jsonify({'success': True, 'redirect_url': url_for('floor_plan.results')})
+    except Exception as exc:
+        current_app.logger.exception('Sessionize API failed: %s', exc)
+        return jsonify({'success': False, 'error': 'Failed to start analysis. Please try again.'}), 500
 
 
 @floor_plan_bp.route('/reset')
