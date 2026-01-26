@@ -4,7 +4,7 @@
 <div class="fp-results">
     <div class="shell shell--wide">
         <div class="fp-results__header">
-            <h1 class="fp-results__title">Your Floor Plan Analysis</h1>
+            <h1 class="fp-results__title"><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i> Your Floor Plan Analysis</h1>
             <p class="fp-results__subtitle">
                 We analyzed {{ analysis.total_rooms }} rooms 
                 ({{ "%.1f"|format(analysis.total_area) }} {{ 'm²' if session.get('fp_unit_system') == 'metric' else 'ft²' }})

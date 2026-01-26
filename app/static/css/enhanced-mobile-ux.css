@@ -9,6 +9,7 @@
    🎨 ENHANCED COLOR PALETTE - Natural & Warm
    ===================================================== */
 :root {
+    color-scheme: light;
     /* Warm, natural primary colors */
     --color-primary-soft: #5B8DEE;
     --color-primary-light: #E8F1FF;
@@ -430,11 +431,18 @@
         width: 48px;
         height: 48px;
         padding: 0;
-        background: none;
-        border: none;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(0, 0, 0, 0.08);
         cursor: pointer;
         z-index: 1001;
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        border-radius: var(--radius-medium);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .nav-toggle:active {
+        transform: scale(0.98);
     }
     
     .nav-toggle__icon,
@@ -444,7 +452,7 @@
         display: block;
         width: 24px;
         height: 2px;
-        background: var(--color-text);
+        background: #1a1a1a;
         border-radius: 2px;
         transition: all 0.3s var(--transition-smooth);
     }
@@ -1011,42 +1019,14 @@ label {
 }
 
 /* =====================================================
-   🌓 DARK MODE SUPPORT (Auto-detect)
-   ===================================================== */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-bg: #0f1419;
-        --color-surface: #1a1f2e;
-        --color-surface-alt: #252b3d;
-        --color-text: rgba(255, 255, 255, 0.95);
-        --color-muted: rgba(255, 255, 255, 0.65);
-        --color-border: rgba(255, 255, 255, 0.12);
-    }
-    
-    body.theme-lux {
-        background: linear-gradient(180deg, #0f1419 0%, #1a1f2e 50%, #252b3d 100%);
-    }
-    
-    .glass {
-        background: rgba(26, 31, 46, 0.92);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    .plan-card,
-    .card,
-    .experience-card {
-        background: var(--color-surface);
-        border-color: rgba(255, 255, 255, 0.08);
-    }
-    
-    input,
-    select,
-    textarea {
-        background: var(--color-surface-alt);
-        border-color: rgba(255, 255, 255, 0.1);
-        color: var(--color-text);
-    }
-}
+   313 DARK MODE
+   =====================================================
+   Disabled for now: the base theme is light-only, and auto-detect dark mode
+   can produce low-contrast (white-on-white) text on mobile.
+
+   If you want a full dark mode later, we can implement it consistently across
+   all surfaces (header, cards, forms, filters, footers) and add a user toggle.
+*/
 
 /* =====================================================
    📐 IMPROVED GRID LAYOUTS

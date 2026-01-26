@@ -60,7 +60,13 @@
     }
     
     if (navToggle) {
-        navToggle.addEventListener('click', function() {
+        navToggle.addEventListener('click', function(e) {
+            // Defensive: never throw on pages without the nav element.
+            if (!nav) return;
+
+            // Keep the click focused on the toggle.
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
             const isOpen = nav.classList.contains('is-open');
             if (isOpen) {
                 closeNav();
