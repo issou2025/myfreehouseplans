@@ -147,7 +147,6 @@
     </div>
   </section>
 
-
   {# WHY THIS PLAN SECTION - Highlighted Box #}
   {% if plan.key_selling_point or plan.problems_this_plan_solves or plan.target_buyer %}
   <section class="plan-why" aria-label="Why this plan">
@@ -307,209 +306,224 @@
     </div>
   </section>
 
-  <section class="plan-tech__content" aria-label="Technical description">
-    <div class="tech-grid">
-      <article class="tech-card" id="design" aria-label="Design philosophy">
-        <header class="tech-card__head">
-          <h2>Design philosophy</h2>
-          <p>Concept and intent, from an architect’s perspective.</p>
-        </header>
-        <div class="tech-card__body rich-text">
-          {% if plan.design_philosophy %}
-            {{ render_richtext(plan.design_philosophy) }}
-          {% elif plan.description %}
-            {{ render_richtext(plan.description) }}
-          {% else %}
-            <p>Description coming soon.</p>
-          {% endif %}
+  {# CLIMATE & BUILD SECTION - Show only if data exists #}
+  {% if plan.climate_compatibility or plan.structure_type or plan.foundation_type or plan.roof_type or plan.construction_complexity or plan.estimated_build_time %}
+  <section class="plan-build" aria-label="Climate and build information">
+    <h2 class="plan-build__title">Climate & Build</h2>
+    <div class="plan-build__grid">
+      {% if plan.climate_compatibility %}
+      <div class="build-item">
+        <i class="fa-solid fa-cloud-sun" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Climate</strong>
+          <span>{{ plan.climate_compatibility }}</span>
         </div>
-      </article>
-
-      <article class="tech-card" id="features" aria-label="Technical features">
-        <header class="tech-card__head">
-          <h2>Technical features</h2>
-          <p>Materials, structure, and build notes.</p>
-        </header>
-        <div class="tech-card__body rich-text">
-          {% if plan.main_features %}
-            {{ render_richtext(plan.main_features) }}
-          {% elif plan.room_details %}
-            {{ render_richtext(plan.room_details) }}
-          {% elif plan.construction_notes %}
-            {{ render_richtext(plan.construction_notes) }}
-          {% else %}
-            <p>Technical details will be added soon.</p>
-          {% endif %}
-        </div>
-      </article>
-    </div>
-
-    <section class="spec-table" id="specs" aria-label="Detailed specifications">
-      <header class="spec-table__head">
-        <h2>Detailed specifications</h2>
-        <p>Clean technical data for quick evaluation.</p>
-      </header>
-      <div class="spec-table__wrap" role="region" aria-label="Specification table" tabindex="0">
-        <table>
-          <tbody>
-            {% if plan.dimensions_summary %}
-              <tr><th>Dimensions</th><td>{{ plan.dimensions_summary }}</td></tr>
-            {% endif %}
-            {% if plan.living_rooms is not none %}
-              <tr><th>Living rooms</th><td>{{ plan.living_rooms }}</td></tr>
-            {% endif %}
-            {% if plan.kitchens is not none %}
-              <tr><th>Kitchens</th><td>{{ plan.kitchens }}</td></tr>
-            {% endif %}
-            {% if plan.offices is not none %}
-              <tr><th>Offices</th><td>{{ plan.offices }}</td></tr>
-            {% endif %}
-            {% if plan.terraces is not none %}
-              <tr><th>Terraces</th><td>{{ plan.terraces }}</td></tr>
-            {% endif %}
-            {% if plan.storage_rooms is not none %}
-              <tr><th>Storage rooms</th><td>{{ plan.storage_rooms }}</td></tr>
-            {% endif %}
-            {% if plan.roof_type %}
-              <tr><th>Roof type</th><td>{{ plan.roof_type }}</td></tr>
-            {% endif %}
-            {% if plan.foundation_type %}
-              <tr><th>Foundation</th><td>{{ plan.foundation_type }}</td></tr>
-            {% endif %}
-            {% if plan.structure_type %}
-              <tr><th>Structure</th><td>{{ plan.structure_type }}</td></tr>
-            {% endif %}
-            {% if plan.ceiling_height %}
-              <tr><th>Ceiling height</th><td>{{ plan.ceiling_height }} m</td></tr>
-            {% endif %}
-            {% if plan.parking_count %}
-              <tr><th>Parking</th><td>{{ plan.parking_count }}</td></tr>
-            {% endif %}
-            {% if plan.min_plot_width or plan.min_plot_length %}
-              <tr>
-                <th>Min. plot size</th>
-                <td>
-                  {% if plan.min_plot_width and plan.min_plot_length %}
-                    {{ format_dimensions_box(plan.min_plot_width, plan.min_plot_length) }}
-                    <small>({{ plan.min_plot_area_m2|format_area_dual if plan.min_plot_area_m2 }})</small>
-                  {% elif plan.min_plot_width %}
-                    Width: {{ plan.min_plot_width|format_dimension_dual }}
-                  {% elif plan.min_plot_length %}
-                    Length: {{ plan.min_plot_length|format_dimension_dual }}
-                  {% endif %}
-                </td>
-              </tr>
-            {% endif %}
-            {% if plan.climate_compatibility %}
-              <tr><th>Climate compatibility</th><td>{{ plan.climate_compatibility }}</td></tr>
-            {% elif plan.suitable_climate %}
-              <tr><th>Climate</th><td>{{ plan.suitable_climate }}</td></tr>
-            {% endif %}
-            {% if plan.estimated_build_time %}
-              <tr><th>Est. build time</th><td>{{ plan.estimated_build_time }}</td></tr>
-            {% endif %}
-            {% if plan.ideal_for %}
-              <tr><th>Ideal for</th><td>{{ plan.ideal_for }}</td></tr>
-            {% endif %}
-            {% if plan.construction_complexity %}
-              <tr><th>Complexity</th><td>{{ plan.construction_complexity }}</td></tr>
-            {% endif %}
-            {% if plan.estimated_cost_low or plan.estimated_cost_high %}
-              <tr>
-                <th>Est. construction cost</th>
-                <td>
-                  {{ format_cost_range(plan.estimated_cost_low, plan.estimated_cost_high) }}
-                  {% if plan.estimated_construction_cost_note %}<br><small>{{ plan.estimated_construction_cost_note }}</small>{% endif %}
-                </td>
-              </tr>
-            {% elif plan.estimated_construction_cost_note %}
-              <tr><th>Cost note</th><td>{{ plan.estimated_construction_cost_note }}</td></tr>
-            {% endif %}
-            {% if not (plan.dimensions_summary or plan.roof_type or plan.foundation_type or plan.structure_type or plan.ceiling_height or plan.parking_count or plan.suitable_climate or plan.ideal_for or plan.construction_complexity or plan.estimated_construction_cost_note) %}
-              <tr><th>Specifications</th><td>Technical specifications are being prepared.</td></tr>
-            {% endif %}
-          </tbody>
-        </table>
       </div>
-    </section>
+      {% endif %}
+
+      {% if plan.structure_type %}
+      <div class="build-item">
+        <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Structure</strong>
+          <span>{{ plan.structure_type }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if plan.foundation_type %}
+      <div class="build-item">
+        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Foundation</strong>
+          <span>{{ plan.foundation_type }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if plan.roof_type %}
+      <div class="build-item">
+        <i class="fa-solid fa-house-chimney" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Roof</strong>
+          <span>{{ plan.roof_type }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if plan.construction_complexity %}
+      <div class="build-item">
+        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Complexity</strong>
+          <span>{{ plan.construction_complexity }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if plan.estimated_build_time %}
+      <div class="build-item">
+        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+        <div class="build-item__content">
+          <strong>Build Time</strong>
+          <span>{{ plan.estimated_build_time }}</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ESTIMATED COST SECTION - Show only if both values exist #}
+  {% if plan.estimated_cost_low and plan.estimated_cost_high %}
+  <section class="plan-cost" aria-label="Estimated construction cost">
+    <div class="plan-cost__box">
+      <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+      <div class="plan-cost__content">
+        <strong>Estimated Construction Cost</strong>
+        <p class="plan-cost__range">{{ format_cost_range(plan.estimated_cost_low, plan.estimated_cost_high) }}</p>
+        <p class="plan-cost__note">Cost varies by country, materials, and local labor rates.{% if plan.estimated_construction_cost_note %} {{ plan.estimated_construction_cost_note }}{% endif %}</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# DESCRIPTION SECTION #}
+  <section class="plan-description" aria-label="Plan description">
+    <div class="plan-description__content">
+      {% if plan.design_philosophy %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Design Philosophy</h2>
+        <div class="rich-text">{{ render_richtext(plan.design_philosophy) }}</div>
+      </article>
+      {% endif %}
+
+      {% if plan.description %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-align-left" aria-hidden="true"></i> Full Description</h2>
+        <div class="rich-text">{{ render_richtext(plan.description) }}</div>
+      </article>
+      {% endif %}
+
+      {% if plan.lifestyle_suitability %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-heart" aria-hidden="true"></i> Lifestyle Suitability</h2>
+        <div class="rich-text">{{ render_richtext(plan.lifestyle_suitability) }}</div>
+      </article>
+      {% endif %}
+
+      {% if plan.room_details %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-door-open" aria-hidden="true"></i> Room-by-Room Details</h2>
+        <div class="rich-text">{{ render_richtext(plan.room_details) }}</div>
+      </article>
+      {% endif %}
+
+      {% if plan.customization_potential %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Customization Potential</h2>
+        <div class="rich-text">{{ render_richtext(plan.customization_potential) }}</div>
+      </article>
+      {% endif %}
+
+      {% if not (plan.design_philosophy or plan.description or plan.lifestyle_suitability or plan.room_details or plan.customization_potential) %}
+      <article class="description-card">
+        <h2><i class="fa-solid fa-info-circle" aria-hidden="true"></i> About This Plan</h2>
+        <p>Detailed description coming soon.</p>
+      </article>
+      {% endif %}
+    </div>
   </section>
 
-  <section class="plan-tech__pricing" id="pricing" aria-label="Pricing packs">
-    <header class="pricing-head">
-      <h2>Choose your pack</h2>
-      <p>Pricing packs are shown after the technical description — pick the level that matches your build stage.</p>
-    </header>
+  {# PACK COMPARISON SECTION #}
+  <section class="plan-packs" id="pricing" aria-label="Available packs">
+    <h2 class="plan-packs__title">Choose Your Pack</h2>
+    <p class="plan-packs__subtitle">Select the pack that best matches your project stage</p>
 
     {% set visible_tiers = filter_pack_tiers(plan.pricing_tiers, pack_visibility) %}
     {% if visible_tiers %}
-    <div class="pricing-grid">
+    <div class="plan-packs__grid">
       {% for tier in visible_tiers %}
         {% set is_recommended = (tier.pack == 2) %}
-        <article class="pricing-card {% if is_recommended %}is-recommended{% endif %}">
-          <div class="pricing-card__top">
-            <div class="pricing-card__label">
-              <span class="pack">Pack {{ tier.pack }}</span>
-              {% if is_recommended %}<span class="rec"><i class="fa-solid fa-star" aria-hidden="true"></i> Recommended</span>{% endif %}
-            </div>
-            <h3>{{ tier.label }}</h3>
-            <p class="pricing-card__price">
+        <article class="pack-card {% if is_recommended %}pack-card--recommended{% endif %}">
+          {% if is_recommended %}
+          <div class="pack-card__badge">
+            <i class="fa-solid fa-star" aria-hidden="true"></i> Most Popular
+          </div>
+          {% endif %}
+
+          <div class="pack-card__header">
+            <h3 class="pack-card__name">{{ tier.label }}</h3>
+            <div class="pack-card__price">
               {% if tier.is_free %}
-                <span class="amount">Free</span>
+                <span class="price">Free</span>
               {% elif tier.price is not none %}
-                <span class="amount">${{ tier.price|round(0)|int }}</span>
+                <span class="price">${{ tier.price|round(0)|int }}</span>
               {% else %}
-                <span class="amount">—</span>
+                <span class="price">—</span>
               {% endif %}
-            </p>
+            </div>
           </div>
 
-          <ul class="pricing-card__features">
+          <ul class="pack-card__features">
             {% if tier.pack == 1 %}
               {% if plan.pack1_description %}
-                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ plan.pack1_description }}</li>
+                {{ plan.pack1_description|safe }}
               {% else %}
-                <li><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Free PDF download</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> West view, East view, South view</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> North floor plan</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> 3D view + 3D section</li>
-                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i> No dimensions included in the free pack</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Free PDF preview</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Basic elevations</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Floor plan overview</li>
+                <li><i class="fa-solid fa-xmark" aria-hidden="true"></i> No dimensions</li>
               {% endif %}
             {% elif tier.pack == 2 %}
               {% if plan.pack2_description %}
-                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ plan.pack2_description }}</li>
+                {{ plan.pack2_description|safe }}
               {% else %}
-                <li><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Full PDF documentation set</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Dimensions & elevations</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Ready for local adaptation</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Complete PDF set</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> All dimensions included</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Detailed elevations</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Ready for permits</li>
               {% endif %}
             {% else %}
               {% if plan.pack3_description %}
-                <li><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ plan.pack3_description }}</li>
+                {{ plan.pack3_description|safe }}
               {% else %}
-                <li><i class="fa-solid fa-drafting-compass" aria-hidden="true"></i> Ultimate CAD/BIM files (where available)</li>
-                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Best for contractors & consultants</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Editable CAD/DWG files</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> All pack 2 benefits</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Full customization</li>
+                <li><i class="fa-solid fa-check" aria-hidden="true"></i> Professional use</li>
               {% endif %}
             {% endif %}
           </ul>
 
-          <div class="pricing-card__cta">
+          <div class="pack-card__cta">
             {% if tier.pack == 1 %}
               {% if plan.free_pdf_file %}
-                <a class="btn btn-primary" href="{{ url_for('main.download_free', plan_id=plan.id) }}"><i class="fa-solid fa-download" aria-hidden="true"></i> Download</a>
+                <a class="btn btn-primary btn-block" href="{{ url_for('main.download_free', plan_id=plan.id) }}">
+                  <i class="fa-solid fa-download" aria-hidden="true"></i> Download Free
+                </a>
               {% else %}
-                <span class="btn btn-ghost is-disabled" aria-disabled="true"><i class="fa-solid fa-clock" aria-hidden="true"></i> Not available</span>
+                <span class="btn btn-ghost btn-block is-disabled" aria-disabled="true">
+                  <i class="fa-solid fa-clock" aria-hidden="true"></i> Coming Soon
+                </span>
               {% endif %}
             {% elif tier.available %}
-              <a class="btn btn-primary" href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=tier.pack) }}" rel="nofollow"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Buy now</a>
+              <a class="btn btn-{% if is_recommended %}accent{% else %}primary{% endif %} btn-block" 
+                 href="{{ url_for('main.gumroad_redirect', slug=plan.slug, pack=tier.pack) }}" 
+                 rel="nofollow">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i> Buy Now
+              </a>
             {% else %}
-              <span class="btn btn-ghost is-disabled" aria-disabled="true"><i class="fa-solid fa-clock" aria-hidden="true"></i> Coming soon</span>
+              <span class="btn btn-ghost btn-block is-disabled" aria-disabled="true">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i> Coming Soon
+              </span>
             {% endif %}
           </div>
         </article>
       {% endfor %}
     </div>
     {% else %}
-    <p class="muted">Packs are temporarily hidden. Please check back later or contact support.</p>
+    <p class="plan-packs__empty">Packs are being prepared. Please check back soon or contact us for more information.</p>
     {% endif %}
   </section>
 </div>
@@ -518,30 +532,66 @@
 {% block extra_js %}
 <script>
   (function () {
+    // Gallery thumbnail switcher
     const main = document.getElementById('planMainImage');
-    const thumbs = document.querySelectorAll('.plan-thumb');
-    if (!main || !thumbs.length) return;
-
-    thumbs.forEach(btn => {
-      btn.addEventListener('click', function () {
-        const src = btn.getAttribute('data-src');
-        const srcset = btn.getAttribute('data-srcset');
-        const sizes = btn.getAttribute('data-sizes');
-        if (!src) return;
-        main.setAttribute('src', src);
-        if (srcset) {
-          main.setAttribute('srcset', srcset);
-          if (sizes) {
-            main.setAttribute('sizes', sizes);
+    const thumbs = document.querySelectorAll('.plan-gallery__thumb');
+    
+    if (main && thumbs.length) {
+      thumbs.forEach(btn => {
+        btn.addEventListener('click', function () {
+          const src = btn.getAttribute('data-src');
+          const srcset = btn.getAttribute('data-srcset');
+          const sizes = btn.getAttribute('data-sizes');
+          
+          if (!src) return;
+          
+          main.setAttribute('src', src);
+          if (srcset) {
+            main.setAttribute('srcset', srcset);
+            if (sizes) {
+              main.setAttribute('sizes', sizes);
+            }
+          } else {
+            main.removeAttribute('srcset');
+            main.removeAttribute('sizes');
           }
-        } else {
-          main.removeAttribute('srcset');
-          main.removeAttribute('sizes');
-        }
-        thumbs.forEach(t => t.classList.remove('is-active'));
-        btn.classList.add('is-active');
+          
+          thumbs.forEach(t => t.classList.remove('is-active'));
+          btn.classList.add('is-active');
+        });
       });
-    });
+    }
+
+    // Area unit toggle (optional enhancement)
+    const areaToggles = document.querySelectorAll('.area-toggle');
+    if (areaToggles.length) {
+      areaToggles.forEach(toggle => {
+        toggle.addEventListener('click', function () {
+          const unit = this.getAttribute('data-unit');
+          areaToggles.forEach(t => t.classList.remove('is-active'));
+          this.classList.add('is-active');
+          
+          // Store preference
+          localStorage.setItem('preferred_area_unit', unit);
+        });
+      });
+
+      // Load preference
+      const preferredUnit = localStorage.getItem('preferred_area_unit');
+      if (preferredUnit) {
+        const preferredToggle = document.querySelector(`.area-toggle[data-unit="${preferredUnit}"]`);
+        if (preferredToggle) {
+          areaToggles.forEach(t => t.classList.remove('is-active'));
+          preferredToggle.classList.add('is-active');
+        }
+      } else {
+        // Default to m2
+        const m2Toggle = document.querySelector('.area-toggle[data-unit="m2"]');
+        if (m2Toggle) {
+          m2Toggle.classList.add('is-active');
+        }
+      }
+    }
   })();
 </script>
 {% endblock %}

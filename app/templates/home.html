@@ -203,7 +203,7 @@
                     {% set visible_paid_price = visible_starting_price(plan.pricing_tiers, pack_visibility) %}
                     <div class="plan-card__footer" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                         <div class="plan-card__price">
-                            <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.reference_code }}</span>
+                            <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.display_reference|default(plan.id, true) }}</span>
                             {% if visible_paid_price %}
                                 <span class="price" itemprop="price">From ${{ visible_paid_price|round(0)|int }}</span>
                             {% else %}
@@ -264,7 +264,7 @@
                         {% if plan.bathrooms_count %}<span><i class="fa-solid fa-bath" aria-hidden="true"></i>{{ plan.bathrooms_count }} baths</span>{% endif %}
                     </div>
                     <div class="plan-card__footer">
-                        <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.reference_code }}</span>
+                        <span class="plan-card__ref"><i class="fa-solid fa-hashtag" aria-hidden="true"></i> {{ plan.display_reference|default(plan.id, true) }}</span>
                         <a class="btn btn-soft" href="{{ url_for('main.pack_detail', slug=plan.slug) }}"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> View</a>
                     </div>
                 </div>

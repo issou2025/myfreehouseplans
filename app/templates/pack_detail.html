@@ -23,7 +23,7 @@
 {% set hero_src = upload_url(hero_image) if hero_image else placeholder_src %}
 {% set hero_thumb = hero_src or placeholder_src %}
 {% set plan_title = plan.title|default('House Plan', true) %}
-{% set plan_ref = plan.reference_code|default(plan.id, true) %}
+{% set plan_ref = plan.display_reference|default(plan.id, true) %}
 {% set plan_slug = plan.slug|default('', true) %}
 <div class="shell">
     <article class="plan-detail" itemscope itemtype="https://schema.org/Product">
@@ -360,6 +360,15 @@
             <div class="pack-comparison__grid">
                 {% for tier in visible_tiers %}
                     {% set meta = package_meta.get(tier.pack, package_meta_default) %}
+                    {% if tier.pack == 1 and plan.pack1_description %}
+                        {% set package_desc = plan.pack1_description %}
+                    {% elif tier.pack == 2 and plan.pack2_description %}
+                        {% set package_desc = plan.pack2_description %}
+                    {% elif tier.pack == 3 and plan.pack3_description %}
+                        {% set package_desc = plan.pack3_description %}
+                    {% else %}
+                        {% set package_desc = meta.description %}
+                    {% endif %}
                     <article class="package-card package-card--{{ meta.card_class }}" aria-label="{{ meta.name }}">
                         <header class="package-card__header">
                             <p class="eyebrow">Pack 0{{ tier.pack }}</p>
@@ -374,7 +383,7 @@
                                 {% endif %}
                             </p>
                         </header>
-                        <p class="package-copy">{{ meta.description }}</p>
+                            <p class="package-copy">{{ package_desc }}</p>
                         <ul class="package-points" aria-label="What you get">
                             {% for point in meta.features %}
                                 <li>{{ point }}</li>
@@ -435,6 +444,48 @@
                     <div class="spec-item"><div class="spec-k">Bathrooms</div><div class="spec-v">{{ plan.bathrooms_count or '—' }}</div></div>
                     <div class="spec-item"><div class="spec-k">Levels</div><div class="spec-v">{{ plan.floors_count or '—' }}</div></div>
                     <div class="spec-item"><div class="spec-k">Parking</div><div class="spec-v">{{ plan.parking_count or '—' }}</div></div>
+                    {% if plan.living_rooms is not none %}<div class="spec-item"><div class="spec-k">Living rooms</div><div class="spec-v">{{ plan.living_rooms }}</div></div>{% endif %}
+                    {% if plan.kitchens is not none %}<div class="spec-item"><div class="spec-k">Kitchens</div><div class="spec-v">{{ plan.kitchens }}</div></div>{% endif %}
+                    {% if plan.offices is not none %}<div class="spec-item"><div class="spec-k">Offices</div><div class="spec-v">{{ plan.offices }}</div></div>{% endif %}
+                    {% if plan.terraces is not none %}<div class="spec-item"><div class="spec-k">Terraces</div><div class="spec-v">{{ plan.terraces }}</div></div>{% endif %}
+                    {% if plan.storage_rooms is not none %}<div class="spec-item"><div class="spec-k">Storage rooms</div><div class="spec-v">{{ plan.storage_rooms }}</div></div>{% endif %}
+                    {% if plan.min_plot_width or plan.min_plot_length %}
+                        <div class="spec-item">
+                            <div class="spec-k">Minimum plot</div>
+                            <div class="spec-v">
+                                {% if plan.min_plot_width and plan.min_plot_length %}
+                                    {{ plan.min_plot_width|round(2) }} m × {{ plan.min_plot_length|round(2) }} m
+                                    {% if plan.min_plot_width_ft and plan.min_plot_length_ft %}
+                                        <span class="muted"> · {{ plan.min_plot_width_ft|round(1) }} ft × {{ plan.min_plot_length_ft|round(1) }} ft</span>
+                                    {% endif %}
+                                {% elif plan.min_plot_width %}
+                                    {{ plan.min_plot_width|round(2) }} m width{% if plan.min_plot_width_ft %}<span class="muted"> · {{ plan.min_plot_width_ft|round(1) }} ft</span>{% endif %}
+                                {% else %}
+                                    {{ plan.min_plot_length|round(2) }} m length{% if plan.min_plot_length_ft %}<span class="muted"> · {{ plan.min_plot_length_ft|round(1) }} ft</span>{% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if plan.climate_compatibility %}
+                        <div class="spec-item"><div class="spec-k">Climate compatibility</div><div class="spec-v">{{ plan.climate_compatibility }}</div></div>
+                    {% endif %}
+                    {% if plan.estimated_build_time %}
+                        <div class="spec-item"><div class="spec-k">Estimated build time</div><div class="spec-v">{{ plan.estimated_build_time }}</div></div>
+                    {% endif %}
+                    {% if plan.estimated_cost_low is not none or plan.estimated_cost_high is not none %}
+                        <div class="spec-item">
+                            <div class="spec-k">Estimated cost</div>
+                            <div class="spec-v">
+                                {% if plan.estimated_cost_low is not none and plan.estimated_cost_high is not none %}
+                                    ${{ plan.estimated_cost_low|round(0)|int }}–${{ plan.estimated_cost_high|round(0)|int }} USD
+                                {% elif plan.estimated_cost_low is not none %}
+                                    From ${{ plan.estimated_cost_low|round(0)|int }} USD
+                                {% else %}
+                                    Up to ${{ plan.estimated_cost_high|round(0)|int }} USD
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
                     <div class="spec-item"><div class="spec-k">Roof</div><div class="spec-v">{{ plan.roof_type or '—' }}</div></div>
                     <div class="spec-item"><div class="spec-k">Structure</div><div class="spec-v">{{ plan.structure_type or '—' }}</div></div>
                     <div class="spec-item"><div class="spec-k">Foundation</div><div class="spec-v">{{ plan.foundation_type or '—' }}</div></div>
@@ -443,6 +494,26 @@
                     <div class="spec-item"><div class="spec-k">Ideal for</div><div class="spec-v">{{ plan.ideal_for or '—' }}</div></div>
                 </div>
             </article>
+
+            {% if plan.target_buyer or plan.budget_category or plan.architectural_style or plan.key_selling_point or plan.problems_this_plan_solves %}
+            <article class="plan-panel">
+                <div class="plan-panel__head">
+                    <p class="eyebrow">Marketing summary</p>
+                    <h2>Who this plan is for</h2>
+                </div>
+                <div class="spec-grid">
+                    {% if plan.target_buyer %}<div class="spec-item"><div class="spec-k">Target buyer</div><div class="spec-v">{{ plan.target_buyer }}</div></div>{% endif %}
+                    {% if plan.budget_category %}<div class="spec-item"><div class="spec-k">Budget category</div><div class="spec-v">{{ plan.budget_category }}</div></div>{% endif %}
+                    {% if plan.architectural_style %}<div class="spec-item"><div class="spec-k">Architectural style</div><div class="spec-v">{{ plan.architectural_style }}</div></div>{% endif %}
+                </div>
+                {% if plan.key_selling_point %}
+                    <p class="muted"><strong>Key selling point:</strong> {{ plan.key_selling_point }}</p>
+                {% endif %}
+                {% if plan.problems_this_plan_solves %}
+                    <div class="rich-text">{{ plan.problems_this_plan_solves|default('', true) | replace('\n','<br>') | safe }}</div>
+                {% endif %}
+            </article>
+            {% endif %}
 
             <article class="plan-panel">
                 <div class="plan-panel__head">
@@ -556,7 +627,7 @@
             <ul>
                 <li>Last update · {{ plan.updated_at.strftime('%B %d, %Y') if plan.updated_at else 'To confirm' }}</li>
                 <li>First publication · {{ plan.created_at.strftime('%B %d, %Y') if plan.created_at else 'To confirm' }}</li>
-                <li>File reference · {{ plan.reference_code }}</li>
+                <li>File reference · {{ plan_ref }}</li>
             </ul>
         </section>
 

@@ -163,6 +163,41 @@ class HousePlan(db.Model):
     lifestyle_suitability = db.Column(db.Text)
     customization_potential = db.Column(db.Text)
 
+    # Professional reference system (migration 0017)
+    public_plan_code = db.Column(db.String(20), unique=True, nullable=True, index=True)  # MFP-XXX format
+    
+    # Marketing & positioning (migration 0017)
+    target_buyer = db.Column(db.String(100), nullable=True)  # e.g., "First-time homebuyer", "Growing families"
+    budget_category = db.Column(db.String(50), nullable=True)  # e.g., "Affordable", "Mid-range", "Premium"
+    key_selling_point = db.Column(db.Text, nullable=True)  # Main benefit/hook for marketing
+    problems_this_plan_solves = db.Column(db.Text, nullable=True)  # Pain points addressed
+    architectural_style = db.Column(db.String(100), nullable=True)  # e.g., "Modern", "Traditional", "Contemporary"
+    
+    # Structured room specifications (migration 0017)
+    living_rooms = db.Column(db.Integer, nullable=True)
+    kitchens = db.Column(db.Integer, nullable=True)
+    offices = db.Column(db.Integer, nullable=True)
+    terraces = db.Column(db.Integer, nullable=True)
+    storage_rooms = db.Column(db.Integer, nullable=True)
+    
+    # Land requirements (migration 0017) - stored in meters
+    min_plot_width = db.Column(db.Float, nullable=True)  # Minimum plot width in meters
+    min_plot_length = db.Column(db.Float, nullable=True)  # Minimum plot length in meters
+    
+    # Construction details (migration 0017)
+    climate_compatibility = db.Column(db.String(200), nullable=True)  # e.g., "Tropical, Temperate, Arid"
+    estimated_build_time = db.Column(db.String(100), nullable=True)  # e.g., "6-9 months"
+    
+    # Cost estimation (migration 0017) - stored in USD
+    # Note: The 0017 migration adds these as Float; keep model aligned for cross-DB compatibility.
+    estimated_cost_low = db.Column(db.Float, nullable=True)  # Low-end cost estimate
+    estimated_cost_high = db.Column(db.Float, nullable=True)  # High-end cost estimate
+    
+    # Pack descriptions (migration 0017)
+    pack1_description = db.Column(db.Text, nullable=True)  # Free pack detailed description
+    pack2_description = db.Column(db.Text, nullable=True)  # PDF pack detailed description
+    pack3_description = db.Column(db.Text, nullable=True)  # CAD pack detailed description
+
     # Rich architectural characteristics (new)
     total_area_m2 = db.Column(db.Float)
     total_area_sqft = db.Column(db.Float)
@@ -529,6 +564,86 @@ class HousePlan(db.Model):
     @property
     def parking_count(self):
         return self.parking_spaces if self.parking_spaces is not None else self.garage
+
+    @property
+    def display_reference(self):
+        """Return public-facing plan code (MFP-XXX) or fallback to reference_code."""
+        return self.public_plan_code or self.reference_code
+
+    @property
+    def min_plot_area_m2(self):
+        """Calculate minimum plot area in square meters."""
+        if self.min_plot_width and self.min_plot_length:
+            return self.min_plot_width * self.min_plot_length
+        return None
+
+    @property
+    def min_plot_area_sqft(self):
+        """Calculate minimum plot area in square feet."""
+        area_m2 = self.min_plot_area_m2
+        if area_m2:
+            return self._sqft_from_m2(area_m2)
+        return None
+
+    @staticmethod
+    def _meters_to_feet(meters):
+        """Convert meters to feet."""
+        try:
+            return float(meters) * 3.28084
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _feet_to_meters(feet):
+        """Convert feet to meters."""
+        try:
+            return float(feet) / 3.28084
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def min_plot_width_ft(self):
+        """Minimum plot width in feet."""
+        if self.min_plot_width:
+            return self._meters_to_feet(self.min_plot_width)
+        return None
+
+    @property
+    def min_plot_length_ft(self):
+        """Minimum plot length in feet."""
+        if self.min_plot_length:
+            return self._meters_to_feet(self.min_plot_length)
+        return None
+
+    @property
+    def building_width_ft(self):
+        """Building width in feet."""
+        if self.building_width:
+            return self._meters_to_feet(self.building_width)
+        return None
+
+    @property
+    def building_length_ft(self):
+        """Building length in feet."""
+        if self.building_length:
+            return self._meters_to_feet(self.building_length)
+        return None
+
+    @property
+    def total_rooms_count(self):
+        """Sum of all specified rooms (optional rooms included)."""
+        count = 0
+        if self.bedrooms_count:
+            count += self.bedrooms_count
+        if self.bathrooms_count:
+            count += int(self.bathrooms_count)  # Count full bathrooms
+        if self.living_rooms:
+            count += self.living_rooms
+        if self.kitchens:
+            count += self.kitchens
+        if self.offices:
+            count += self.offices
+        return count if count > 0 else None
 
     @property
     def dimensions_summary(self):

@@ -274,7 +274,7 @@
                     <p>{{ post.linked_plan.short_description or post.linked_plan.description }}</p>
                     {% set starting_price = visible_starting_price(post.linked_plan.pricing_tiers, pack_visibility) %}
                     <div class="blog-cta__price">
-                        <span class="badge badge--outline">{{ post.linked_plan.reference_code }}</span>
+                        <span class="badge badge--outline">{{ post.linked_plan.display_reference|default(post.linked_plan.id, true) }}</span>
                         <strong>{% if starting_price %}From ${{ starting_price|round(0)|int }}{% else %}Free{% endif %}</strong>
                     </div>
                     <div class="blog-cta__actions">
@@ -314,7 +314,7 @@
                             {% endif %}
                             <h3>{{ plan.title }}</h3>
                             <p>{{ plan.short_description or plan.description|truncate(100) }}</p>
-                            <span class="badge badge--outline">{{ plan.reference_code }}</span>
+                            <span class="badge badge--outline">{{ plan.display_reference|default(plan.id, true) }}</span>
                         </a>
                     </article>
                     {% endfor %}
@@ -354,7 +354,7 @@
                     {% for plan in popular_plans %}
                     <li>
                         <a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }}</a>
-                        <span>{{ plan.reference_code }}</span>
+                        <span>{{ plan.display_reference|default(plan.id, true) }}</span>
                     </li>
                     {% endfor %}
                 </ul>

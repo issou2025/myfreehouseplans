@@ -1,6 +1,6 @@
 {% for plan in plans %}
 {% set plan_title = plan.title|default('House Plan', true) %}
-{% set plan_ref = plan.reference_code|default(plan.id, true) %}
+{% set plan_ref = plan.display_reference|default(plan.id, true) %}
 <article class="plan-card plan-card--lux" itemscope itemtype="https://schema.org/Product">
     <div class="plan-card__media" aria-hidden="true">
         {% set card_image = plan.cover_image or plan.main_image %}

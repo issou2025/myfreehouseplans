@@ -136,7 +136,7 @@
             <p class="muted"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Frequently referenced plans</p>
             <ul class="plan-chip-list">
                 {% for plan in plan_options[:3] %}
-                <li>{{ plan.reference_code }} · {{ plan.title }}</li>
+                <li>{{ plan.display_reference|default(plan.id, true) }} · {{ plan.title }}</li>
                 {% endfor %}
             </ul>
         </div>

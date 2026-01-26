@@ -11,6 +11,7 @@ This blueprint handles administrative functionality including:
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, send_file, abort, session, jsonify
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
+import re
 import os
 import traceback
 from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor, house_plan_categories
@@ -45,6 +46,70 @@ from app.utils.db_resilience import with_db_resilience, safe_db_query
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
+
+
+PUBLIC_PLAN_CODE_PATTERN = re.compile(r'^MFP-\d{3,}$', re.IGNORECASE)
+
+
+def _is_valid_public_plan_code(code: str | None) -> bool:
+    if not code:
+        return False
+    return bool(PUBLIC_PLAN_CODE_PATTERN.match(code.strip()))
+
+
+def _extract_reference_numeric(reference_code: str | None) -> str | None:
+    if not reference_code:
+        return None
+    match = re.search(r'(\d+)', reference_code)
+    if not match:
+        return None
+    return match.group(1).zfill(3)
+
+
+def _generate_public_plan_code(plan: HousePlan) -> str:
+    extracted = _extract_reference_numeric(plan.reference_code)
+    if extracted:
+        return f"MFP-{extracted}"
+    return f"MFP-{str(plan.id).zfill(3)}"
+
+
+def _assign_public_plan_code(plan: HousePlan) -> None:
+    if _is_valid_public_plan_code(plan.public_plan_code):
+        plan.public_plan_code = plan.public_plan_code.strip().upper()
+        return
+
+    candidate_codes = []
+    generated = _generate_public_plan_code(plan)
+    candidate_codes.append(generated)
+    candidate_codes.append(f"MFP-{str(plan.id).zfill(3)}")
+
+    for code in candidate_codes:
+        existing = HousePlan.query.filter_by(public_plan_code=code).first()
+        if existing and existing.id != plan.id:
+            current_app.logger.warning(
+                'Public plan code conflict for plan id=%s: %s already used by plan id=%s',
+                plan.id,
+                code,
+                existing.id,
+            )
+            continue
+        plan.public_plan_code = code
+        return
+
+    current_app.logger.warning('Public plan code could not be assigned for plan id=%s', plan.id)
+
+
+def _sync_area_units(plan: HousePlan) -> None:
+    if plan.total_area_m2 and not plan.total_area_sqft:
+        try:
+            plan.total_area_sqft = float(plan.total_area_m2) * 10.7639
+        except (TypeError, ValueError):
+            pass
+    if plan.total_area_sqft and not plan.total_area_m2:
+        try:
+            plan.total_area_m2 = float(plan.total_area_sqft) / 10.7639
+        except (TypeError, ValueError):
+            pass
 
 
 def _generate_unique_category_slug(name: str, *, exclude_category_id: int | None = None) -> str:
@@ -1694,6 +1759,33 @@ def add_plan():
             plan.lifestyle_suitability = form.lifestyle_suitability.data
             plan.customization_potential = form.customization_potential.data
 
+            plan.target_buyer = form.target_buyer.data
+            plan.budget_category = form.budget_category.data or None
+            plan.architectural_style = form.architectural_style.data
+            plan.key_selling_point = form.key_selling_point.data
+            plan.problems_this_plan_solves = form.problems_this_plan_solves.data
+
+            plan.living_rooms = form.living_rooms.data
+            plan.kitchens = form.kitchens.data
+            plan.offices = form.offices.data
+            plan.terraces = form.terraces.data
+            plan.storage_rooms = form.storage_rooms.data
+
+            plan.min_plot_width = form.min_plot_width.data
+            plan.min_plot_length = form.min_plot_length.data
+
+            plan.climate_compatibility = form.climate_compatibility.data
+            plan.estimated_build_time = form.estimated_build_time.data
+
+            plan.estimated_cost_low = form.estimated_cost_low.data
+            plan.estimated_cost_high = form.estimated_cost_high.data
+
+            plan.pack1_description = form.pack1_description.data
+            plan.pack2_description = form.pack2_description.data
+            plan.pack3_description = form.pack3_description.data
+
+            _sync_area_units(plan)
+
             if plan.total_area_sqft:
                 plan.square_feet = int(plan.total_area_sqft)
             elif plan.total_area_m2:
@@ -1734,6 +1826,8 @@ def add_plan():
         else:
             try:
                 db.session.add(plan)
+                db.session.flush()
+                _assign_public_plan_code(plan)
                 db.session.commit()
             except Exception as exc:
                 db.session.rollback()
@@ -1933,6 +2027,33 @@ def edit_plan(id):
                 plan.lifestyle_suitability = form.lifestyle_suitability.data
                 plan.customization_potential = form.customization_potential.data
 
+                plan.target_buyer = form.target_buyer.data
+                plan.budget_category = form.budget_category.data or None
+                plan.architectural_style = form.architectural_style.data
+                plan.key_selling_point = form.key_selling_point.data
+                plan.problems_this_plan_solves = form.problems_this_plan_solves.data
+
+                plan.living_rooms = form.living_rooms.data
+                plan.kitchens = form.kitchens.data
+                plan.offices = form.offices.data
+                plan.terraces = form.terraces.data
+                plan.storage_rooms = form.storage_rooms.data
+
+                plan.min_plot_width = form.min_plot_width.data
+                plan.min_plot_length = form.min_plot_length.data
+
+                plan.climate_compatibility = form.climate_compatibility.data
+                plan.estimated_build_time = form.estimated_build_time.data
+
+                plan.estimated_cost_low = form.estimated_cost_low.data
+                plan.estimated_cost_high = form.estimated_cost_high.data
+
+                plan.pack1_description = form.pack1_description.data
+                plan.pack2_description = form.pack2_description.data
+                plan.pack3_description = form.pack3_description.data
+
+                _sync_area_units(plan)
+
                 if plan.total_area_sqft:
                     plan.square_feet = int(plan.total_area_sqft)
                 elif plan.total_area_m2:
@@ -1958,6 +2079,7 @@ def edit_plan(id):
                     for category, message in diagnostics_to_flash_messages(diagnostics):
                         flash(message, category)
 
+                _assign_public_plan_code(plan)
                 plan.updated_at = datetime.utcnow()
 
                 if getattr(form, 'save_draft', None) and form.save_draft.data:

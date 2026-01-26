@@ -229,6 +229,115 @@ class HousePlanForm(FlaskForm):
     lifestyle_suitability = TextAreaField('Lifestyle suitability', validators=[Optional(), Length(max=6000)])
     customization_potential = TextAreaField('Customization potential', validators=[Optional(), Length(max=6000)])
     
+    # Professional Marketing & Positioning (Migration 0017)
+    target_buyer = StringField('Target buyer persona', validators=[
+        Optional(),
+        Length(max=100, message='Target buyer must be 100 characters or less')
+    ], description='e.g., "First-time homebuyers", "Growing families", "Retirees"')
+    
+    budget_category = SelectField(
+        'Budget category',
+        validators=[Optional()],
+        choices=[
+            ('', 'Select…'),
+            ('Affordable', 'Affordable'),
+            ('Mid-range', 'Mid-range'),
+            ('Premium', 'Premium'),
+            ('Luxury', 'Luxury'),
+        ],
+        description='Price positioning for this plan'
+    )
+    
+    architectural_style = StringField('Architectural style', validators=[
+        Optional(),
+        Length(max=100, message='Style must be 100 characters or less')
+    ], description='e.g., "Modern", "Traditional", "Contemporary", "Mediterranean"')
+    
+    key_selling_point = TextAreaField('Key selling point', validators=[
+        Optional(),
+        Length(max=500, message='Key selling point must be 500 characters or less')
+    ], description='Main benefit or hook for marketing (1-2 sentences)')
+    
+    problems_this_plan_solves = TextAreaField('Problems this plan solves', validators=[
+        Optional(),
+        Length(max=1000, message='Must be 1000 characters or less')
+    ], description='Pain points this design addresses (e.g., "Maximizes natural light in narrow lots")')
+    
+    # Structured Room Specifications (Migration 0017)
+    living_rooms = IntegerField('Living rooms', validators=[
+        Optional(),
+        NumberRange(min=0, max=5, message='Living rooms must be between 0 and 5')
+    ])
+    
+    kitchens = IntegerField('Kitchens', validators=[
+        Optional(),
+        NumberRange(min=0, max=3, message='Kitchens must be between 0 and 3')
+    ])
+    
+    offices = IntegerField('Offices / Studies', validators=[
+        Optional(),
+        NumberRange(min=0, max=5, message='Offices must be between 0 and 5')
+    ])
+    
+    terraces = IntegerField('Terraces / Patios', validators=[
+        Optional(),
+        NumberRange(min=0, max=10, message='Terraces must be between 0 and 10')
+    ])
+    
+    storage_rooms = IntegerField('Storage rooms', validators=[
+        Optional(),
+        NumberRange(min=0, max=10, message='Storage rooms must be between 0 and 10')
+    ])
+    
+    # Land Requirements (Migration 0017)
+    min_plot_width = FloatField('Minimum plot width (m)', validators=[
+        Optional(),
+        NumberRange(min=0, message='Plot width must be positive')
+    ], description='Minimum land width required for this plan')
+    
+    min_plot_length = FloatField('Minimum plot length (m)', validators=[
+        Optional(),
+        NumberRange(min=0, message='Plot length must be positive')
+    ], description='Minimum land depth required for this plan')
+    
+    # Construction Details (Migration 0017)
+    climate_compatibility = StringField('Climate compatibility', validators=[
+        Optional(),
+        Length(max=200, message='Climate compatibility must be 200 characters or less')
+    ], description='e.g., "Tropical, Temperate", "Hot & Arid", "Cold climates"')
+    
+    estimated_build_time = StringField('Estimated build time', validators=[
+        Optional(),
+        Length(max=100, message='Build time must be 100 characters or less')
+    ], description='e.g., "6-9 months", "12-18 months"')
+    
+    # Cost Estimation (Migration 0017)
+    estimated_cost_low = DecimalField('Estimated cost (low) - USD', validators=[
+        Optional(),
+        NumberRange(min=0, message='Cost estimate must be positive')
+    ], description='Low-end construction cost estimate')
+    
+    estimated_cost_high = DecimalField('Estimated cost (high) - USD', validators=[
+        Optional(),
+        NumberRange(min=0, message='Cost estimate must be positive')
+    ], description='High-end construction cost estimate')
+    
+    # Pack Descriptions (Migration 0017)
+    pack1_description = TextAreaField('Free Pack description', validators=[
+        Optional(),
+        Length(max=1000, message='Pack description must be 1000 characters or less')
+    ], description='Detailed description of what\'s included in the free pack')
+    
+    pack2_description = TextAreaField('PDF Pro Pack description', validators=[
+        Optional(),
+        Length(max=1000, message='Pack description must be 1000 characters or less')
+    ], description='Detailed description of what\'s included in the PDF Pro Pack')
+    
+    pack3_description = TextAreaField('Ultimate CAD Pack description', validators=[
+        Optional(),
+        Length(max=1000, message='Pack description must be 1000 characters or less')
+    ], description='Detailed description of what\'s included in the Ultimate CAD Pack')
+    
     # Pricing
     price_pack_1 = DecimalField('Free Pack value ($)', default=0, validators=[
         Optional(),

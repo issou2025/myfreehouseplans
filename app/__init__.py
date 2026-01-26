@@ -450,12 +450,29 @@ def create_app(config_name='default'):
     mail.init_app(app)
     ckeditor.init_app(app)
 
-    # Zero-touch bootstrap (Render-friendly): force-create tables and NEVER
-    # hard-fail startup if schema is incomplete.
-    # This is intentionally resilient, and imports models inside app_context
-    # to avoid circular import issues.
-    _force_create_tables(app)
+    # Startup DB tasks (schema patch + optional Alembic upgrade)
+    #
+    # IMPORTANT FOR PRODUCTION (Render): default is OFF.
+    # We do not run Alembic upgrades or create/alter tables at import/startup
+    # unless explicitly enabled, to avoid risky behavior in multi-worker
+    # environments and to respect strict “migration-only” production workflows.
+    enable_startup_db_tasks = os.environ.get('ENABLE_STARTUP_DB_TASKS') == '1'
+    if config_name != 'production' or enable_startup_db_tasks:
+        _force_create_tables(app)
+    else:
+        _safe_log(
+            app,
+            'info',
+            'Startup DB tasks are disabled in production. '
+            'Use Render releaseCommand (flask db upgrade) or set ENABLE_STARTUP_DB_TASKS=1 for emergency override.',
+        )
 
+    # Register Jinja2 filters for unit conversions
+    try:
+        from app.utils.unit_converter import register_filters
+        register_filters(app)
+    except Exception as filter_exc:
+        app.logger.warning(f'Unit converter filter registration failed: {filter_exc}')
     
     # Register blueprints
     register_blueprints(app)

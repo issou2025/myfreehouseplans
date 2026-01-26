@@ -147,7 +147,7 @@
         <p class="catalog-suggestions__title">You just explored this series. Try these as well:</p>
         <ul>
             {% for plan in suggestion_targets %}
-            <li><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }} · Ref {{ plan.reference_code }}</a></li>
+            <li><a href="{{ url_for('main.pack_detail', slug=plan.slug) }}">{{ plan.title }} · Ref {{ plan.display_reference|default(plan.id, true) }}</a></li>
             {% endfor %}
         </ul>
         <p class="microcopy">Each click opens a fresh trail of similar plans.</p>
