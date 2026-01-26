@@ -47,6 +47,38 @@ def get_missing_tables() -> set:
         return set()
 
 
+def get_missing_columns_by_table() -> dict[str, list[str]]:
+    """Return missing columns for each existing model table.
+
+    Compares SQLAlchemy metadata (models) with the live database schema.
+    This is non-destructive and intended for diagnostics/logging.
+    """
+    try:
+        # Import models to populate metadata
+        import app.models  # noqa: F401
+
+        inspector = inspect(db.engine)
+        existing_tables = set(inspector.get_table_names())
+
+        missing_by_table: dict[str, list[str]] = {}
+        for table_name, table in db.metadata.tables.items():
+            if table_name not in existing_tables:
+                continue
+            expected_cols = {c.name for c in table.columns}
+            actual_cols = {c['name'] for c in inspector.get_columns(table_name)}
+            missing_cols = sorted(expected_cols - actual_cols)
+            if missing_cols:
+                missing_by_table[table_name] = missing_cols
+        return missing_by_table
+    except Exception as exc:
+        current_app.logger.error(
+            'Failed to inspect database columns: %s',
+            exc,
+            exc_info=True,
+        )
+        return {}
+
+
 def verify_alembic_version_table() -> bool:
     """
     Check if alembic_version table exists.
@@ -185,6 +217,22 @@ def intelligent_db_init(app) -> None:
         
         if not missing_tables:
             current_app.logger.info('✓ All required database tables exist')
+
+            # Log column drift (do not crash). Missing columns frequently
+            # manifest as SQLAlchemy OperationalError (sqlalche.me/e/20/f405).
+            missing_cols = get_missing_columns_by_table()
+            if missing_cols:
+                preview = ', '.join(
+                    f"{t}({len(cols)})" for t, cols in sorted(missing_cols.items())
+                )
+                current_app.logger.warning(
+                    '⚠ Database schema drift detected (missing columns). Tables affected: %s. '
+                    'Run: flask db upgrade',
+                    preview,
+                )
+                # Log a compact per-table list (kept short to avoid noisy logs).
+                for table_name, cols in sorted(missing_cols.items()):
+                    current_app.logger.warning('  - %s missing columns: %s', table_name, ', '.join(cols))
             
             # Verify alembic state if migrations are initialized
             if verify_alembic_version_table():

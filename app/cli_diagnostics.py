@@ -102,6 +102,27 @@ def diagnose_db_command():
             print("    releaseCommand: flask db upgrade\n")
         else:
             print("\n  ✓ All required tables exist")
+
+        # Column-level drift check (helps diagnose SQLAlchemy f405 / UndefinedColumn)
+        print("\n🧱 Column Drift (missing columns):")
+        print("-" * 70)
+        tables_to_check = sorted(required_tables & existing_tables)
+        missing_any = False
+
+        for table_name in tables_to_check:
+            try:
+                expected_cols = {c.name for c in db.metadata.tables[table_name].columns}
+                actual_cols = {c['name'] for c in inspector.get_columns(table_name)}
+                missing_cols = sorted(expected_cols - actual_cols)
+                if missing_cols:
+                    missing_any = True
+                    print(f"  ❌ {table_name}: missing {len(missing_cols)} column(s)")
+                    print(f"     - {', '.join(missing_cols)}")
+            except Exception as exc:
+                print(f"  ⚠ Could not inspect columns for {table_name}: {exc}")
+
+        if not missing_any:
+            print("  ✓ No missing columns detected for model tables")
     except Exception as exc:
         print(f"  ❌ Schema inspection failed: {exc}")
         import traceback
