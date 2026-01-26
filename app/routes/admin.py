@@ -43,6 +43,7 @@ from app.utils.pack_visibility import load_pack_visibility, save_pack_visibility
 from app.models import PlanFAQ
 from werkzeug.security import generate_password_hash
 from app.utils.db_resilience import with_db_resilience, safe_db_query
+from sqlalchemy.orm import load_only
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -334,16 +335,29 @@ def dashboard():
 
     try:
         # Get statistics
-        total_plans = HousePlan.query.count()
-        published_plans = HousePlan.query.filter_by(is_published=True).count()
+        total_plans = db.session.query(func.count(HousePlan.id)).scalar() or 0
+        published_plans = (
+            db.session.query(func.count(HousePlan.id))
+            .filter(HousePlan.is_published.is_(True))
+            .scalar()
+            or 0
+        )
         total_orders = Order.query.count()
         completed_orders = Order.query.filter_by(status='completed').count()
         total_users = User.query.count()
         total_categories = Category.query.count()
-        free_plans = HousePlan.query.filter(HousePlan.free_pdf_file.isnot(None)).count()
-        paid_plans = HousePlan.query.filter(
-            or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None))
-        ).count()
+        free_plans = (
+            db.session.query(func.count(HousePlan.id))
+            .filter(HousePlan.free_pdf_file.isnot(None))
+            .scalar()
+            or 0
+        )
+        paid_plans = (
+            db.session.query(func.count(HousePlan.id))
+            .filter(or_(HousePlan.gumroad_pack_2_url.isnot(None), HousePlan.gumroad_pack_3_url.isnot(None)))
+            .scalar()
+            or 0
+        )
 
         # Blog (non-fatal): if blog_posts table is missing, do not crash the dashboard.
         blog_posts_total = 0
@@ -365,8 +379,45 @@ def dashboard():
         recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
 
         # Popular plans
-        popular_plans = HousePlan.query.order_by(HousePlan.views_count.desc()).limit(5).all()
-        plan_table = HousePlan.query.order_by(HousePlan.created_at.desc()).all()
+        popular_plans = (
+            HousePlan.query.options(
+                load_only(
+                    HousePlan.id,
+                    HousePlan.title,
+                    HousePlan.slug,
+                    HousePlan.views_count,
+                    HousePlan.created_at,
+                    HousePlan.updated_at,
+                    HousePlan.is_published,
+                )
+            )
+            .order_by(HousePlan.views_count.desc())
+            .limit(5)
+            .all()
+        )
+        plan_table = (
+            HousePlan.query.options(
+                load_only(
+                    HousePlan.id,
+                    HousePlan.title,
+                    HousePlan.slug,
+                    HousePlan.reference_code,
+                    HousePlan.created_at,
+                    HousePlan.updated_at,
+                    HousePlan.is_published,
+                    HousePlan.views_count,
+                    HousePlan.free_pdf_file,
+                    HousePlan.gumroad_pack_2_url,
+                    HousePlan.gumroad_pack_3_url,
+                    HousePlan.price_pack_1,
+                    HousePlan.price_pack_2,
+                    HousePlan.price_pack_3,
+                    HousePlan.created_by_id,
+                )
+            )
+            .order_by(HousePlan.created_at.desc())
+            .all()
+        )
         open_statuses = [ContactMessage.STATUS_NEW, ContactMessage.STATUS_IN_PROGRESS]
         inbox_counts = {
             'total': ContactMessage.query.count(),
@@ -1346,6 +1397,28 @@ def plans():
         else:
             query = query.order_by(HousePlan.created_at.desc())
 
+        # Avoid selecting every mapped column (production schema drift safety).
+        # Load only what the list template uses.
+        query = query.options(
+            load_only(
+                HousePlan.id,
+                HousePlan.title,
+                HousePlan.slug,
+                HousePlan.reference_code,
+                HousePlan.is_published,
+                HousePlan.views_count,
+                HousePlan.updated_at,
+                HousePlan.created_at,
+                HousePlan.free_pdf_file,
+                HousePlan.gumroad_pack_2_url,
+                HousePlan.gumroad_pack_3_url,
+                HousePlan.price_pack_1,
+                HousePlan.price_pack_2,
+                HousePlan.price_pack_3,
+                HousePlan.created_by_id,
+            )
+        )
+
         plans = query.paginate(page=page, per_page=per_page, error_out=False)
 
         filters = {
@@ -1358,7 +1431,7 @@ def plans():
         }
 
         categories = Category.query.order_by(Category.name.asc()).all()
-        stats_query = HousePlan.query
+        stats_query = HousePlan.query.with_entities(HousePlan.id)
         if current_user.role == 'staff':
             stats_query = stats_query.filter(
                 or_(

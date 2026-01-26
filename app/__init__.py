@@ -263,8 +263,57 @@ def _force_create_tables(app) -> None:
                         {'admin_id': int(admin_id)},
                     )
 
+            # Professional plan fields (safe additive only).
+            # This is a production safety net for cases where Alembic migrations did
+            # not run (or ran against the wrong database). It keeps admin pages from
+            # crashing with psycopg2.errors.UndefinedColumn (sqlalche.me/e/20/f405).
+            if 'house_plans' in tables:
+                professional_columns = {
+                    # 0017_professional_plan_fields
+                    'public_plan_code': 'VARCHAR(20)',
+                    'target_buyer': 'VARCHAR(200)',
+                    'budget_category': 'VARCHAR(100)',
+                    'key_selling_point': 'VARCHAR(500)',
+                    'problems_this_plan_solves': 'TEXT',
+                    'living_rooms': 'INTEGER',
+                    'kitchens': 'INTEGER',
+                    'offices': 'INTEGER',
+                    'terraces': 'INTEGER',
+                    'storage_rooms': 'INTEGER',
+                    'min_plot_width': 'DOUBLE PRECISION',
+                    'min_plot_length': 'DOUBLE PRECISION',
+                    'climate_compatibility': 'VARCHAR(300)',
+                    'estimated_build_time': 'VARCHAR(150)',
+                    'estimated_cost_low': 'DOUBLE PRECISION',
+                    'estimated_cost_high': 'DOUBLE PRECISION',
+                    'pack1_description': 'TEXT',
+                    'pack2_description': 'TEXT',
+                    'pack3_description': 'TEXT',
+                    'architectural_style': 'VARCHAR(150)',
+                }
+
+                for column_name, column_type in professional_columns.items():
+                    if _has_column('house_plans', column_name):
+                        continue
+                    if dialect == 'postgresql':
+                        db.session.execute(
+                            text(f"ALTER TABLE house_plans ADD COLUMN IF NOT EXISTS {column_name} {column_type}")
+                        )
+                    else:
+                        db.session.execute(text(f"ALTER TABLE house_plans ADD COLUMN {column_name} {column_type}"))
+
+                # Match the migration intent: unique index on public_plan_code.
+                # Note: UNIQUE allows multiple NULLs in Postgres and SQLite.
+                if _has_column('house_plans', 'public_plan_code'):
+                    db.session.execute(
+                        text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS ix_house_plans_public_plan_code "
+                            "ON house_plans (public_plan_code)"
+                        )
+                    )
+
             db.session.commit()
-            _safe_log(app, 'info', '✓ Startup schema patch complete (role/created_by_id)')
+            _safe_log(app, 'info', '✓ Startup schema patch complete (role/created_by_id/professional fields)')
         except Exception as exc:
             db.session.rollback()
             _safe_log(app, 'error', '✗ Startup schema patch failed (continuing): %s', exc, exc_info=True)
