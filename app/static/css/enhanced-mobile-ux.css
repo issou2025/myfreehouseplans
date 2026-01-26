@@ -491,6 +491,20 @@
         overflow-y: auto;
         transition: right 0.4s var(--transition-smooth);
         z-index: 1000;
+        color: #1a1a1a; /* Force dark text */
+    }
+    
+    /* Force dark text color for all nav children */
+    .nav * {
+        color: #1a1a1a;
+    }
+    
+    /* Specific overrides for links and headings */
+    .nav a,
+    .nav span,
+    .nav label,
+    .nav option {
+        color: #1a1a1a !important;
     }
     
     .nav.is-open {
@@ -522,7 +536,7 @@
         gap: var(--space-md);
         padding: var(--space-md);
         border-radius: var(--radius-medium);
-        color: var(--color-text);
+        color: #1a1a1a;
         text-decoration: none;
         font-weight: 500;
         transition: all 0.2s var(--transition-smooth);
@@ -556,7 +570,7 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        color: var(--color-muted);
+        color: #666666;
         margin-bottom: var(--space-sm);
         padding-left: var(--space-md);
     }
@@ -565,6 +579,89 @@
         display: flex;
         flex-direction: column;
         gap: var(--space-xs);
+    }
+    
+    /* Mobile-specific Tools section styling */
+    .nav__select {
+        background: rgba(91, 141, 238, 0.08);
+        border-radius: var(--radius-medium);
+        padding: var(--space-md);
+        margin-bottom: var(--space-xs);
+    }
+    
+    .nav__select i {
+        color: var(--color-primary);
+        font-size: 1.25rem;
+    }
+    
+    .nav__select-label {
+        color: #1a1a1a;
+        font-weight: 600;
+    }
+    
+    .nav__select-control {
+        color: #1a1a1a;
+        background: white;
+        border: 2px solid rgba(91, 141, 238, 0.2);
+        padding: var(--space-sm);
+        border-radius: var(--radius-soft);
+        font-size: 1rem;
+        font-weight: 500;
+        width: 100%;
+        margin-top: var(--space-xs);
+    }
+    
+    .nav__select-control option {
+        color: #1a1a1a;
+        background: white;
+        padding: var(--space-sm);
+    }
+    
+    /* Mobile tools links styling */
+    .nav__tools-links {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+    
+    /* Nav CTA section */
+    .nav__cta {
+        padding-top: var(--space-lg);
+        margin-top: var(--space-lg);
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav__cta .btn {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: var(--space-md);
+        color: white !important; /* Buttons should have white text */
+    }
+    
+    .nav__cta .btn * {
+        color: white !important; /* All button children too */
+    }
+    
+    .nav__contact {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: var(--space-md);
+        background: rgba(78, 203, 113, 0.08);
+        border-radius: var(--radius-medium);
+        color: #1a1a1a !important;
+        text-decoration: none;
+        font-size: 0.938rem;
+        font-weight: 500;
+    }
+    
+    .nav__contact * {
+        color: #1a1a1a !important;
+    }
+    
+    .nav__contact i {
+        color: var(--color-success-soft) !important;
+        font-size: 1.125rem;
     }
 }
 

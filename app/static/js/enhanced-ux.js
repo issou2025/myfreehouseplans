@@ -93,6 +93,19 @@
     });
     
     // =====================================================
+    // 🔽 TOOLS DROPDOWN NAVIGATION
+    // =====================================================
+    const toolsSpinner = document.querySelector('[data-tools-spinner]');
+    if (toolsSpinner instanceof HTMLSelectElement) {
+        toolsSpinner.addEventListener('change', function() {
+            const target = toolsSpinner.value;
+            if (target) {
+                window.location.href = target;
+            }
+        });
+    }
+    
+    // =====================================================
     // 🎭 INTERSECTION OBSERVER - REVEAL ON SCROLL
     // =====================================================
     const observerOptions = {
