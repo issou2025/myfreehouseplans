@@ -377,66 +377,6 @@
             });
         })();
     </script>
-    <script>
-        // Mobile navigation with slide-in menu
-        (function(){
-            const btn = document.querySelector('.nav-toggle');
-            const nav = document.getElementById('primary-navigation');
-            const overlay = document.getElementById('nav-overlay');
-            
-            if(!btn || !nav || !overlay) return;
-            
-            function openMenu() {
-                nav.classList.add('is-open');
-                overlay.classList.add('is-visible');
-                btn.setAttribute('aria-expanded', 'true');
-                document.body.style.overflow = 'hidden';
-            }
-            
-            function closeMenu() {
-                nav.classList.remove('is-open');
-                overlay.classList.remove('is-visible');
-                btn.setAttribute('aria-expanded', 'false');
-                document.body.style.overflow = '';
-            }
-            
-            // Toggle menu
-            btn.addEventListener('click', function(){
-                const isOpen = nav.classList.contains('is-open');
-                if(isOpen) {
-                    closeMenu();
-                } else {
-                    openMenu();
-                }
-            });
-            
-            // Close on overlay click
-            overlay.addEventListener('click', closeMenu);
-            
-            // Close on nav link click (mobile)
-            nav.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', function() {
-                    if(window.innerWidth < 960) {
-                        closeMenu();
-                    }
-                });
-            });
-            
-            // Close on escape key
-            document.addEventListener('keydown', function(e) {
-                if(e.key === 'Escape' && nav.classList.contains('is-open')) {
-                    closeMenu();
-                }
-            });
-            
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                if(window.innerWidth >= 960) {
-                    closeMenu();
-                }
-            });
-        })();
-    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

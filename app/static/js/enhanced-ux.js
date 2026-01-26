@@ -33,8 +33,8 @@
     // 📱 ENHANCED MOBILE NAVIGATION
     // =====================================================
     const navToggle = document.querySelector('.nav-toggle');
-    const nav = document.querySelector('.nav');
-    const navOverlay = document.querySelector('.nav-overlay');
+    const nav = document.getElementById('primary-navigation') || document.querySelector('.nav');
+    const navOverlay = document.getElementById('nav-overlay') || document.querySelector('.nav-overlay');
     const body = document.body;
     
     function openNav() {
@@ -94,6 +94,13 @@
     // Close on escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && nav && nav.classList.contains('is-open')) {
+            closeNav();
+        }
+    });
+
+    // Ensure nav is closed when switching to desktop layout
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 960) {
             closeNav();
         }
     });
