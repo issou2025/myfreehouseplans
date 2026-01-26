@@ -47,6 +47,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced-mobile-ux.css') }}">
     {% block extra_css %}{% endblock %}
     
     {# Structured Data #}
@@ -366,6 +367,7 @@
 
     {# JavaScript #}
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/enhanced-ux.js') }}"></script>
     <script>
         // PWA-lite: register service worker (root scope)
         (function(){
