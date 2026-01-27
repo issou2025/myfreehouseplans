@@ -42,6 +42,11 @@
         </div>
     </header>
 
+    <section class="admin-motivation" aria-label="Daily motivation">
+        <div class="admin-motivation__badge">Daily Motivation</div>
+        <p class="admin-motivation__quote" id="adminMotivationQuote">Issoufou, every small action today moves the studio forward.</p>
+    </section>
+
     <div class="admin-toolbar" role="region" aria-label="Quick actions">
         <a class="btn btn-primary" href="{{ url_for('admin.add_plan') }}">Add plan</a>
         <a class="btn btn-soft" href="{{ url_for('admin.plans') }}">Open plans</a>
@@ -429,4 +434,8 @@
         </section>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin-motivation.js') }}"></script>
 {% endblock %}

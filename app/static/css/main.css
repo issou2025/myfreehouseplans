@@ -5864,6 +5864,37 @@ input[type="file"] {
 	min-height: 100vh;
 }
 
+.admin-motivation {
+	margin: 18px 0 24px;
+	padding: 16px 18px;
+	border-radius: 16px;
+	border: 1px solid rgba(79, 70, 229, 0.18);
+	background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.12));
+	box-shadow: 0 14px 30px rgba(37, 99, 235, 0.08);
+	display: grid;
+	gap: 8px;
+}
+
+.admin-motivation__badge {
+	font-size: 0.85rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #4338ca;
+}
+
+.admin-motivation__quote {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.5;
+	color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+	.admin-motivation { padding: 18px 22px; }
+	.admin-motivation__quote { font-size: 1.05rem; }
+}
+
 @media (min-width: 768px) {
 	.admin-shell { padding-bottom: 48px; }
 }
