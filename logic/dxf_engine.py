@@ -35,6 +35,46 @@ def _norm_layer(layer: str | None) -> str:
     return (layer or '').strip().upper()
 
 
+def identify_layer_category(layer_name: str | None) -> str | None:
+    """Identifie une catégorie d'ingénierie à partir d'un nom de couche.
+
+    Problème réel:
+    - Dans les DXF, les couches ne s'appellent presque jamais exactement "MURS"/"DALLES".
+      On trouve plutôt: A-WALL, WALLS_EXT, DALLE_RDC, SLAB-01, BEAM, SEMELLE, etc.
+
+    Stratégie:
+    - Matching par mots-clés (inclusion) en MAJUSCULE.
+    - Retourne une clé canonique (ex: "MURS", "DALLES", ...) ou None.
+    """
+
+    name = _norm_layer(layer_name)
+    if not name:
+        return None
+
+    # Mapping "catégorie canonique" -> liste de mots clés possibles.
+    # NB: on privilégie des tokens courts mais discriminants.
+    keywords: dict[str, list[str]] = {
+        # Linéaires
+        'MURS': ['MUR', 'WALL', 'A-WALL', 'A_WALL', 'WALLS', 'CLOISON', 'CLSN'],
+        'FONDATIONS': ['FOND', 'FOUND', 'FOOT', 'FOOTING', 'SEMELLE', 'SML', 'RADIER'],
+        'POUTRES': ['POUTRE', 'BEAM', 'PTRL', 'LINTEAU'],
+        # Surfaces
+        'DALLES': ['DALLE', 'SLAB', 'PLANCHER', 'FLOOR', 'DALLAGE'],
+        'CHAPE': ['CHAPE', 'SCREED'],
+        'CARRELAGE': ['CARREL', 'TILE', 'FAIENCE', 'REVET', 'FINISH'],
+        # Unitaires (souvent représentés par blocs)
+        'POTEAUX': ['POTEAU', 'COLUMN', 'COLONNE', 'PILIER'],
+        'MENUISERIES': ['MENUIS', 'DOOR', 'PORTE', 'WINDOW', 'FEN', 'BAIE', 'VITR'],
+        'SANITAIRES': ['SANITA', 'WC', 'LAVABO', 'SINK', 'BATH', 'DOUCHE'],
+    }
+
+    for category, keys in keywords.items():
+        for k in keys:
+            if k in name:
+                return category
+    return None
+
+
 def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     dx = b[0] - a[0]
     dy = b[1] - a[1]
@@ -247,6 +287,221 @@ def _lwpolyline_length_and_points(entity) -> tuple[float, List[tuple[float, floa
     return length, flat_points
 
 
+def _polyline_points_2d(entity) -> list[tuple[float, float]]:
+    """Extrait des points XY d'une POLYLINE (ancienne entité DXF) en 2D.
+
+    Beaucoup de fichiers AutoCAD utilisent encore POLYLINE au lieu de LWPOLYLINE.
+    On ne gère ici que les sommets 2D (x,y).
+    """
+
+    pts: list[tuple[float, float]] = []
+    try:
+        for v in entity.vertices():
+            loc = v.dxf.location
+            pts.append((float(loc.x), float(loc.y)))
+    except Exception:
+        return []
+    return pts
+
+
+def _polyline_is_closed(entity, pts: Sequence[tuple[float, float]], *, tol_units: float) -> bool:
+    """Détermine si une polyline doit être considérée fermée.
+
+    Cas réel:
+    - Certains DXF ont des contours "presque" fermés (dernier point proche du premier)
+      mais le flag closed n'est pas positionné.
+
+    Règle:
+    - Si l'entité est explicitement fermée -> True.
+    - Sinon, si distance(first,last) <= tol_units -> True.
+    """
+
+    try:
+        if bool(getattr(entity, 'closed', False)):
+            return True
+    except Exception:
+        pass
+    if len(pts) < 3:
+        return False
+    return _distance(pts[0], pts[-1]) <= max(0.0, float(tol_units))
+
+
+def _close_ring(points: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
+    if not points:
+        return []
+    pts = list(points)
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])
+    return pts
+
+
+def _transform_point_2d(
+    p: tuple[float, float],
+    *,
+    insert: tuple[float, float],
+    rotation_deg: float,
+    sx: float,
+    sy: float,
+) -> tuple[float, float]:
+    """Applique une transformation 2D de bloc INSERT sur un point.
+
+    Hypothèse (pragmatique):
+    - On traite en 2D (plan XY). C'est suffisant pour des plans architecturaux.
+    - On applique: mise à l'échelle (sx,sy) -> rotation -> translation (insert).
+    """
+
+    x, y = p
+    x *= sx
+    y *= sy
+
+    a = float(rotation_deg) * pi / 180.0
+    ca = cos(a)
+    sa = sin(a)
+    xr = x * ca - y * sa
+    yr = x * sa + y * ca
+
+    return (xr + insert[0], yr + insert[1])
+
+
+def _iter_entities_with_blocks(msp, doc, *, max_depth: int = 2) -> Iterable[tuple[object, str]]:
+    """Itère sur les entités du modelspace + entités contenues dans des INSERT.
+
+    Pourquoi:
+    - Beaucoup de DXF encapsulent les murs/dalles dans des blocs (INSERT).
+      Si on ne "déplie" pas les blocs, on voit des INSERT mais pas la géométrie.
+
+    Sortie:
+    - tuples (entity_like, effective_layer_name)
+    """
+
+    def walk(entity, depth: int) -> Iterable[tuple[object, str]]:
+        layer_name = getattr(entity.dxf, 'layer', None)
+        etype = entity.dxftype()
+        if etype != 'INSERT':
+            yield (entity, layer_name)
+            return
+
+        # INSERT: on émet aussi l'INSERT lui-même (utile pour comptage),
+        # puis on parcourt le contenu du block.
+        yield (entity, layer_name)
+
+        if depth >= max_depth:
+            return
+
+        try:
+            block_name = entity.dxf.name
+            block = doc.blocks.get(block_name)
+        except Exception:
+            return
+
+        try:
+            ins_pt = entity.dxf.insert
+            insert_xy = (float(ins_pt.x), float(ins_pt.y))
+        except Exception:
+            insert_xy = (0.0, 0.0)
+
+        rot = float(getattr(entity.dxf, 'rotation', 0.0) or 0.0)
+        sx = float(getattr(entity.dxf, 'xscale', 1.0) or 1.0)
+        sy = float(getattr(entity.dxf, 'yscale', 1.0) or 1.0)
+
+        for child in block:
+            ctype = child.dxftype()
+            child_layer = getattr(child.dxf, 'layer', None)
+            eff_layer = child_layer or layer_name
+
+            if ctype == 'INSERT':
+                # INSERT imbriqué: on garde les transforms du child (pragmatique)
+                # mais on applique au moins la visite récursive.
+                yield from walk(child, depth + 1)
+                continue
+
+            # On wrappe l'entité "comme si" elle était en world coords.
+            # Pour la robustesse, on transforme seulement les types supportés.
+            try:
+                if ctype == 'LINE':
+                    s = (float(child.dxf.start.x), float(child.dxf.start.y))
+                    e = (float(child.dxf.end.x), float(child.dxf.end.y))
+                    ws = _transform_point_2d(s, insert=insert_xy, rotation_deg=rot, sx=sx, sy=sy)
+                    we = _transform_point_2d(e, insert=insert_xy, rotation_deg=rot, sx=sx, sy=sy)
+
+                    class _LineLike:
+                        def __init__(self, start, end, layer):
+                            self._start = start
+                            self._end = end
+                            self.dxf = type('dxf', (), {})()
+                            self.dxf.layer = layer
+                            self.dxf.start = type('p', (), {'x': start[0], 'y': start[1]})()
+                            self.dxf.end = type('p', (), {'x': end[0], 'y': end[1]})()
+
+                        def dxftype(self):
+                            return 'LINE'
+
+                    yield (_LineLike(ws, we, eff_layer), eff_layer)
+                    continue
+
+                if ctype == 'LWPOLYLINE':
+                    raw = list(child.get_points('xyb'))
+
+                    class _LWLike:
+                        def __init__(self, pts, closed, layer):
+                            self._pts = pts
+                            self.closed = closed
+                            self.dxf = type('dxf', (), {})()
+                            self.dxf.layer = layer
+
+                        def dxftype(self):
+                            return 'LWPOLYLINE'
+
+                        def get_points(self, fmt):
+                            return self._pts
+
+                    # Transforme chaque point; on garde bulge tel quel (arc intrinsèque)
+                    # NB: en cas de scale non uniforme, l'arc n'est plus un cercle.
+                    # Ici on accepte une approximation via échantillonnage dans _lwpolyline...
+                    tpts = []
+                    for x, y, b in raw:
+                        tx, ty = _transform_point_2d((float(x), float(y)), insert=insert_xy, rotation_deg=rot, sx=sx, sy=sy)
+                        tpts.append((tx, ty, float(b or 0.0)))
+                    yield (_LWLike(tpts, bool(getattr(child, 'closed', False)), eff_layer), eff_layer)
+                    continue
+
+                if ctype == 'ARC':
+                    # Si scale non uniforme, on échantillonne l'arc comme polyline.
+                    center = (float(child.dxf.center.x), float(child.dxf.center.y))
+                    radius = float(child.dxf.radius)
+                    a1 = float(child.dxf.start_angle) * pi / 180.0
+                    a2 = float(child.dxf.end_angle) * pi / 180.0
+
+                    pts = _sample_arc_points(center, radius, a1, a2, 1)
+                    tpts = [
+                        _transform_point_2d(p, insert=insert_xy, rotation_deg=rot, sx=sx, sy=sy)
+                        for p in pts
+                    ]
+
+                    class _PolyAsLW:
+                        def __init__(self, pts, layer):
+                            self._pts = [(p[0], p[1], 0.0) for p in pts]
+                            self.closed = False
+                            self.dxf = type('dxf', (), {})()
+                            self.dxf.layer = layer
+
+                        def dxftype(self):
+                            return 'LWPOLYLINE'
+
+                        def get_points(self, fmt):
+                            return self._pts
+
+                    yield (_PolyAsLW(tpts, eff_layer), eff_layer)
+                    continue
+
+            except Exception:
+                # Si transformation échoue, on ignore l'entité du bloc.
+                continue
+
+    for ent in msp:
+        yield from walk(ent, 0)
+
+
 def _line_length(entity) -> float:
     start = (float(entity.dxf.start.x), float(entity.dxf.start.y))
     end = (float(entity.dxf.end.x), float(entity.dxf.end.y))
@@ -272,6 +527,7 @@ def _arc_length(entity) -> float:
 class DXFProcessor:
     """Processeur DXF principal."""
 
+    # Clés canoniques (utilisées dans les sorties)
     linear_layers = ('MURS', 'FONDATIONS', 'POUTRES')
     surface_layers = ('DALLES', 'CHAPE', 'CARRELAGE')
     unit_layers = ('POTEAUX', 'MENUISERIES', 'SANITAIRES')
@@ -279,7 +535,14 @@ class DXFProcessor:
     def __init__(self) -> None:
         self.diagnostics: list[TakeoffDiagnostic] = []
 
-    def extract_data(self, filepath: str | Path, scale_factor: float, *, wall_height_m: float = 2.8) -> pd.DataFrame:
+    def extract_data(
+        self,
+        filepath: str | Path,
+        scale_factor: float,
+        *,
+        wall_height_m: float = 2.8,
+        debug_layers: bool = False,
+    ) -> pd.DataFrame:
         """Extrait les données de métré d'un DXF.
 
         Params:
@@ -305,6 +568,29 @@ class DXFProcessor:
         doc = ezdxf.readfile(str(path))
         msp = doc.modelspace()
 
+        # Hint d'unité DXF ($INSUNITS) pour diagnostiquer les mauvaises échelles.
+        # https://help.autodesk.com/view/OARX/2024/ENU/?guid=OARX-Variable_INSUNITS
+        try:
+            insunits = doc.header.get('$INSUNITS')
+            ins_map = {
+                0: ('Unitless', None),
+                1: ('Inches', 0.0254),
+                2: ('Feet', 0.3048),
+                4: ('Millimeters', 0.001),
+                5: ('Centimeters', 0.01),
+                6: ('Meters', 1.0),
+            }
+            if insunits in ins_map and ins_map[insunits][1] is not None:
+                label, suggested = ins_map[insunits]
+                self.diagnostics.append(
+                    TakeoffDiagnostic(
+                        'info',
+                        f"DXF INSUNITS={insunits} ({label}). Échelle conseillée ≈ {suggested} m/unité.",
+                    )
+                )
+        except Exception:
+            pass
+
         lengths_m: dict[str, float] = {layer: 0.0 for layer in self.linear_layers}
         areas_m2: dict[str, float] = {layer: 0.0 for layer in self.surface_layers}
         blocks_count: dict[tuple[str, str], int] = {}
@@ -312,74 +598,132 @@ class DXFProcessor:
         # Pour la déduction des ouvertures: on collecte les blocs "porte/fenêtre"
         openings_area_m2 = 0.0
 
-        seen_layers: set[str] = set()
+        # Tolérance de fermeture (en unités du dessin).
+        # On se donne 5 mm par défaut dans le monde réel, converti vers unités du dessin.
+        # Exemple: si le DXF est en mm (scale=0.001), tol_units=5.
+        tol_units = 0.005 / float(scale_factor) if float(scale_factor) > 0 else 0.0
+        tol_units = max(1e-6, min(tol_units, 100.0))
 
-        for e in msp:
-            layer = _norm_layer(getattr(e.dxf, 'layer', None))
-            if layer:
-                seen_layers.add(layer)
+        # Liste des couches (debug) : utile pour vérifier que le DXF contient ce qu'on croit.
+        try:
+            all_layers = [str(l.dxf.name) for l in doc.layers]
+        except Exception:
+            all_layers = []
+
+        if debug_layers:
+            # Sortie volontairement simple (temporaire) pour support terrain.
+            for lname in all_layers:
+                print(lname)
+
+        if all_layers:
+            sample = ', '.join(all_layers[:40])
+            suffix = '' if len(all_layers) <= 40 else f" … (+{len(all_layers)-40})"
+            self.diagnostics.append(TakeoffDiagnostic('info', f"Couches détectées: {sample}{suffix}"))
+
+        seen_layers: set[str] = set(_norm_layer(l) for l in all_layers if l)
+
+        # Parcourt modelspace + contenu des blocs (INSERT) pour extraire la géométrie.
+        for e, eff_layer_name in _iter_entities_with_blocks(msp, doc):
+            layer_norm = _norm_layer(eff_layer_name)
+            if layer_norm:
+                seen_layers.add(layer_norm)
 
             etype = e.dxftype()
+            category = identify_layer_category(layer_norm) or identify_layer_category(getattr(e.dxf, 'layer', None))
 
             # -----------------------------------------------------------------
             # 1) Éléments linéaires: LINE, ARC, LWPOLYLINE
             # -----------------------------------------------------------------
-            if layer in self.linear_layers:
+            if category in self.linear_layers:
                 try:
                     if etype == 'LINE':
-                        lengths_m[layer] += _line_length(e) * float(scale_factor)
+                        lengths_m[category] += _line_length(e) * float(scale_factor)
                     elif etype == 'ARC':
-                        lengths_m[layer] += _arc_length(e) * float(scale_factor)
+                        lengths_m[category] += _arc_length(e) * float(scale_factor)
                     elif etype == 'LWPOLYLINE':
                         ln, _pts = _lwpolyline_length_and_points(e)
-                        lengths_m[layer] += ln * float(scale_factor)
+                        lengths_m[category] += ln * float(scale_factor)
+                    elif etype == 'POLYLINE':
+                        pts = _polyline_points_2d(e)
+                        if len(pts) >= 2:
+                            # Longueur = somme des segments consécutifs (et fermeture si close)
+                            ln_units = 0.0
+                            for i in range(len(pts) - 1):
+                                ln_units += _distance(pts[i], pts[i + 1])
+                            if _polyline_is_closed(e, pts, tol_units=tol_units):
+                                ln_units += _distance(pts[-1], pts[0])
+                            lengths_m[category] += ln_units * float(scale_factor)
                 except Exception as exc:
                     self.diagnostics.append(
-                        TakeoffDiagnostic('warning', f"Entité linéaire ignorée ({layer}/{etype}): {exc}")
+                        TakeoffDiagnostic('warning', f"Entité linéaire ignorée ({category}/{etype}): {exc}")
                     )
 
             # -----------------------------------------------------------------
             # 2) Éléments surfaciques: LWPOLYLINE fermée, HATCH
             # -----------------------------------------------------------------
-            if layer in self.surface_layers:
+            if category in self.surface_layers:
                 try:
-                    if etype == 'LWPOLYLINE' and bool(getattr(e, 'closed', False)):
+                    if etype == 'LWPOLYLINE':
                         _ln, pts = _lwpolyline_length_and_points(e)
-                        # Conversion en m puis aire en m² => (scale)^2
-                        poly_area = _shoelace_area(pts) * (float(scale_factor) ** 2)
-                        areas_m2[layer] += poly_area
+                        # Correction "polylines pas fermées":
+                        # - Si le contour est presque fermé, on force la fermeture.
+                        if _polyline_is_closed(e, pts, tol_units=tol_units):
+                            ring = _close_ring(pts)
+                            # Conversion en m puis aire en m² => (scale)^2
+                            poly_area = _shoelace_area(ring) * (float(scale_factor) ** 2)
+                            areas_m2[category] += poly_area
                     elif etype == 'HATCH':
                         hatch_area = self._hatch_area_approx_m2(e, scale_factor=float(scale_factor))
-                        areas_m2[layer] += hatch_area
+                        areas_m2[category] += hatch_area
+                    elif etype == 'POLYLINE':
+                        pts = _polyline_points_2d(e)
+                        if _polyline_is_closed(e, pts, tol_units=tol_units):
+                            ring = _close_ring(pts)
+                            poly_area = _shoelace_area(ring) * (float(scale_factor) ** 2)
+                            areas_m2[category] += poly_area
                 except Exception as exc:
                     self.diagnostics.append(
-                        TakeoffDiagnostic('warning', f"Surface ignorée ({layer}/{etype}): {exc}")
+                        TakeoffDiagnostic('warning', f"Surface ignorée ({category}/{etype}): {exc}")
                     )
 
             # -----------------------------------------------------------------
             # 3) Éléments unitaires: INSERT (références de blocs)
             # -----------------------------------------------------------------
-            if layer in self.unit_layers and etype == 'INSERT':
+            if category in self.unit_layers and etype == 'INSERT':
                 try:
                     name = (getattr(e.dxf, 'name', None) or '').strip()
                     if name:
-                        key = (layer, name)
+                        key = (category, name)
                         blocks_count[key] = blocks_count.get(key, 0) + 1
 
                     # Déduction d'ouvertures uniquement depuis MENUISERIES
-                    if layer == 'MENUISERIES' and name:
+                    if category == 'MENUISERIES' and name:
                         openings_area_m2 += self._estimate_opening_area_m2(e, scale_factor=float(scale_factor))
                 except Exception as exc:
                     self.diagnostics.append(
-                        TakeoffDiagnostic('warning', f"Bloc ignoré ({layer}/{etype}): {exc}")
+                        TakeoffDiagnostic('warning', f"Bloc ignoré ({category}/{etype}): {exc}")
                     )
 
         # Diagnostics: couches attendues manquantes
-        expected = set(self.linear_layers) | set(self.surface_layers) | set(self.unit_layers)
-        missing = sorted(expected - seen_layers)
-        if missing:
+        # Diagnostics: si aucune quantité non nulle -> souvent un mismatch de couches.
+        # On ne peut pas l'affirmer à 100%, mais on peut guider l'utilisateur.
+        total_len = sum(lengths_m.values())
+        total_area = sum(areas_m2.values())
+        if total_len <= 0.0 and total_area <= 0.0 and not blocks_count:
             self.diagnostics.append(
-                TakeoffDiagnostic('warning', f"Couches DXF manquantes (continuer quand même): {', '.join(missing)}")
+                TakeoffDiagnostic(
+                    'warning',
+                    "Aucune géométrie reconnue. Vérifiez les noms de couches (mots clés) et/ou l'échelle du dessin.",
+                )
+            )
+
+        # Diagnostic échelle: si on a reconnu des entités mais valeurs ~0, l'échelle est probablement erronée.
+        if (total_len > 0.0 and total_len < 1e-6) or (total_area > 0.0 and total_area < 1e-9):
+            self.diagnostics.append(
+                TakeoffDiagnostic(
+                    'warning',
+                    f"Quantités extrêmement petites (longueur={total_len:.3e} m, aire={total_area:.3e} m²). L'échelle (scale_factor={scale_factor}) semble incorrecte.",
+                )
             )
 
         # Assemble DataFrame
