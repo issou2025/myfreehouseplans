@@ -4,6 +4,9 @@
 {% if category_schema %}
 <script type="application/ld+json">{{ category_schema | tojson | safe }}</script>
 {% endif %}
+{% if breadcrumb_schema %}
+<script type="application/ld+json">{{ breadcrumb_schema | tojson | safe }}</script>
+{% endif %}
 {% endblock %}
 
 {% block content %}

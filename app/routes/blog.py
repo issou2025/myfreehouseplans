@@ -13,7 +13,7 @@ from slugify import slugify
 from app.extensions import db, limiter
 from app.forms import PowerfulPostForm
 from app.models import BlogPost, HousePlan, Category
-from app.seo import generate_meta_tags
+from app.seo import generate_meta_tags, generate_breadcrumb_schema
 from app.utils.uploads import save_uploaded_file
 from app.utils.experience_links import experience_for_article, get_experience_options
 from app.utils.article_extras import (
@@ -151,6 +151,17 @@ def detail(slug):
         type='article',
     )
 
+    breadcrumb_schema = None
+    try:
+        breadcrumbs = [
+            ('Home', url_for('main.index')),
+            ('Blog', url_for('blog.index')),
+            (post.title, url_for('blog.detail', slug=post.slug)),
+        ]
+        breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
+    except Exception:
+        breadcrumb_schema = None
+
     related_experience = None
     try:
         related_experience = experience_for_article(slug=post.slug, extras=extras)
@@ -184,6 +195,7 @@ def detail(slug):
         extras=extras,
         related_experience=related_experience,
         tool_links=tool_links,
+        breadcrumb_schema=breadcrumb_schema,
     )
 
 

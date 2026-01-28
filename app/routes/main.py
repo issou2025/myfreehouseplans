@@ -735,6 +735,17 @@ def plans_by_category(slug: str):
         url=url_for('main.plans_by_category', slug=category.slug, _external=True),
     )
 
+    breadcrumb_schema = None
+    try:
+        breadcrumbs = [
+            ('Home', url_for('main.index')),
+            ('Plans', url_for('main.packs')),
+            (category.name, url_for('main.plans_by_category', slug=category.slug)),
+        ]
+        breadcrumb_schema = generate_breadcrumb_schema(breadcrumbs)
+    except Exception:
+        breadcrumb_schema = None
+
     item_list_elements = []
     for idx, plan in enumerate(plans[:20], start=1):
         item_list_elements.append({
@@ -766,6 +777,7 @@ def plans_by_category(slug: str):
         plans=plans,
         meta=meta,
         category_schema=category_schema,
+        breadcrumb_schema=breadcrumb_schema,
     )
 
 @main_bp.route('/insights/<string:slug>')
@@ -1550,8 +1562,16 @@ def sitemap():
     # Get all categories
     categories = Category.query.all()
     
+    # Get published blog posts
+    try:
+        from app.models import BlogPost
+
+        posts = BlogPost.query.filter_by(status=BlogPost.STATUS_PUBLISHED).all()
+    except Exception:
+        posts = []
+
     # Generate sitemap XML
-    sitemap_xml = generate_sitemap(plans, categories)
+    sitemap_xml = generate_sitemap(plans, categories, posts=posts)
     
     return Response(sitemap_xml, mimetype='application/xml')
 

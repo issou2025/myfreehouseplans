@@ -8,6 +8,9 @@
 {% endblock %}
 
 {% block structured_data %}
+    {% if breadcrumb_schema %}
+        <script type="application/ld+json">{{ breadcrumb_schema | tojson | safe }}</script>
+    {% endif %}
         {% set _faq = (extras or {}).get('faq', []) if extras is defined else [] %}
         {% if _faq and _faq|length > 0 %}
                 <script type="application/ld+json">

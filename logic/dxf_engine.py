@@ -197,6 +197,7 @@ def _sample_arc_points(
     end_angle: float,
     direction: int,
     max_step_deg: float = 5.0,
+    max_sagitta: float | None = None,
 ) -> List[tuple[float, float]]:
     """Échantillonne un arc en une polyline (liste de points).
 
@@ -210,10 +211,26 @@ def _sample_arc_points(
 
     cx, cy = center
 
-    if max_step_deg <= 0:
-        max_step_deg = 5.0
+    # Précision (ingénierie): on privilégie une contrainte d'erreur (sagitta)
+    # plutôt qu'un angle fixe.
+    # - sagitta = flèche max entre l'arc et sa corde.
+    # - Plus sagitta est petite, plus l'approximation est précise.
+    if max_sagitta is not None and max_sagitta > 0 and radius > 0:
+        # angle max par segment pour respecter la flèche: s = R(1 - cos(a/2))
+        # => cos(a/2) = 1 - s/R
+        # => a = 2 arccos(1 - s/R)
+        try:
+            from math import acos
 
-    max_step = max_step_deg * pi / 180.0
+            ratio = 1.0 - (float(max_sagitta) / float(radius))
+            ratio = max(-1.0, min(1.0, ratio))
+            max_step = max(1e-6, 2.0 * acos(ratio))
+        except Exception:
+            max_step = max(1e-6, (max_step_deg if max_step_deg > 0 else 5.0) * pi / 180.0)
+    else:
+        if max_step_deg <= 0:
+            max_step_deg = 5.0
+        max_step = max_step_deg * pi / 180.0
 
     if direction == 1:
         delta = _arc_delta_ccw(start_angle, end_angle)
@@ -604,6 +621,12 @@ class DXFProcessor:
         tol_units = 0.005 / float(scale_factor) if float(scale_factor) > 0 else 0.0
         tol_units = max(1e-6, min(tol_units, 100.0))
 
+        # Tolérance de précision courbes (en unités du dessin):
+        # 1 mm dans le monde réel (objectif "très précis" sans exploser le temps de calcul).
+        curve_sagitta_units = 0.001 / float(scale_factor) if float(scale_factor) > 0 else None
+        if curve_sagitta_units is not None:
+            curve_sagitta_units = max(1e-6, min(curve_sagitta_units, 50.0))
+
         # Liste des couches (debug) : utile pour vérifier que le DXF contient ce qu'on croit.
         try:
             all_layers = [str(l.dxf.name) for l in doc.layers]
@@ -622,8 +645,23 @@ class DXFProcessor:
 
         seen_layers: set[str] = set(_norm_layer(l) for l in all_layers if l)
 
-        # Parcourt modelspace + contenu des blocs (INSERT) pour extraire la géométrie.
-        for e, eff_layer_name in _iter_entities_with_blocks(msp, doc):
+        # Parcourt modelspace + géométrie "dépliée" depuis les blocs.
+        # IMPORTANT:
+        # - INSERT.virtual_entities() (ezdxf) applique correctement les transformations
+        #   du bloc (rotation/scale/translation) et retourne une géométrie en WCS.
+        # - C'est nettement plus fiable que des transformations 2D faites à la main.
+        def _iter_all_entities():
+            for ent in msp:
+                yield ent, getattr(ent.dxf, 'layer', None)
+                if ent.dxftype() == 'INSERT':
+                    try:
+                        for v in ent.virtual_entities():
+                            v_layer = getattr(v.dxf, 'layer', None) or getattr(ent.dxf, 'layer', None)
+                            yield v, v_layer
+                    except Exception:
+                        continue
+
+        for e, eff_layer_name in _iter_all_entities():
             layer_norm = _norm_layer(eff_layer_name)
             if layer_norm:
                 seen_layers.add(layer_norm)
@@ -673,7 +711,11 @@ class DXFProcessor:
                             poly_area = _shoelace_area(ring) * (float(scale_factor) ** 2)
                             areas_m2[category] += poly_area
                     elif etype == 'HATCH':
-                        hatch_area = self._hatch_area_approx_m2(e, scale_factor=float(scale_factor))
+                        hatch_area = self._hatch_area_approx_m2(
+                            e,
+                            scale_factor=float(scale_factor),
+                            curve_sagitta_units=curve_sagitta_units,
+                        )
                         areas_m2[category] += hatch_area
                     elif etype == 'POLYLINE':
                         pts = _polyline_points_2d(e)
@@ -879,7 +921,13 @@ class DXFProcessor:
         except Exception:
             return 0.0
 
-    def _hatch_area_approx_m2(self, hatch_entity, *, scale_factor: float) -> float:
+    def _hatch_area_approx_m2(
+        self,
+        hatch_entity,
+        *,
+        scale_factor: float,
+        curve_sagitta_units: float | None = None,
+    ) -> float:
         """Calcule une aire approximative d'un HATCH.
 
         DXF HATCH:
@@ -896,7 +944,10 @@ class DXFProcessor:
           complexes avec trous, cette approximation peut sur-estimer.
         """
 
-        total_units2 = 0.0
+        # On tente de respecter les "trous" (holes) via l'orientation.
+        # Convention fréquente: extérieur CCW (aire signée positive), trous CW.
+        # En pratique, certains DXF ne respectent pas strictement; on fait au mieux.
+        total_signed_units2 = 0.0
 
         try:
             paths = hatch_entity.paths
@@ -908,7 +959,13 @@ class DXFProcessor:
                 # PolylinePath (souvent le cas)
                 if hasattr(p, 'vertices') and p.vertices:
                     verts = [(float(v[0]), float(v[1])) for v in p.vertices]
-                    total_units2 += _shoelace_area(verts)
+                    # Aire signée
+                    area2 = 0.0
+                    for i in range(len(verts)):
+                        x1, y1 = verts[i]
+                        x2, y2 = verts[(i + 1) % len(verts)]
+                        area2 += x1 * y2 - x2 * y1
+                    total_signed_units2 += area2 * 0.5
                     continue
 
                 # EdgePath
@@ -928,16 +985,81 @@ class DXFProcessor:
                             start = float(edge.start_angle) * pi / 180.0
                             end = float(edge.end_angle) * pi / 180.0
                             direction = 1 if bool(getattr(edge, 'ccw', True)) else -1
-                            pts = _sample_arc_points(center, radius, start, end, direction)
+                            pts = _sample_arc_points(
+                                center,
+                                radius,
+                                start,
+                                end,
+                                direction,
+                                max_sagitta=curve_sagitta_units,
+                            )
                             if not poly:
                                 poly.append(pts[0])
                             poly.extend(pts[1:])
+                        elif et == 'EllipseEdge':
+                            # Approximation par échantillonnage.
+                            # L'ellipse est définie par centre + axe majeur + ratio.
+                            try:
+                                center = (float(edge.center[0]), float(edge.center[1]))
+                                major = (float(edge.major_axis[0]), float(edge.major_axis[1]))
+                                ratio = float(edge.ratio)
+                                start = float(edge.start_angle) * pi / 180.0
+                                end = float(edge.end_angle) * pi / 180.0
+                                # Pas angulaire plus fin car ellipse peut être "serrée".
+                                steps = 180
+                                if curve_sagitta_units is not None:
+                                    steps = 360
+
+                                # Parcours CCW par défaut.
+                                delta = _arc_delta_ccw(start, end)
+                                for i in range(steps + 1):
+                                    t = start + (delta * i / steps)
+                                    # Paramétrisation: P = C + major*cos(t) + minor*sin(t)
+                                    # minor est major tourné et réduit par ratio.
+                                    mx, my = major
+                                    # vecteur minor (rotation +90°)
+                                    nx, ny = (-my * ratio, mx * ratio)
+                                    x = center[0] + mx * cos(t) + nx * sin(t)
+                                    y = center[1] + my * cos(t) + ny * sin(t)
+                                    if not poly:
+                                        poly.append((x, y))
+                                    else:
+                                        poly.append((x, y))
+                            except Exception:
+                                continue
+                        elif et == 'SplineEdge':
+                            # Approximation: on utilise les points de contrôle / fit points si disponibles.
+                            try:
+                                pts = []
+                                if getattr(edge, 'fit_points', None):
+                                    pts = [(float(x), float(y)) for x, y in edge.fit_points]
+                                elif getattr(edge, 'control_points', None):
+                                    pts = [(float(x), float(y)) for x, y in edge.control_points]
+                                if pts:
+                                    if not poly:
+                                        poly.append(pts[0])
+                                    poly.extend(pts[1:])
+                            except Exception:
+                                continue
                         else:
                             # SplineEdge, EllipseEdge, etc. ignorés
                             continue
 
-                    total_units2 += _shoelace_area(poly)
+                    # Aire signée
+                    if len(poly) >= 3:
+                        area2 = 0.0
+                        for i in range(len(poly)):
+                            x1, y1 = poly[i]
+                            x2, y2 = poly[(i + 1) % len(poly)]
+                            area2 += x1 * y2 - x2 * y1
+                        total_signed_units2 += area2 * 0.5
             except Exception:
                 continue
 
-        return float(total_units2) * (float(scale_factor) ** 2)
+        # Conversion unités^2 -> m^2
+        signed_m2 = float(total_signed_units2) * (float(scale_factor) ** 2)
+        # Si l'orientation n'est pas fiable, signed_m2 peut être "absurde".
+        # On sécurise avec valeur absolue si besoin.
+        if signed_m2 < 0:
+            signed_m2 = abs(signed_m2)
+        return signed_m2

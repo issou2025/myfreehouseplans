@@ -11,8 +11,8 @@
     {% block meta_keywords %}
     {% if meta and meta.keywords %}
     <meta name="keywords" content="{{ meta.keywords }}">
-    {% elif site_description %}
-    <meta name="keywords" content="{{ site_description }}">
+    {% elif site_keywords %}
+    <meta name="keywords" content="{{ site_keywords }}">
     {% endif %}
     {% endblock %}
     <meta name="robots" content="{% block meta_robots %}index,follow{% endblock %}">
@@ -23,14 +23,14 @@
     <meta property="og:url" content="{% block og_url %}{{ meta.og_url if meta else site_url }}{% endblock %}">
     <meta property="og:title" content="{% block og_title %}{{ meta.og_title if meta else site_name }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ meta.og_description if meta else site_description }}{% endblock %}">
-    <meta property="og:image" content="{% block og_image %}{{ meta.og_image if meta }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ meta.og_image if meta and meta.og_image else url_for('static', filename='images/logo.png', _external=True) }}{% endblock %}">
     
     {# Twitter Card #}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="{{ meta.og_url if meta else site_url }}">
     <meta name="twitter:title" content="{{ meta.og_title if meta else site_name }}">
     <meta name="twitter:description" content="{{ meta.og_description if meta else site_description }}">
-    <meta name="twitter:image" content="{{ meta.og_image if meta }}">
+    <meta name="twitter:image" content="{{ meta.og_image if meta and meta.og_image else url_for('static', filename='images/logo.png', _external=True) }}">
     
     {# Favicon #}
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -50,7 +50,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced-mobile-ux.css') }}">
     {% block extra_css %}{% endblock %}
     
-    {# Structured Data #}
+    {# Structured Data (global defaults) #}
+    {% if organization_schema %}
+    <script type="application/ld+json">{{ organization_schema | tojson | safe }}</script>
+    {% endif %}
+    {% if website_schema %}
+    <script type="application/ld+json">{{ website_schema | tojson | safe }}</script>
+    {% endif %}
+
+    {# Structured Data (page-specific additions) #}
     {% block structured_data %}{% endblock %}
 
     {# Google Analytics 4 #}

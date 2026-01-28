@@ -587,11 +587,8 @@ def create_app(config_name='default'):
     def favicon_placeholder():  # pragma: no cover - trivial route
         return ('', 204)
     
-    @app.route('/robots.txt')
-    def robots_txt():  # pragma: no cover - SEO route
-        """Serve robots.txt for search engine crawlers."""
-        from flask import send_from_directory
-        return send_from_directory(app.static_folder, 'robots.txt', mimetype='text/plain')
+    # NOTE: robots.txt is served by main blueprint (/robots.txt) so we avoid
+    # registering a duplicate URL rule here.
     
     return app
 
@@ -664,6 +661,7 @@ def register_template_processors(app):
         from app.utils.geoip import get_country_for_ip, resolve_client_ip
         from app.utils.pack_visibility import load_pack_visibility, filter_pack_tiers, visible_starting_price
         from app.utils.category_colors import get_category_color, get_category_style
+        from app.seo import generate_organization_schema, generate_website_schema
 
         def render_richtext(value):
             """Render blog content with paragraph breaks.
@@ -712,10 +710,22 @@ def register_template_processors(app):
         visitor_ip = client_ip()
         visitor_country = get_country_for_ip(visitor_ip)
         pack_visibility = load_pack_visibility()
+
+        organization_schema = None
+        website_schema = None
+        try:
+            organization_schema = generate_organization_schema()
+            website_schema = generate_website_schema()
+        except Exception:
+            organization_schema = None
+            website_schema = None
         return {
             'site_name': app.config['SITE_NAME'],
             'site_description': app.config['SITE_DESCRIPTION'],
             'site_url': app.config['SITE_URL'],
+            'site_keywords': app.config.get('SITE_KEYWORDS', ''),
+            'organization_schema': organization_schema,
+            'website_schema': website_schema,
             'upload_url': upload_url,
             'picture_tag': picture_tag,
             'CARD_PRESET': CARD_PRESET,

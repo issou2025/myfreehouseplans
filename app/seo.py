@@ -13,6 +13,35 @@ from datetime import datetime
 from slugify import slugify as _slugify
 
 
+def _effective_site_url() -> str:
+    """Return the canonical site URL.
+
+    Falls back to the Flask server name when SITE_URL is not configured.
+    """
+
+    configured = (current_app.config.get('SITE_URL') or '').strip()
+    if configured:
+        return configured.rstrip('/')
+    try:
+        return url_for('main.index', _external=True).rstrip('/')
+    except Exception:
+        return 'http://localhost:5000'
+
+
+def _join_site_url(site_url: str, path_or_url: str) -> str:
+    if not path_or_url:
+        return site_url.rstrip('/') if site_url else ''
+    if isinstance(path_or_url, str) and path_or_url.startswith(('http://', 'https://')):
+        return path_or_url
+    base = (site_url or '').rstrip('/')
+    path = str(path_or_url)
+    if not path.startswith('/'):
+        path = '/' + path
+    if not base:
+        return path
+    return base + path
+
+
 def generate_meta_tags(title=None, description=None, keywords=None, image=None, url=None, type='website'):
     """
     Generate SEO meta tags for templates
@@ -32,7 +61,9 @@ def generate_meta_tags(title=None, description=None, keywords=None, image=None, 
     # Default values from config
     site_name = current_app.config.get('SITE_NAME', 'MyFreeHousePlans')
     site_description = current_app.config.get('SITE_DESCRIPTION', '')
-    site_url = current_app.config.get('SITE_URL', '')
+    site_url = (current_app.config.get('SITE_URL') or '').strip()
+    if not site_url:
+        site_url = _effective_site_url()
     
     # Build full title
     if title:
@@ -71,7 +102,7 @@ def generate_product_schema(plan):
         dict: JSON-LD structured data
     """
     
-    site_url = current_app.config.get('SITE_URL', '')
+    site_url = _effective_site_url()
     
     entry_price = plan.starting_paid_price if hasattr(plan, 'starting_paid_price') else None
     if entry_price is None and getattr(plan, 'price_pack_1', None) not in (None, 0):
@@ -131,7 +162,7 @@ def generate_breadcrumb_schema(breadcrumbs):
         dict: JSON-LD breadcrumb list
     """
     
-    site_url = current_app.config.get('SITE_URL', '')
+    site_url = _effective_site_url()
     
     items = []
     for position, (name, url) in enumerate(breadcrumbs, start=1):
@@ -139,7 +170,7 @@ def generate_breadcrumb_schema(breadcrumbs):
             "@type": "ListItem",
             "position": position,
             "name": name,
-            "item": f"{site_url}{url}" if not url.startswith('http') else url
+            "item": _join_site_url(site_url, url)
         })
     
     return {
@@ -157,15 +188,22 @@ def generate_organization_schema():
         dict: JSON-LD organization data
     """
     
-    site_url = current_app.config.get('SITE_URL', '')
+    site_url = _effective_site_url()
     site_name = current_app.config.get('SITE_NAME', 'MyFreeHousePlans')
+
+    logo_url = None
+    try:
+        logo_url = url_for('static', filename='images/logo.png', _external=True)
+    except Exception:
+        logo_url = _join_site_url(site_url, '/static/images/logo.png')
     
     return {
         "@context": "https://schema.org/",
         "@type": "Organization",
+        "@id": f"{site_url}#organization",
         "name": site_name,
         "url": site_url,
-        "logo": f"{site_url}{url_for('static', filename='images/logo.png')}",
+        "logo": logo_url,
         "sameAs": [
             # Add social media URLs here when available
             # "https://www.facebook.com/myfreehouseplans",
@@ -175,7 +213,36 @@ def generate_organization_schema():
     }
 
 
-def generate_sitemap(plans, categories):
+def generate_website_schema():
+    """Generate JSON-LD WebSite schema.
+
+    Includes SearchAction pointing to the plans catalog.
+    """
+
+    site_url = _effective_site_url()
+    site_name = current_app.config.get('SITE_NAME', 'MyFreeHousePlans')
+
+    try:
+        search_target = url_for('main.packs', _external=True) + '?q={search_term_string}'
+    except Exception:
+        search_target = _join_site_url(site_url, '/plans') + '?q={search_term_string}'
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": f"{site_url}#website",
+        "url": site_url,
+        "name": site_name,
+        "publisher": {"@id": f"{site_url}#organization"},
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": search_target,
+            "query-input": "required name=search_term_string",
+        },
+    }
+
+
+def generate_sitemap(plans, categories, posts=None):
     """
     Generate XML sitemap content
     
@@ -187,21 +254,21 @@ def generate_sitemap(plans, categories):
         str: XML sitemap content
     """
     
-    site_url = current_app.config.get('SITE_URL', '')
+    site_url = _effective_site_url()
     
     xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>']
     xml_lines.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
     
     # Homepage
     xml_lines.append('<url>')
-    xml_lines.append(f'<loc>{site_url}{url_for("main.index")}</loc>')
+    xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("main.index"))}</loc>')
     xml_lines.append('<changefreq>daily</changefreq>')
     xml_lines.append('<priority>1.0</priority>')
     xml_lines.append('</url>')
     
     # Plans page
     xml_lines.append('<url>')
-    xml_lines.append(f'<loc>{site_url}{url_for("main.packs")}</loc>')
+    xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("main.packs"))}</loc>')
     xml_lines.append('<changefreq>daily</changefreq>')
     xml_lines.append('<priority>0.9</priority>')
     xml_lines.append('</url>')
@@ -210,26 +277,65 @@ def generate_sitemap(plans, categories):
     for plan in plans:
         if plan.is_published:
             xml_lines.append('<url>')
-            xml_lines.append(f'<loc>{site_url}{url_for("main.pack_detail", slug=plan.slug)}</loc>')
+            xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("main.pack_detail", slug=plan.slug))}</loc>')
             xml_lines.append(f'<lastmod>{plan.updated_at.strftime("%Y-%m-%d")}</lastmod>')
             xml_lines.append('<changefreq>weekly</changefreq>')
             xml_lines.append('<priority>0.8</priority>')
             xml_lines.append('</url>')
     
-    # Static pages
+    # Category pages
+    for category in categories or []:
+        try:
+            xml_lines.append('<url>')
+            xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("main.plans_by_category", slug=category.slug))}</loc>')
+            xml_lines.append('<changefreq>weekly</changefreq>')
+            xml_lines.append('<priority>0.6</priority>')
+            xml_lines.append('</url>')
+        except Exception:
+            continue
+
+    # Blog index + posts (published)
+    try:
+        xml_lines.append('<url>')
+        xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("blog.index"))}</loc>')
+        xml_lines.append('<changefreq>weekly</changefreq>')
+        xml_lines.append('<priority>0.6</priority>')
+        xml_lines.append('</url>')
+    except Exception:
+        pass
+
+    if posts:
+        for post in posts:
+            try:
+                xml_lines.append('<url>')
+                xml_lines.append(f'<loc>{_join_site_url(site_url, url_for("blog.detail", slug=post.slug))}</loc>')
+                lastmod = getattr(post, 'updated_at', None) or getattr(post, 'created_at', None)
+                if lastmod:
+                    xml_lines.append(f'<lastmod>{lastmod.strftime("%Y-%m-%d")}</lastmod>')
+                xml_lines.append('<changefreq>monthly</changefreq>')
+                xml_lines.append('<priority>0.5</priority>')
+                xml_lines.append('</url>')
+            except Exception:
+                continue
+
+    # Static pages (ensure endpoints actually exist)
     static_pages = [
         ('main.about', 0.6),
         ('main.contact', 0.5),
-        ('main.privacy', 0.3),
-        ('main.terms', 0.3)
+        ('main.faq', 0.5),
+        ('main.privacy_policy', 0.3),
+        ('main.terms_of_service', 0.3),
     ]
     
     for endpoint, priority in static_pages:
-        xml_lines.append('<url>')
-        xml_lines.append(f'<loc>{site_url}{url_for(endpoint)}</loc>')
-        xml_lines.append('<changefreq>monthly</changefreq>')
-        xml_lines.append(f'<priority>{priority}</priority>')
-        xml_lines.append('</url>')
+        try:
+            xml_lines.append('<url>')
+            xml_lines.append(f'<loc>{site_url}{url_for(endpoint)}</loc>')
+            xml_lines.append('<changefreq>monthly</changefreq>')
+            xml_lines.append(f'<priority>{priority}</priority>')
+            xml_lines.append('</url>')
+        except Exception:
+            continue
     
     xml_lines.append('</urlset>')
     
