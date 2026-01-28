@@ -120,6 +120,37 @@ class ContactForm(FlaskForm):
         Length(min=10, max=2000, message='Message must be between 10 and 2000 characters')
     ])
 
+    # Honeypot (anti-spam)
+    website = StringField('Website', validators=[Optional(), Length(max=120)])
+
+    inquiry_type = SelectField(
+        'Inquiry type',
+        choices=[
+            ('plans', 'Plan selection & availability'),
+            ('orders', 'Gumroad orders & downloads'),
+            ('custom', 'Custom project or collaboration'),
+            ('support', 'Technical support'),
+        ],
+        validators=[DataRequired(message='Please choose the topic that best fits your message.')],
+    )
+
+    plan_reference = SelectField('Plan of interest', choices=[], validators=[Optional()], default='', coerce=str)
+    reference_code = StringField('Reference code (optional)', validators=[Optional(), Length(max=50)])
+
+    attachment = FileField(
+        'Attachment',
+        validators=[
+            Optional(),
+            FileAllowed(
+                ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'dwg', 'doc', 'docx'],
+                'Upload PDF, DOC/DOCX, DWG, or image files only.',
+            ),
+        ],
+    )
+
+    subscribe = BooleanField('Send me quarterly studio updates')
+    submit = SubmitField('Send Message')
+
 
 class DXFTakeoffForm(FlaskForm):
     """Formulaire Admin: upload DXF + paramètres de métré.
@@ -157,26 +188,6 @@ class DXFTakeoffForm(FlaskForm):
     )
 
     submit = SubmitField('Analyser le DXF')
-
-    website = StringField('Website', validators=[Optional(), Length(max=120)])
-    inquiry_type = SelectField(
-        'Inquiry type',
-        choices=[
-            ('plans', 'Plan selection & availability'),
-            ('orders', 'Gumroad orders & downloads'),
-            ('custom', 'Custom project or collaboration'),
-            ('support', 'Technical support'),
-        ],
-        validators=[DataRequired(message='Please choose the topic that best fits your message.')],
-    )
-    plan_reference = SelectField('Plan of interest', choices=[], validators=[Optional()], default='', coerce=str)
-    reference_code = StringField('Reference code (optional)', validators=[Optional(), Length(max=50)])
-    attachment = FileField('Attachment', validators=[
-        Optional(),
-        FileAllowed(['pdf', 'png', 'jpg', 'jpeg', 'gif', 'dwg', 'doc', 'docx'], 'Upload PDF, DOC/DOCX, DWG, or image files only.'),
-    ])
-    subscribe = BooleanField('Send me quarterly studio updates')
-    submit = SubmitField('Send Message')
 
 
 class MessageStatusForm(FlaskForm):
