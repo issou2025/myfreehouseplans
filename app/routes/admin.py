@@ -14,6 +14,8 @@ from functools import wraps
 import re
 import os
 import traceback
+import tempfile
+from uuid import uuid4
 from app.models import HousePlan, Category, Order, User, ContactMessage, Visitor, house_plan_categories
 from app.forms import HousePlanForm, CategoryForm, LoginForm, MessageStatusForm, StaffCreateForm
 from app.forms import PlanFAQForm
@@ -42,8 +44,12 @@ from app.utils.media import is_absolute_url
 from app.utils.pack_visibility import load_pack_visibility, save_pack_visibility
 from app.models import PlanFAQ
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 from app.utils.db_resilience import with_db_resilience, safe_db_query
 from sqlalchemy.orm import load_only
+
+from logic.dxf_engine import DXFProcessor
+from logic.excel_export import build_takeoff_excel_bytes
 
 # Create Blueprint
 admin_bp = Blueprint('admin', __name__)
@@ -175,6 +181,34 @@ def team_required(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def _takeoff_scale_factor(scale_key: str) -> float:
+    """Convertit une sélection d'unité en facteur de conversion vers mètres."""
+
+    key = (scale_key or '').strip().lower()
+    if key == 'meters':
+        return 1.0
+    if key == 'centimeters':
+        return 0.01
+    if key == 'millimeters':
+        return 0.001
+    # Valeur défaut prudente
+    return 0.001
+
+
+def _takeoff_tmp_dir() -> str:
+    """Répertoire temporaire (Render: /tmp)."""
+
+    # Sur Render et Linux: tempfile.gettempdir() => /tmp
+    # Sur Windows dev: un temp local.
+    return tempfile.gettempdir()
+
+
+def _takeoff_session_clear() -> None:
+    session.pop('takeoff_rows', None)
+    session.pop('takeoff_meta', None)
+    session.pop('takeoff_diagnostics', None)
 
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
@@ -2464,3 +2498,150 @@ def orders():
     )
     
     return render_template('admin/orders_list.html', orders=orders)
+
+
+@admin_bp.route('/takeoff', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def takeoff():
+    """CivilQuant Pro — Interface admin pour métré DXF (stateless)."""
+
+    from app.forms import DXFTakeoffForm
+
+    form = DXFTakeoffForm()
+
+    # Afficher les derniers résultats (si existants) pour éviter une page vide après refresh.
+    rows = session.get('takeoff_rows')
+    meta = session.get('takeoff_meta')
+    diagnostics = session.get('takeoff_diagnostics') or []
+
+    if form.validate_on_submit():
+        _takeoff_session_clear()
+
+        dxf_file = form.dxf_file.data
+        filename = secure_filename(getattr(dxf_file, 'filename', '') or '')
+        if not filename.lower().endswith('.dxf'):
+            flash('Format non supporté. Seuls les fichiers .dxf sont autorisés.', 'danger')
+            return render_template('admin/takeoff.html', form=form, rows=None, meta=None, diagnostics=[])
+
+        # Garde-fou taille (MAX_CONTENT_LENGTH est déjà configuré à 16MB, ceci aide en local/debug).
+        if request.content_length and request.content_length > (16 * 1024 * 1024):
+            flash('Fichier trop volumineux (max 16MB).', 'danger')
+            return render_template('admin/takeoff.html', form=form, rows=None, meta=None, diagnostics=[])
+
+        temp_dir = _takeoff_tmp_dir()
+        temp_path = os.path.join(temp_dir, f"civilquant_{uuid4().hex}_{filename}")
+
+        scale_factor = _takeoff_scale_factor(form.scale.data)
+        wall_height_m = float(form.wall_height_m.data or 0.0)
+
+        try:
+            dxf_file.save(temp_path)
+            processor = DXFProcessor()
+            df = processor.extract_data(temp_path, scale_factor=scale_factor, wall_height_m=wall_height_m)
+            result_rows = df.to_dict(orient='records')
+
+            # Edge case: DXF vide / rien d'exploitable
+            if df.empty or not result_rows:
+                flash('DXF vide ou aucune entité exploitable trouvée.', 'warning')
+
+            meta = {
+                'filename': filename,
+                'scale': form.scale.data,
+                'scale_factor': scale_factor,
+                'wall_height_m': wall_height_m,
+            }
+            diagnostics = [f"[{d.niveau}] {d.message}" for d in (processor.diagnostics or [])]
+
+            # Stockage en session (sans DB). Les résultats sont agrégés donc généralement légers.
+            session['takeoff_rows'] = result_rows
+            session['takeoff_meta'] = meta
+            session['takeoff_diagnostics'] = diagnostics
+
+            rows = result_rows
+            flash('Analyse DXF terminée.', 'success')
+        except Exception as exc:
+            current_app.logger.error('CivilQuant DXF processing failed: %s', exc, exc_info=True)
+            flash('Erreur pendant le traitement du DXF. Vérifiez le fichier et réessayez.', 'danger')
+            rows = None
+            meta = None
+            diagnostics = []
+        finally:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                current_app.logger.warning('CivilQuant: impossible de supprimer le fichier temporaire: %s', temp_path)
+
+    elif request.method == 'POST':
+        # Afficher les erreurs formulaire (DXF manquant, etc.)
+        for field, errors in (form.errors or {}).items():
+            for err in errors:
+                flash(f"{field}: {err}", 'danger')
+
+    return render_template('admin/takeoff.html', form=form, rows=rows, meta=meta, diagnostics=diagnostics)
+
+
+@admin_bp.route('/takeoff/export', methods=['GET'])
+@login_required
+@admin_required
+def takeoff_export():
+    """CivilQuant Pro — Export Excel en mémoire (OpenPyXL)."""
+
+    rows = session.get('takeoff_rows')
+    meta = session.get('takeoff_meta') or {}
+    if not rows:
+        flash('Aucun résultat en session. Analysez un DXF avant l’export.', 'warning')
+        return redirect(url_for('admin.takeoff'))
+
+    try:
+        bio = build_takeoff_excel_bytes(rows, meta=meta)
+        filename = meta.get('filename') or 'takeoff.dxf'
+        base = os.path.splitext(str(filename))[0]
+        download_name = f"CivilQuant_Takeoff_{base}.xlsx"
+        return send_file(
+            bio,
+            as_attachment=True,
+            download_name=download_name,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+    except Exception as exc:
+        current_app.logger.error('CivilQuant export failed: %s', exc, exc_info=True)
+        flash('Impossible de générer le fichier Excel.', 'danger')
+        return redirect(url_for('admin.takeoff'))
+
+
+@admin_bp.route('/takeoff/update', methods=['POST'])
+@login_required
+@admin_required
+def takeoff_update():
+    """Met à jour les lignes de métré en session (pour table interactive côté client).
+
+    Entrée JSON:
+    {
+      "rows": [{"Désignation":..., "Quantité":..., "Unité":..., "Catégorie":...}, ...]
+    }
+    """
+
+    payload = request.get_json(silent=True) or {}
+    new_rows = payload.get('rows')
+
+    if not isinstance(new_rows, list):
+        return jsonify({'ok': False, 'error': 'Invalid payload'}), 400
+
+    cleaned: list[dict[str, object]] = []
+    for r in new_rows:
+        if not isinstance(r, dict):
+            continue
+        cleaned.append(
+            {
+                'Désignation': str(r.get('Désignation', '') or ''),
+                'Quantité': float(r.get('Quantité', 0.0) or 0.0) if str(r.get('Quantité', '')).strip() != '' else 0.0,
+                'Unité': str(r.get('Unité', '') or ''),
+                'Catégorie': str(r.get('Catégorie', '') or ''),
+            }
+        )
+
+    session['takeoff_rows'] = cleaned
+    return jsonify({'ok': True, 'count': len(cleaned)})
+

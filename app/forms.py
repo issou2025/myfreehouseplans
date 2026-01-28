@@ -6,7 +6,7 @@ for user input validation and CSRF protection.
 """
 
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, PasswordField, TextAreaField, DecimalField, IntegerField, FloatField, SelectField, SelectMultipleField, BooleanField, SubmitField
 from flask_ckeditor import CKEditorField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, NumberRange, URL
@@ -119,6 +119,45 @@ class ContactForm(FlaskForm):
         DataRequired(message='Message is required'),
         Length(min=10, max=2000, message='Message must be between 10 and 2000 characters')
     ])
+
+
+class DXFTakeoffForm(FlaskForm):
+    """Formulaire Admin: upload DXF + paramètres de métré.
+
+    Conçu pour CivilQuant Pro.
+    - Statut: sans persistance DB (le traitement est côté serveur et les résultats peuvent être mis en session).
+    """
+
+    dxf_file = FileField(
+        'Fichier DXF (.dxf)',
+        validators=[
+            FileRequired(message='Veuillez sélectionner un fichier DXF.'),
+            FileAllowed(['dxf'], message='Format non supporté. Seuls les fichiers .dxf sont autorisés.'),
+        ],
+    )
+
+    wall_height_m = FloatField(
+        'Hauteur des murs (m)',
+        validators=[
+            DataRequired(message='La hauteur des murs est requise.'),
+            NumberRange(min=0.5, max=20.0, message='Hauteur des murs invalide.'),
+        ],
+        default=2.8,
+    )
+
+    scale = SelectField(
+        'Échelle / unités du dessin',
+        choices=[
+            ('meters', 'Mètres (m)'),
+            ('centimeters', 'Centimètres (cm)'),
+            ('millimeters', 'Millimètres (mm)'),
+        ],
+        validators=[DataRequired(message='Veuillez choisir une unité de dessin.')],
+        default='millimeters',
+    )
+
+    submit = SubmitField('Analyser le DXF')
+
     website = StringField('Website', validators=[Optional(), Length(max=120)])
     inquiry_type = SelectField(
         'Inquiry type',

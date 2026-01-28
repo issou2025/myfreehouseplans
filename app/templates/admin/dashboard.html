@@ -52,6 +52,7 @@
         <a class="btn btn-soft" href="{{ url_for('admin.plans') }}">Open plans</a>
         <a class="btn btn-soft" href="{{ url_for('blog.admin_list') }}">Blog</a>
         <a class="btn btn-soft" href="{{ url_for('admin.messages') }}">Inbox</a>
+        <a class="btn btn-soft" href="{{ url_for('admin.takeoff') }}">CivilQuant (DXF takeoff)</a>
         <a class="btn btn-soft" href="{{ url_for('admin.analytics') }}">Visitor tracking</a>
         {% if current_user.is_authenticated and current_user.role == 'superadmin' %}
         <a class="btn btn-soft" href="{{ url_for('admin.manage_categories') }}">Categories</a>
@@ -110,6 +111,14 @@
                     <p>Track purchases and order statuses in one place.</p>
                 </div>
                 <div class="admin-tool-card__meta">{{ stats.total_orders }} orders</div>
+            </a>
+            <a class="admin-tool-card" href="{{ url_for('admin.takeoff') }}">
+                <div class="admin-tool-card__icon">📐</div>
+                <div class="admin-tool-card__content">
+                    <h3>CivilQuant Pro</h3>
+                    <p>Upload DXF plans and generate engineering-grade quantity takeoff (Excel export).</p>
+                </div>
+                <div class="admin-tool-card__meta">DXF → Excel</div>
             </a>
             <a class="admin-tool-card" href="{{ url_for('admin.analytics') }}">
                 <div class="admin-tool-card__icon">📈</div>

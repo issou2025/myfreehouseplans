@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}CivilQuant Pro — DXF Takeoff{% endblock %}
+
+{% block content %}
+<div class="shell admin-shell">
+  <header class="admin-header" style="gap:1rem;">
+    <div class="admin-header__content">
+      <p class="admin-eyebrow">CivilQuant Pro</p>
+      <h1 class="admin-title">DXF Quantity Takeoff</h1>
+      <p class="admin-subtitle">Importez un DXF, choisissez l’échelle, obtenez un métré instantané (sans base de données).</p>
+    </div>
+    <div class="admin-header__actions">
+      <a class="btn-admin btn-admin--secondary" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+      <a class="btn-admin btn-admin--ghost" href="{{ url_for('admin.takeoff_export') }}" {% if not rows %}aria-disabled="true" style="pointer-events:none;opacity:.6;"{% endif %}>
+        Télécharger Excel
+      </a>
+    </div>
+  </header>
+
+  <section class="glass" style="padding:1.25rem; border-radius:1rem;">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+
+      <div class="row" style="display:grid; grid-template-columns: 1.25fr 0.75fr 0.75fr; gap: 1rem; align-items:end;">
+        <div>
+          <label class="form-label" for="dxfFile">Fichier DXF</label>
+          <div id="dropZone" class="glass" style="padding:1rem; border-radius:.9rem; border:1px dashed rgba(255,255,255,.35); cursor:pointer;">
+            <div style="display:flex; gap:.75rem; align-items:center;">
+              <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div style="font-weight:600;">Glisser-déposer votre DXF ici</div>
+                <div style="opacity:.85; font-size:.95rem;">ou cliquez pour choisir un fichier (.dxf). Taille max: 16MB.</div>
+                <div id="fileName" style="opacity:.9; margin-top:.35rem; font-size:.9rem;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:.6rem;">
+            {{ form.dxf_file(class_="form-control", id="dxfFile", style="display:none") }}
+            {% if form.dxf_file.errors %}
+              <div class="text-danger" style="margin-top:.4rem;">{{ form.dxf_file.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label" for="wallHeight">Hauteur murs (m)</label>
+          {{ form.wall_height_m(class_="form-control", id="wallHeight", step="0.01") }}
+          {% if form.wall_height_m.errors %}
+            <div class="text-danger" style="margin-top:.4rem;">{{ form.wall_height_m.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="form-label" for="scale">Unités du dessin</label>
+          {{ form.scale(class_="form-control", id="scale") }}
+          {% if form.scale.errors %}
+            <div class="text-danger" style="margin-top:.4rem;">{{ form.scale.errors[0] }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; margin-top:1rem;">
+        <button class="btn btn-primary" type="submit">
+          <i class="fa-solid fa-gears" aria-hidden="true"></i>
+          Analyser le DXF
+        </button>
+        <a class="btn btn-secondary" href="{{ url_for('admin.takeoff') }}" title="Rafraîchir">Rafraîchir</a>
+        <span style="opacity:.85; font-size:.95rem;">Aucune donnée n’est enregistrée en base — traitement temporaire.</span>
+      </div>
+    </form>
+  </section>
+
+  {% if diagnostics and diagnostics|length > 0 %}
+  <section class="glass" style="padding:1rem; border-radius:1rem; margin-top:1rem;">
+    <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.5rem;">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <strong>Diagnostics</strong>
+    </div>
+    <ul style="margin:0; padding-left:1.25rem;">
+      {% for d in diagnostics %}
+        <li style="margin:.25rem 0; opacity:.95;">{{ d }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if rows %}
+  <section class="glass" style="padding:1.25rem; border-radius:1rem; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <div>
+        <h2 style="margin:0; font-size:1.2rem;">Résultats</h2>
+        {% if meta %}
+          <div style="opacity:.85; margin-top:.25rem;">
+            Fichier: <strong>{{ meta.filename }}</strong> — Échelle: <strong>{{ meta.scale }}</strong> — Hauteur murs: <strong>{{ meta.wall_height_m }} m</strong>
+          </div>
+        {% endif %}
+      </div>
+      <div style="display:flex; gap:.6rem; align-items:center;">
+        <input id="tableFilter" class="form-control" placeholder="Filtrer…" style="max-width: 280px;" />
+        <a class="btn btn-primary" href="{{ url_for('admin.takeoff_export') }}">
+          <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+          Export Excel
+        </a>
+      </div>
+    </div>
+
+    <div style="overflow:auto; margin-top:1rem; border-radius:.8rem;">
+      <table id="takeoffTable" class="table" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th data-sort="Désignation" style="text-align:left; cursor:pointer;">Désignation</th>
+            <th data-sort="Quantité" style="text-align:right; cursor:pointer;">Quantité</th>
+            <th data-sort="Unité" style="text-align:left; cursor:pointer;">Unité</th>
+            <th data-sort="Catégorie" style="text-align:left; cursor:pointer;">Catégorie</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r['Désignation'] }}</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">{{ '%.3f'|format(r['Quantité']) if r['Unité']=='m' else ('%.2f'|format(r['Quantité']) if r['Unité']=='m²' else r['Quantité']) }}</td>
+            <td>{{ r['Unité'] }}</td>
+            <td>{{ r['Catégorie'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="opacity:.8; font-size:.9rem; margin-top:.75rem;">
+      Astuce: cliquez sur les en-têtes pour trier; utilisez le filtre pour rechercher.
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('dxfFile');
+  const fileName = document.getElementById('fileName');
+
+  function setName(){
+    const f = fileInput.files && fileInput.files[0];
+    fileName.textContent = f ? ('Sélectionné: ' + f.name) : '';
+  }
+
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', setName);
+
+    ;['dragenter','dragover'].forEach(evt => {
+      dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = 'rgba(255,255,255,.75)';
+      });
+    });
+    ;['dragleave','drop'].forEach(evt => {
+      dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = 'rgba(255,255,255,.35)';
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (!files || !files.length) return;
+      fileInput.files = files;
+      setName();
+    });
+  }
+
+  // Filtre table
+  const filter = document.getElementById('tableFilter');
+  const table = document.getElementById('takeoffTable');
+  if (filter && table) {
+    filter.addEventListener('input', () => {
+      const q = (filter.value || '').toLowerCase();
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(tr => {
+        const text = tr.innerText.toLowerCase();
+        tr.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Tri table (simple)
+  if (table) {
+    let sortKey = null;
+    let sortDir = 1;
+
+    const headers = table.querySelectorAll('thead th[data-sort]');
+    headers.forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.getAttribute('data-sort');
+        if (!key) return;
+        if (sortKey === key) sortDir *= -1;
+        else { sortKey = key; sortDir = 1; }
+
+        const idx = Array.from(th.parentElement.children).indexOf(th);
+        const tbody = table.querySelector('tbody');
+        const trs = Array.from(tbody.querySelectorAll('tr'));
+
+        trs.sort((a,b) => {
+          const av = a.children[idx].innerText.trim();
+          const bv = b.children[idx].innerText.trim();
+
+          const an = Number(av.replace(',', '.'));
+          const bn = Number(bv.replace(',', '.'));
+          const bothNumeric = !Number.isNaN(an) && !Number.isNaN(bn) && (key === 'Quantité');
+          if (bothNumeric) return (an - bn) * sortDir;
+          return av.localeCompare(bv, undefined, {numeric:true, sensitivity:'base'}) * sortDir;
+        });
+
+        trs.forEach(tr => tbody.appendChild(tr));
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}
